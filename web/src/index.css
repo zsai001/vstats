@@ -1,0 +1,125 @@
+@import "tailwindcss";
+
+@theme {
+  --color-glass-border: rgba(255, 255, 255, 0.08);
+  --color-glass-bg: rgba(20, 20, 22, 0.6);
+  --color-glass-bg-hover: rgba(30, 30, 35, 0.7);
+  
+  --color-neon-green: #10b981;
+  --color-neon-blue: #3b82f6;
+  --color-neon-purple: #8b5cf6;
+  --color-neon-yellow: #f59e0b;
+  --color-neon-red: #ef4444;
+
+  --font-display: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+/* Base Setup */
+html {
+  color-scheme: dark;
+}
+
+body {
+  @apply font-display antialiased text-gray-100;
+  background-color: #0f172a;
+  /* Landscape Background */
+  background-image: url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=3870&auto=format&fit=crop');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+/* Overlay to darken the background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  z-index: -1;
+}
+
+/* Nezha-style Glass Card */
+.nezha-card {
+  @apply relative rounded-2xl transition-all duration-300;
+  background: var(--color-glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-glass-border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.nezha-card:hover {
+  background: var(--color-glass-bg-hover);
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px);
+}
+
+/* Progress Bar */
+.nezha-progress-track {
+  @apply h-1.5 w-full bg-gray-700/50 rounded-full overflow-hidden;
+}
+
+.nezha-progress-bar {
+  @apply h-full rounded-full transition-all duration-500 ease-out;
+}
+
+/* Badge/Tag */
+.nezha-tag {
+  @apply px-2 py-0.5 text-[10px] font-bold rounded-md uppercase tracking-wider;
+}
+
+.tag-blue { @apply bg-blue-500/20 text-blue-400 border border-blue-500/30; }
+.tag-green { @apply bg-emerald-500/20 text-emerald-400 border border-emerald-500/30; }
+.tag-purple { @apply bg-purple-500/20 text-purple-400 border border-purple-500/30; }
+.tag-yellow { @apply bg-amber-500/20 text-amber-400 border border-amber-500/30; }
+.tag-red { @apply bg-red-500/20 text-red-400 border border-red-500/30; }
+.tag-gray { @apply bg-gray-500/20 text-gray-400 border border-gray-500/30; }
+
+/* Typography */
+.label-text {
+  @apply text-xs font-medium text-gray-400 uppercase tracking-wider mb-1 block;
+}
+
+.value-text {
+  @apply text-lg font-bold text-white tracking-tight;
+}
+
+.sub-value-text {
+  @apply text-xs text-gray-400 font-mono;
+}
+
+/* Animations */
+@keyframes pulse-dot {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.status-indicator {
+  @apply w-2.5 h-2.5 rounded-full bg-emerald-500;
+  animation: pulse-dot 2s infinite;
+}
+
+.status-indicator.offline {
+  @apply bg-red-500;
+  animation: none;
+}
+
+/* Modal Animation */
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-modal-in {
+  animation: modal-in 0.2s ease-out forwards;
+}
