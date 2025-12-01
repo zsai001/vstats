@@ -73,13 +73,10 @@ detect_system() {
         *) error "Unsupported OS: $OS" ;;
     esac
     
-    # Detect libc type for Linux
+    # For Linux, always use musl (static) binaries for maximum compatibility
+    # musl binaries work on ANY Linux regardless of glibc version
     if [ "$OS" = "linux" ]; then
-        if ldd --version 2>&1 | grep -q musl; then
-            LIBC="musl"
-        else
-            LIBC="gnu"
-        fi
+        LIBC="musl"
     fi
     
     info "Detected: $OS-$ARCH"

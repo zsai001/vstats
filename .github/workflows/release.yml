@@ -7,285 +7,204 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag (e.g., v1.0.0)'
+        description: 'Release tag (e.g., v1.4.0)'
         required: true
-        default: 'v1.0.0'
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build-server:
-    name: Build Server - ${{ matrix.target }}
-    runs-on: ${{ matrix.os }}
+  build-linux:
+    runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
       matrix:
         include:
-          # Linux x86_64 (GNU)
-          - target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
-            name: vstats-server-linux-x86_64-gnu
-          # Linux x86_64 (musl - static)
           - target: x86_64-unknown-linux-musl
-            os: ubuntu-latest
-            name: vstats-server-linux-x86_64-musl
-          # Linux aarch64 (GNU)
-          - target: aarch64-unknown-linux-gnu
-            os: ubuntu-latest
-            name: vstats-server-linux-aarch64-gnu
-          # macOS x86_64
-          - target: x86_64-apple-darwin
-            os: macos-latest
-            name: vstats-server-darwin-x86_64
-          # macOS ARM64
-          - target: aarch64-apple-darwin
-            os: macos-latest
-            name: vstats-server-darwin-aarch64
-
+            artifact: linux-x86_64-musl
+          - target: aarch64-unknown-linux-musl
+            artifact: linux-aarch64-musl
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
         with:
           targets: ${{ matrix.target }}
-
-      - name: Install cross-compilation tools (Linux)
-        if: runner.os == 'Linux'
+      
+      - name: Install musl tools
         run: |
           sudo apt-get update
-          if [[ "${{ matrix.target }}" == *"musl"* ]]; then
-            sudo apt-get install -y musl-tools
-          fi
+          sudo apt-get install -y musl-tools
+          
+          # For cross-compilation to aarch64
           if [[ "${{ matrix.target }}" == "aarch64"* ]]; then
             sudo apt-get install -y gcc-aarch64-linux-gnu
+            mkdir -p ~/.cargo
+            cat >> ~/.cargo/config.toml << EOF
+          [target.aarch64-unknown-linux-musl]
+          linker = "aarch64-linux-gnu-gcc"
+          EOF
           fi
-
-      - name: Build server
-        run: |
-          cd server
-          if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
-            export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
-          fi
-          cargo build --release --target ${{ matrix.target }}
-          mv target/${{ matrix.target }}/release/xprob-server ../vstats-server || mv target/${{ matrix.target }}/release/vstats-server ../vstats-server
-
-      - name: Rename binary
-        run: mv vstats-server ${{ matrix.name }}
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.name }}
-          path: ${{ matrix.name }}
-
-  build-agent:
-    name: Build Agent - ${{ matrix.target }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # Linux x86_64 (GNU)
-          - target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
-            name: vstats-agent-linux-x86_64-gnu
-          # Linux x86_64 (musl - static)
-          - target: x86_64-unknown-linux-musl
-            os: ubuntu-latest
-            name: vstats-agent-linux-x86_64-musl
-          # Linux aarch64 (GNU)
-          - target: aarch64-unknown-linux-gnu
-            os: ubuntu-latest
-            name: vstats-agent-linux-aarch64-gnu
-          # macOS x86_64
-          - target: x86_64-apple-darwin
-            os: macos-latest
-            name: vstats-agent-darwin-x86_64
-          # macOS ARM64
-          - target: aarch64-apple-darwin
-            os: macos-latest
-            name: vstats-agent-darwin-aarch64
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-
-      - name: Install cross-compilation tools (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          if [[ "${{ matrix.target }}" == *"musl"* ]]; then
-            sudo apt-get install -y musl-tools
-          fi
-          if [[ "${{ matrix.target }}" == "aarch64"* ]]; then
-            sudo apt-get install -y gcc-aarch64-linux-gnu
-          fi
-
-      - name: Build agent
+      
+      - name: Build Agent
         run: |
           cd agent
-          if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
-            export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
-          fi
-          cargo build --release --target ${{ matrix.target }}
-          mv target/${{ matrix.target }}/release/vstats-agent ../vstats-agent
-
-      - name: Rename binary
-        run: mv vstats-agent ${{ matrix.name }}
-
-      - name: Upload artifact
+          RUSTFLAGS="-C target-feature=+crt-static" cargo build --release --target ${{ matrix.target }}
+          cp target/${{ matrix.target }}/release/vstats-agent ../vstats-agent-${{ matrix.artifact }}
+      
+      - name: Build Server
+        run: |
+          cd server
+          RUSTFLAGS="-C target-feature=+crt-static" cargo build --release --target ${{ matrix.target }}
+          cp target/${{ matrix.target }}/release/xprob-server ../vstats-server-${{ matrix.artifact }}
+      
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.name }}
-          path: ${{ matrix.name }}
+          name: binaries-${{ matrix.artifact }}
+          path: |
+            vstats-agent-${{ matrix.artifact }}
+            vstats-server-${{ matrix.artifact }}
+
+  build-macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-apple-darwin
+            artifact: darwin-x86_64
+          - target: aarch64-apple-darwin
+            artifact: darwin-aarch64
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          targets: ${{ matrix.target }}
+      
+      - name: Build Agent
+        run: |
+          cd agent
+          cargo build --release --target ${{ matrix.target }}
+          cp target/${{ matrix.target }}/release/vstats-agent ../vstats-agent-${{ matrix.artifact }}
+      
+      - name: Build Server
+        run: |
+          cd server
+          cargo build --release --target ${{ matrix.target }}
+          cp target/${{ matrix.target }}/release/xprob-server ../vstats-server-${{ matrix.artifact }}
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-${{ matrix.artifact }}
+          path: |
+            vstats-agent-${{ matrix.artifact }}
+            vstats-server-${{ matrix.artifact }}
 
   build-web:
-    name: Build Web Assets
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
+      
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
-
-      - name: Install dependencies
+      
+      - name: Build web assets
         run: |
           cd web
           npm ci
-
-      - name: Build
-        run: |
-          cd web
           npm run build
-
-      - name: Package web assets
-        run: |
-          cd web
-          tar -czf ../web-dist.tar.gz -C dist .
-
-      - name: Upload artifact
+          cd dist
+          tar -czvf ../../web-dist.tar.gz .
+      
+      - name: Upload web artifacts
         uses: actions/upload-artifact@v4
         with:
           name: web-dist
           path: web-dist.tar.gz
 
   release:
-    name: Create Release
-    needs: [build-server, build-agent, build-web]
+    needs: [build-linux, build-macos, build-web]
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-
-      - name: Get version
-        id: version
-        run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "VERSION=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
-          else
-            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Prepare release assets
+      
+      - name: Prepare release files
         run: |
           mkdir -p release
-          # Move server binaries
-          for dir in artifacts/vstats-server-*; do
-            if [ -d "$dir" ]; then
-              name=$(basename "$dir")
-              mv "$dir/$name" "release/$name"
-              chmod +x "release/$name"
-            fi
-          done
-          # Move agent binaries
-          for dir in artifacts/vstats-agent-*; do
-            if [ -d "$dir" ]; then
-              name=$(basename "$dir")
-              mv "$dir/$name" "release/$name"
-              chmod +x "release/$name"
-            fi
-          done
-          # Move web assets
-          mv artifacts/web-dist/web-dist.tar.gz release/
-
-      - name: Generate checksums
+          find artifacts -type f -name "vstats-*" -exec cp {} release/ \;
+          find artifacts -type f -name "web-dist.tar.gz" -exec cp {} release/ \;
+          chmod +x release/vstats-*
+          ls -la release/
+      
+      - name: Get tag name
+        id: tag
         run: |
-          cd release
-          sha256sum * > checksums.txt
-
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+      
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ steps.version.outputs.VERSION }}
-          name: vStats ${{ steps.version.outputs.VERSION }}
+          tag_name: ${{ steps.tag.outputs.TAG }}
+          name: vStats ${{ steps.tag.outputs.TAG }}
           draft: false
           prerelease: false
           files: |
-            release/*
+            release/vstats-agent-linux-x86_64-musl
+            release/vstats-agent-linux-aarch64-musl
+            release/vstats-agent-darwin-x86_64
+            release/vstats-agent-darwin-aarch64
+            release/vstats-server-linux-x86_64-musl
+            release/vstats-server-linux-aarch64-musl
+            release/vstats-server-darwin-x86_64
+            release/vstats-server-darwin-aarch64
+            release/web-dist.tar.gz
           body: |
-            ## vStats ${{ steps.version.outputs.VERSION }}
+            ## vStats ${{ steps.tag.outputs.TAG }}
             
-            ### 📥 Dashboard (主控端)
+            ### Downloads
             
-            | 平台 | 架构 | 下载链接 |
-            |------|------|----------|
-            | Linux | x86_64 (GNU) | [vstats-server-linux-x86_64-gnu](https://github.com/zsai001/vstats/releases/download/${{ steps.version.outputs.VERSION }}/vstats-server-linux-x86_64-gnu) |
-            | Linux | x86_64 (musl) | [vstats-server-linux-x86_64-musl](https://github.com/zsai001/vstats/releases/download/${{ steps.version.outputs.VERSION }}/vstats-server-linux-x86_64-musl) |
-            | Linux | ARM64 | [vstats-server-linux-aarch64-gnu](https://github.com/zsai001/vstats/releases/download/${{ steps.version.outputs.VERSION }}/vstats-server-linux-aarch64-gnu) |
-            | macOS | x86_64 | [vstats-server-darwin-x86_64](https://github.com/zsai001/vstats/releases/download/${{ steps.version.outputs.VERSION }}/vstats-server-darwin-x86_64) |
-            | macOS | ARM64 | [vstats-server-darwin-aarch64](https://github.com/zsai001/vstats/releases/download/${{ steps.version.outputs.VERSION }}/vstats-server-darwin-aarch64) |
+            **Linux (Static/Portable - works on any Linux)**
+            - Agent: `vstats-agent-linux-x86_64-musl` (x86_64)
+            - Agent: `vstats-agent-linux-aarch64-musl` (ARM64)
+            - Server: `vstats-server-linux-x86_64-musl` (x86_64)
+            - Server: `vstats-server-linux-aarch64-musl` (ARM64)
             
-            ### 📥 Agent (探针)
+            **macOS**
+            - Agent: `vstats-agent-darwin-x86_64` (Intel)
+            - Agent: `vstats-agent-darwin-aarch64` (Apple Silicon)
+            - Server: `vstats-server-darwin-x86_64` (Intel)
+            - Server: `vstats-server-darwin-aarch64` (Apple Silicon)
             
-            | 平台 | 架构 | 下载链接 |
-            |------|------|----------|
-            | Linux | x86_64 (GNU) | [vstats-agent-linux-x86_64-gnu](https://github.com/zsai001/vstats/releases/download/${{ steps.version.outputs.VERSION }}/vstats-agent-linux-x86_64-gnu) |
-            | Linux | x86_64 (musl) | [vstats-agent-linux-x86_64-musl](https://github.com/zsai001/vstats/releases/download/${{ steps.version.outputs.VERSION }}/vstats-agent-linux-x86_64-musl) |
-            | Linux | ARM64 | [vstats-agent-linux-aarch64-gnu](https://github.com/zsai001/vstats/releases/download/${{ steps.version.outputs.VERSION }}/vstats-agent-linux-aarch64-gnu) |
-            | macOS | x86_64 | [vstats-agent-darwin-x86_64](https://github.com/zsai001/vstats/releases/download/${{ steps.version.outputs.VERSION }}/vstats-agent-darwin-x86_64) |
-            | macOS | ARM64 | [vstats-agent-darwin-aarch64](https://github.com/zsai001/vstats/releases/download/${{ steps.version.outputs.VERSION }}/vstats-agent-darwin-aarch64) |
+            ### Installation
             
-            ### ⚡ 一键安装
-            
+            **Dashboard Server:**
             ```bash
-            # 安装主控端
             curl -fsSL https://vstats.zsoft.cc/install.sh | sudo bash
-            
-            # 安装 Rust 探针 (推荐)
-            curl -fsSL https://github.com/zsai001/vstats/releases/download/${{ steps.version.outputs.VERSION }}/vstats-agent-linux-x86_64-gnu -o vstats-agent
-            chmod +x vstats-agent
-            sudo ./vstats-agent register --server http://YOUR_SERVER:3001 --token "YOUR_TOKEN"
-            sudo ./vstats-agent install
-            
-            # 或使用 Shell 探针
-            curl -fsSL https://vstats.zsoft.cc/agent.sh | sudo bash -s -- \
-              --server http://YOUR_SERVER:3001 \
-              --token "YOUR_TOKEN"
             ```
             
-            ### 📚 文档
-            
-            访问 [vstats.zsoft.cc](https://vstats.zsoft.cc) 查看完整文档。
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+            **Agent (on servers to monitor):**
+            ```bash
+            curl -fsSL https://vstats.zsoft.cc/agent.sh | sudo bash -s -- \
+              --server http://YOUR-DASHBOARD:3001 \
+              --token "YOUR-TOKEN" \
+              --name "$(hostname)"
+            ```

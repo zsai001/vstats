@@ -138,14 +138,11 @@ detect_system() {
         *) error "Unsupported OS: $OS" ;;
     esac
     
-    # Detect libc type for Linux
+    # For Linux, always prefer musl (static) binaries for maximum compatibility
+    # musl binaries work on ANY Linux regardless of glibc version
     if [ "$OS" = "linux" ]; then
-        if ldd --version 2>&1 | grep -q musl; then
-            LIBC="musl"
-        else
-            LIBC="gnu"
-        fi
-        BINARY_NAME="vstats-agent-${OS}-${ARCH}-${LIBC}"
+        # Always use musl for better compatibility
+        BINARY_NAME="vstats-agent-${OS}-${ARCH}-musl"
     else
         BINARY_NAME="vstats-agent-${OS}-${ARCH}"
     fi
