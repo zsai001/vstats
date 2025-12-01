@@ -1,0 +1,201 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g., v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-server:
+    name: Build Server - ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux x86_64 (GNU)
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            name: vstats-server-linux-x86_64-gnu
+          # Linux x86_64 (musl - static)
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            name: vstats-server-linux-x86_64-musl
+          # Linux aarch64 (GNU)
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            name: vstats-server-linux-aarch64-gnu
+          # macOS x86_64
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            name: vstats-server-darwin-x86_64
+          # macOS ARM64
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            name: vstats-server-darwin-aarch64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross-compilation tools (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          if [[ "${{ matrix.target }}" == *"musl"* ]]; then
+            sudo apt-get install -y musl-tools
+          fi
+          if [[ "${{ matrix.target }}" == "aarch64"* ]]; then
+            sudo apt-get install -y gcc-aarch64-linux-gnu
+          fi
+
+      - name: Build server
+        run: |
+          cd server
+          if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
+            export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+          fi
+          cargo build --release --target ${{ matrix.target }}
+          mv target/${{ matrix.target }}/release/xprob-server ../vstats-server || mv target/${{ matrix.target }}/release/vstats-server ../vstats-server
+
+      - name: Rename binary
+        run: mv vstats-server ${{ matrix.name }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: ${{ matrix.name }}
+
+  build-web:
+    name: Build Web Assets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd web
+          npm ci
+
+      - name: Build
+        run: |
+          cd web
+          npm run build
+
+      - name: Package web assets
+        run: |
+          cd web
+          tar -czf ../web-dist.tar.gz -C dist .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: web-dist.tar.gz
+
+  release:
+    name: Create Release
+    needs: [build-server, build-web]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release
+          # Move server binaries
+          for dir in artifacts/vstats-server-*; do
+            if [ -d "$dir" ]; then
+              name=$(basename "$dir")
+              mv "$dir/$name" "release/$name"
+              chmod +x "release/$name"
+            fi
+          done
+          # Move web assets
+          mv artifacts/web-dist/web-dist.tar.gz release/
+
+      - name: Generate checksums
+        run: |
+          cd release
+          sha256sum * > checksums.txt
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.VERSION }}
+          name: vStats ${{ steps.version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+          files: |
+            release/*
+          body: |
+            ## vStats ${{ steps.version.outputs.VERSION }}
+            
+            ### 📥 下载
+            
+            | 平台 | 架构 | 下载链接 |
+            |------|------|----------|
+            | Linux | x86_64 (GNU) | [vstats-server-linux-x86_64-gnu](https://github.com/zsai001/vstats/releases/download/${{ steps.version.outputs.VERSION }}/vstats-server-linux-x86_64-gnu) |
+            | Linux | x86_64 (musl) | [vstats-server-linux-x86_64-musl](https://github.com/zsai001/vstats/releases/download/${{ steps.version.outputs.VERSION }}/vstats-server-linux-x86_64-musl) |
+            | Linux | ARM64 | [vstats-server-linux-aarch64-gnu](https://github.com/zsai001/vstats/releases/download/${{ steps.version.outputs.VERSION }}/vstats-server-linux-aarch64-gnu) |
+            | macOS | x86_64 | [vstats-server-darwin-x86_64](https://github.com/zsai001/vstats/releases/download/${{ steps.version.outputs.VERSION }}/vstats-server-darwin-x86_64) |
+            | macOS | ARM64 | [vstats-server-darwin-aarch64](https://github.com/zsai001/vstats/releases/download/${{ steps.version.outputs.VERSION }}/vstats-server-darwin-aarch64) |
+            
+            ### ⚡ 一键安装
+            
+            ```bash
+            # 安装主控端
+            curl -fsSL https://vstats.zsoft.cc/install.sh | sudo bash
+            
+            # 安装探针
+            curl -fsSL https://vstats.zsoft.cc/agent.sh | sudo bash -s -- \
+              --server http://YOUR_SERVER:3001 \
+              --name "$(hostname)"
+            ```
+            
+            ### 📚 文档
+            
+            访问 [vstats.zsoft.cc](https://vstats.zsoft.cc) 查看完整文档。
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

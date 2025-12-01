@@ -1,10 +1,14 @@
-# xProb - Server Monitoring Dashboard
+# vStats - Server Monitoring Dashboard
 
-一个极简且美观的服务器探针监控系统，使用 Rust 后端和现代 React 前端。
+[![GitHub Release](https://img.shields.io/github/v/release/zsai001/vstats?style=flat-square)](https://github.com/zsai001/vstats/releases)
+[![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
+![Rust](https://img.shields.io/badge/Rust-000000?style=flat-square&logo=rust&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat-square&logo=typescript&logoColor=white)
 
-![xProb](https://img.shields.io/badge/Rust-000000?style=flat&logo=rust&logoColor=white)
-![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)
-![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat&logo=typescript&logoColor=white)
+极简美观的服务器探针监控系统。Rust 驱动，毫秒级延迟，一键部署。
+
+**文档网站**: [vstats.zsoft.cc](https://vstats.zsoft.cc)
 
 ## ✨ 特性
 
@@ -18,6 +22,47 @@
 - 🎨 **现代 UI** - 玻璃拟态设计，流畅动画
 - 🔐 **安全认证** - JWT 认证保护管理接口
 - ⚡ **一键部署** - 提供自动化安装脚本
+
+## 🚀 一键安装
+
+### 安装主控端 (Dashboard)
+
+```bash
+curl -fsSL https://vstats.zsoft.cc/install.sh | sudo bash
+```
+
+### 安装探针 (Agent)
+
+登录 Dashboard 后，进入 **Settings** 页面获取安装命令，或直接运行：
+
+```bash
+curl -fsSL https://vstats.zsoft.cc/agent.sh | sudo bash -s -- \
+  --server http://YOUR_DASHBOARD_IP:3001 \
+  --name "$(hostname)" \
+  --token "your-jwt-token" \
+  --location "US" \
+  --provider "Vultr"
+```
+
+### 升级
+
+```bash
+# 升级主控端
+curl -fsSL https://vstats.zsoft.cc/install.sh | sudo bash -s -- --upgrade
+
+# 升级探针
+curl -fsSL https://vstats.zsoft.cc/agent.sh | sudo bash -s -- --upgrade
+```
+
+### 卸载
+
+```bash
+# 卸载主控端
+curl -fsSL https://vstats.zsoft.cc/install.sh | sudo bash -s -- --uninstall
+
+# 卸载探针
+curl -fsSL https://vstats.zsoft.cc/agent.sh | sudo bash -s -- --uninstall
+```
 
 ## 🏗️ 架构
 
@@ -42,56 +87,9 @@
     └─────────────┘ └─────────────┘ └─────────────┘
 ```
 
-## 🚀 快速开始
+## 🛠️ 手动开发环境
 
-### 方式一：一键安装（推荐）
-
-#### 1. 安装主控端 (Dashboard)
-
-在你的主服务器上运行：
-
-```bash
-curl -fsSL https://your-domain.com/install.sh | sudo bash
-```
-
-或者手动安装：
-
-```bash
-# 克隆仓库
-git clone https://github.com/your-username/xprob.git
-cd xprob
-
-# 构建后端
-cd server && cargo build --release
-
-# 构建前端
-cd ../web && npm install && npm run build
-
-# 启动服务
-./server/target/release/xprob-server
-```
-
-#### 2. 添加被监控服务器
-
-登录 Dashboard 后，进入 **Settings** 页面，点击 **Show Install Command**，复制显示的命令：
-
-```bash
-curl -fsSL http://your-dashboard:3001/agent.sh | sudo bash -s -- \
-  --server http://your-dashboard:3001 \
-  --token "your-jwt-token" \
-  --name "$(hostname)" \
-  --location "US" \
-  --provider "Vultr"
-```
-
-在被监控服务器上运行此命令即可自动：
-- 下载并安装探针
-- 注册到主控端
-- 创建 systemd 服务
-
-### 方式二：手动开发环境
-
-#### 1. 启动后端服务
+### 启动后端服务
 
 ```bash
 cd server
@@ -100,7 +98,7 @@ cargo run --release
 
 服务器将在 `http://localhost:3001` 启动。
 
-#### 2. 启动前端开发服务器
+### 启动前端开发服务器
 
 ```bash
 cd web
@@ -113,7 +111,7 @@ npm run dev
 ## 📁 项目结构
 
 ```
-xprob/
+vstats/
 ├── server/                 # Rust 后端
 │   ├── src/
 │   │   └── main.rs        # 主程序
@@ -128,7 +126,15 @@ xprob/
 ├── scripts/                # 安装脚本
 │   ├── install.sh         # 主控端安装脚本
 │   └── agent.sh           # 被控端安装脚本
-└── README.md
+├── docs/                   # GitHub Pages 文档站
+│   ├── index.html         # 落地页
+│   ├── install.sh         # 安装脚本 (镜像)
+│   ├── agent.sh           # 探针脚本 (镜像)
+│   └── CNAME              # 自定义域名
+└── .github/
+    └── workflows/
+        ├── release.yml    # 构建发布工作流
+        └── pages.yml      # GitHub Pages 部署
 ```
 
 ## 🔌 API 接口
@@ -143,7 +149,6 @@ xprob/
 | `/api/auth/login` | POST | 用户登录 |
 | `/api/auth/verify` | GET | 验证 Token |
 | `/ws` | WebSocket | 实时指标推送 (1秒/次) |
-| `/agent.sh` | GET | 获取探针安装脚本 |
 
 ### 需要认证的接口
 
@@ -171,26 +176,23 @@ interface SystemMetrics {
 
 ## 🔐 默认凭据
 
-- **默认密码**: `admin`
+- **默认密码**: `admin` (或安装时生成的随机密码)
 - 首次登录后请立即修改密码
 
 ## 🛠️ 服务管理
 
 ```bash
 # 查看状态
-systemctl status xprob
+systemctl status vstats
 
 # 重启服务
-systemctl restart xprob
+systemctl restart vstats
 
 # 查看日志
-journalctl -u xprob -f
+journalctl -u vstats -f
 
 # 停止服务
-systemctl stop xprob
-
-# 卸载
-curl -fsSL http://your-dashboard:3001/install.sh | sudo bash -s -- --uninstall
+systemctl stop vstats
 ```
 
 ## 🔧 技术栈
@@ -210,6 +212,20 @@ curl -fsSL http://your-dashboard:3001/install.sh | sudo bash -s -- --uninstall
 - **React Router** - 路由管理
 - **自定义组件** - 进度环、进度条等
 
+## 📦 发布流程
+
+1. 创建新的 Git tag:
+   ```bash
+   git tag v1.0.0
+   git push origin v1.0.0
+   ```
+
+2. GitHub Actions 自动:
+   - 构建多平台二进制文件 (Linux x86_64/aarch64, macOS x86_64/aarch64)
+   - 构建 Web 资源
+   - 创建 GitHub Release
+   - 上传所有构建产物
+
 ## 📄 许可证
 
 MIT License
@@ -217,4 +233,3 @@ MIT License
 ## 🤝 贡献
 
 欢迎提交 Issue 和 Pull Request！
-# vstats

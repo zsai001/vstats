@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>vStats - 轻量级服务器监控系统</title>
+    <meta name="description" content="极简美观的服务器探针监控系统，一键部署，实时监控">
+    <meta name="keywords" content="server monitor, vps, probe, 服务器监控, 探针">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #16161f;
+            --border: #2a2a3a;
+            --text-primary: #f0f0f5;
+            --text-secondary: #8888a0;
+            --accent: #00d4aa;
+            --accent-glow: rgba(0, 212, 170, 0.3);
+            --accent-alt: #7c3aed;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        code, pre {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Animated background */
+        .bg-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: 
+                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0, 212, 170, 0.15), transparent),
+                radial-gradient(ellipse 60% 40% at 80% 60%, rgba(124, 58, 237, 0.1), transparent);
+        }
+
+        .grid-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 60px 60px;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            padding: 1rem 2rem;
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-alt));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+        }
+
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .btn-primary:hover {
+            background: #00e8bb;
+            box-shadow: 0 0 30px var(--accent-glow);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+            border-color: var(--text-secondary);
+        }
+
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 8rem 2rem 4rem;
+            text-align: center;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .hero-badge .dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 8vw, 5rem);
+            font-weight: 700;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, var(--text-primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: fadeInUp 0.6s ease-out 0.1s both;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin-bottom: 3rem;
+            animation: fadeInUp 0.6s ease-out 0.2s both;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            animation: fadeInUp 0.6s ease-out 0.3s both;
+        }
+
+        .hero-buttons .btn {
+            padding: 0.8rem 1.8rem;
+            font-size: 1rem;
+        }
+
+        /* Install Command */
+        .install-section {
+            padding: 6rem 2rem;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .section-title h2 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .section-title p {
+            color: var(--text-secondary);
+        }
+
+        .install-box {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .install-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .install-tab {
+            flex: 1;
+            padding: 1rem;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .install-tab:hover {
+            color: var(--text-primary);
+            background: var(--bg-card);
+        }
+
+        .install-tab.active {
+            color: var(--accent);
+            background: var(--bg-card);
+            border-bottom: 2px solid var(--accent);
+            margin-bottom: -1px;
+        }
+
+        .install-content {
+            padding: 0;
+        }
+
+        .install-panel {
+            display: none;
+        }
+
+        .install-panel.active {
+            display: block;
+        }
+
+        .code-block {
+            position: relative;
+            background: var(--bg-card);
+            border-radius: 0;
+        }
+
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .code-header span {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        .copy-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .copy-btn:hover {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border-color: var(--accent);
+        }
+
+        .copy-btn.copied {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border-color: var(--accent);
+        }
+
+        .code-block pre {
+            padding: 1.5rem;
+            overflow-x: auto;
+            font-size: 0.9rem;
+            line-height: 1.8;
+        }
+
+        .code-block code {
+            color: var(--text-primary);
+        }
+
+        .code-block .comment {
+            color: var(--text-secondary);
+        }
+
+        .code-block .command {
+            color: var(--accent);
+        }
+
+        /* Features */
+        .features {
+            padding: 6rem 2rem;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: all 0.3s;
+        }
+
+        .feature-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-alt));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-card p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Architecture */
+        .architecture {
+            padding: 6rem 2rem;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+        }
+
+        .arch-diagram {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .arch-diagram pre {
+            font-size: 0.75rem;
+            line-height: 1.4;
+            overflow-x: auto;
+            color: var(--accent);
+        }
+
+        /* Docs Section */
+        .docs {
+            padding: 6rem 2rem;
+        }
+
+        .docs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .doc-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .doc-card:hover {
+            border-color: var(--accent);
+            background: var(--bg-secondary);
+        }
+
+        .doc-icon {
+            font-size: 2rem;
+        }
+
+        .doc-content h3 {
+            font-size: 1rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .doc-content p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        /* API Reference */
+        .api-ref {
+            padding: 6rem 2rem;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+        }
+
+        .api-table {
+            width: 100%;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .api-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .api-table th,
+        .api-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .api-table th {
+            background: rgba(0, 0, 0, 0.3);
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .api-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .api-table code {
+            background: var(--bg-primary);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: var(--accent);
+        }
+
+        .method-badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .method-get { background: #22c55e20; color: #22c55e; }
+        .method-post { background: #3b82f620; color: #3b82f6; }
+        .method-delete { background: #ef444420; color: #ef4444; }
+        .method-ws { background: #f59e0b20; color: #f59e0b; }
+
+        /* Footer */
+        footer {
+            padding: 4rem 2rem 2rem;
+            border-top: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: var(--accent);
+        }
+
+        .footer-copy {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            nav {
+                padding: 1rem;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .hero {
+                padding: 6rem 1.5rem 3rem;
+            }
+
+            .hero-buttons {
+                flex-direction: column;
+                width: 100%;
+                padding: 0 1rem;
+            }
+
+            .hero-buttons .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .install-tabs {
+                flex-direction: column;
+            }
+
+            .code-block pre {
+                font-size: 0.75rem;
+            }
+
+            .api-table {
+                overflow-x: auto;
+            }
+
+            .api-table table {
+                min-width: 600px;
+            }
+        }
+
+        /* Version badge */
+        .version-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.3rem 0.6rem;
+            background: var(--accent);
+            color: var(--bg-primary);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        /* Stats */
+        .stats {
+            display: flex;
+            gap: 3rem;
+            justify-content: center;
+            margin-top: 4rem;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-pattern"></div>
+    <div class="grid-pattern"></div>
+
+    <nav>
+        <div class="nav-container">
+            <a href="#" class="logo">
+                <div class="logo-icon">📊</div>
+                vStats
+            </a>
+            <div class="nav-links">
+                <a href="#features">功能</a>
+                <a href="#install">安装</a>
+                <a href="#docs">文档</a>
+                <a href="#api">API</a>
+                <a href="https://github.com/zsai001/vstats" target="_blank" class="btn btn-secondary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                    GitHub
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero" id="home">
+        <div class="hero-badge">
+            <span class="dot"></span>
+            <span>开源免费 · 极致轻量</span>
+            <span id="latest-version" class="version-badge">v1.0.0</span>
+        </div>
+        <h1>vStats</h1>
+        <p>极简美观的服务器探针监控系统。<br>Rust 驱动，毫秒级延迟，一键部署。</p>
+        <div class="hero-buttons">
+            <a href="#install" class="btn btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                一键安装
+            </a>
+            <a href="https://github.com/zsai001/vstats" target="_blank" class="btn btn-secondary">
+                查看源码
+            </a>
+        </div>
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value">&lt;5MB</div>
+                <div class="stat-label">二进制大小</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">&lt;10MB</div>
+                <div class="stat-label">内存占用</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">1s</div>
+                <div class="stat-label">数据刷新</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="install-section" id="install">
+        <div class="container">
+            <div class="section-title">
+                <h2>⚡ 一键安装</h2>
+                <p>选择你的安装方式，30秒完成部署</p>
+            </div>
+            <div class="install-box">
+                <div class="install-tabs">
+                    <button class="install-tab active" onclick="showTab('dashboard')">📊 主控端 (Dashboard)</button>
+                    <button class="install-tab" onclick="showTab('agent')">🔌 探针 (Agent)</button>
+                    <button class="install-tab" onclick="showTab('docker')">🐳 Docker</button>
+                </div>
+                <div class="install-content">
+                    <div id="dashboard-panel" class="install-panel active">
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span>bash</span>
+                                <button class="copy-btn" onclick="copyCode('dashboard-code')">复制</button>
+                            </div>
+                            <pre><code id="dashboard-code"><span class="comment"># 一键安装主控端 (Dashboard)</span>
+<span class="command">curl -fsSL https://vstats.zsoft.cc/install.sh | sudo bash</span>
+
+<span class="comment"># 或使用 wget</span>
+<span class="command">wget -qO- https://vstats.zsoft.cc/install.sh | sudo bash</span></code></pre>
+                        </div>
+                    </div>
+                    <div id="agent-panel" class="install-panel">
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span>bash</span>
+                                <button class="copy-btn" onclick="copyCode('agent-code')">复制</button>
+                            </div>
+                            <pre><code id="agent-code"><span class="comment"># 在需要监控的服务器上运行</span>
+<span class="command">curl -fsSL https://vstats.zsoft.cc/agent.sh | sudo bash -s -- \
+  --server http://YOUR_DASHBOARD_IP:3001 \
+  --name "$(hostname)" \
+  --token "YOUR_TOKEN"</span>
+
+<span class="comment"># 可选参数: --location "US" --provider "Vultr"</span></code></pre>
+                        </div>
+                    </div>
+                    <div id="docker-panel" class="install-panel">
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span>bash</span>
+                                <button class="copy-btn" onclick="copyCode('docker-code')">复制</button>
+                            </div>
+                            <pre><code id="docker-code"><span class="comment"># Docker 部署 (即将支持)</span>
+<span class="command">docker run -d \
+  --name vstats \
+  -p 3001:3001 \
+  -v vstats-data:/data \
+  ghcr.io/zsai001/vstats:latest</span></code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-title">
+                <h2>✨ 核心功能</h2>
+                <p>专注于简洁与高效</p>
+            </div>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>实时监控</h3>
+                    <p>WebSocket 实时推送，1秒刷新频率，毫秒级延迟感知</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🖥️</div>
+                    <h3>多服务器</h3>
+                    <p>支持同时监控多台服务器，统一管理界面</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💻</div>
+                    <h3>CPU 监控</h3>
+                    <p>总体使用率、每核心负载，频率信息可视化</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🧠</div>
+                    <h3>内存监控</h3>
+                    <p>RAM 和 Swap 使用情况，实时内存压力</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💾</div>
+                    <h3>磁盘监控</h3>
+                    <p>挂载点使用率，IO 读写统计</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🌐</div>
+                    <h3>网络监控</h3>
+                    <p>实时上传/下载速度，流量统计</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎨</div>
+                    <h3>现代 UI</h3>
+                    <p>玻璃拟态设计，流畅动画，暗色主题</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔐</div>
+                    <h3>安全认证</h3>
+                    <p>JWT 认证保护，bcrypt 密码加密</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="architecture">
+        <div class="container">
+            <div class="section-title">
+                <h2>🏗️ 架构</h2>
+                <p>简洁高效的主控-探针架构</p>
+            </div>
+            <div class="arch-diagram">
+                <pre>
+┌─────────────────────────────────────────────────────────────┐
+│                    Dashboard (主控端)                        │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
+│  │   Web UI    │  │  REST API   │  │  WebSocket  │         │
+│  └─────────────┘  └─────────────┘  └─────────────┘         │
+│                          │                                   │
+│              ┌───────────┴───────────┐                      │
+│              │    Rust Backend       │                      │
+│              │   (Axum + Tokio)      │                      │
+│              └───────────────────────┘                      │
+└─────────────────────────────────────────────────────────────┘
+                           │
+           ┌───────────────┼───────────────┐
+           ▼               ▼               ▼
+    ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+    │   Agent 1   │ │   Agent 2   │ │   Agent N   │
+    │  (被控端)   │ │  (被控端)   │ │  (被控端)   │
+    └─────────────┘ └─────────────┘ └─────────────┘
+                </pre>
+            </div>
+        </div>
+    </section>
+
+    <section class="docs" id="docs">
+        <div class="container">
+            <div class="section-title">
+                <h2>📚 文档</h2>
+                <p>快速上手指南</p>
+            </div>
+            <div class="docs-grid">
+                <a href="https://github.com/zsai001/vstats#readme" target="_blank" class="doc-card">
+                    <div class="doc-icon">🚀</div>
+                    <div class="doc-content">
+                        <h3>快速开始</h3>
+                        <p>从零开始安装和配置 vStats</p>
+                    </div>
+                </a>
+                <a href="https://github.com/zsai001/vstats/releases" target="_blank" class="doc-card">
+                    <div class="doc-icon">📦</div>
+                    <div class="doc-content">
+                        <h3>版本发布</h3>
+                        <p>查看所有版本和更新日志</p>
+                    </div>
+                </a>
+                <a href="https://github.com/zsai001/vstats/issues" target="_blank" class="doc-card">
+                    <div class="doc-icon">💬</div>
+                    <div class="doc-content">
+                        <h3>问题反馈</h3>
+                        <p>报告 Bug 或提交功能请求</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section class="api-ref" id="api">
+        <div class="container">
+            <div class="section-title">
+                <h2>🔌 API 接口</h2>
+                <p>RESTful API 文档</p>
+            </div>
+            <div class="api-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>端点</th>
+                            <th>方法</th>
+                            <th>描述</th>
+                            <th>认证</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>/health</code></td>
+                            <td><span class="method-badge method-get">GET</span></td>
+                            <td>健康检查</td>
+                            <td>否</td>
+                        </tr>
+                        <tr>
+                            <td><code>/api/metrics</code></td>
+                            <td><span class="method-badge method-get">GET</span></td>
+                            <td>获取当前系统指标</td>
+                            <td>否</td>
+                        </tr>
+                        <tr>
+                            <td><code>/api/servers</code></td>
+                            <td><span class="method-badge method-get">GET</span></td>
+                            <td>获取服务器列表</td>
+                            <td>否</td>
+                        </tr>
+                        <tr>
+                            <td><code>/api/servers</code></td>
+                            <td><span class="method-badge method-post">POST</span></td>
+                            <td>添加服务器</td>
+                            <td>是</td>
+                        </tr>
+                        <tr>
+                            <td><code>/api/servers/{id}</code></td>
+                            <td><span class="method-badge method-delete">DELETE</span></td>
+                            <td>删除服务器</td>
+                            <td>是</td>
+                        </tr>
+                        <tr>
+                            <td><code>/api/auth/login</code></td>
+                            <td><span class="method-badge method-post">POST</span></td>
+                            <td>用户登录</td>
+                            <td>否</td>
+                        </tr>
+                        <tr>
+                            <td><code>/ws</code></td>
+                            <td><span class="method-badge method-ws">WS</span></td>
+                            <td>实时指标推送 (1秒/次)</td>
+                            <td>否</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="footer-links">
+            <a href="https://github.com/zsai001/vstats" target="_blank">GitHub</a>
+            <a href="https://github.com/zsai001/vstats/releases" target="_blank">Releases</a>
+            <a href="https://github.com/zsai001/vstats/issues" target="_blank">Issues</a>
+            <a href="https://github.com/zsai001/vstats#readme" target="_blank">Documentation</a>
+        </div>
+        <p class="footer-copy">
+            MIT License © 2024 vStats · Made with ❤️ and Rust
+        </p>
+    </footer>
+
+    <script>
+        // Tab switching
+        function showTab(tabName) {
+            document.querySelectorAll('.install-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.install-panel').forEach(panel => panel.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName + '-panel').classList.add('active');
+        }
+
+        // Copy code
+        function copyCode(elementId) {
+            const code = document.getElementById(elementId).innerText;
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = event.target;
+                btn.textContent = '已复制!';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = '复制';
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+
+        // Fetch latest release version from GitHub
+        async function fetchLatestVersion() {
+            try {
+                const response = await fetch('https://api.github.com/repos/zsai001/vstats/releases/latest');
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('latest-version').textContent = data.tag_name || 'v1.0.0';
+                }
+            } catch (e) {
+                console.log('Could not fetch latest version');
+            }
+        }
+
+        // Initialize
+        fetchLatestVersion();
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+
