@@ -48,6 +48,8 @@ export interface NetworkMetrics {
   interfaces: NetworkInterface[];
   total_rx: number;
   total_tx: number;
+  rx_speed?: number;
+  tx_speed?: number;
 }
 
 export interface NetworkInterface {

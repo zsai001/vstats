@@ -75,7 +75,7 @@ export function useServerManager() {
               setSiteSettings(data.site_settings);
             }
             
-            if (data.type === 'metrics' && data.servers) {
+              if (data.type === 'metrics' && data.servers) {
               const now = Date.now();
               
               setServers(prev => {
@@ -88,7 +88,15 @@ export function useServerManager() {
                   
                   let newSpeed = existingServer?.speed || { rx_sec: 0, tx_sec: 0 };
 
-                  if (lastData && serverUpdate.metrics) {
+                  // Use pre-calculated speeds from agent if available
+                  if (serverUpdate.metrics?.network.rx_speed !== undefined && 
+                      serverUpdate.metrics?.network.tx_speed !== undefined) {
+                    newSpeed = {
+                      rx_sec: serverUpdate.metrics.network.rx_speed,
+                      tx_sec: serverUpdate.metrics.network.tx_speed
+                    };
+                  } else if (lastData && serverUpdate.metrics) {
+                    // Fallback: calculate from totals difference
                     const timeDiff = (now - lastData.time) / 1000;
                     if (timeDiff > 0) {
                       const rxDiff = serverUpdate.metrics.network.total_rx - lastData.metrics.network.total_rx;
@@ -170,7 +178,14 @@ export function useServerManager() {
           
           let newSpeed = existingLocal?.speed || { rx_sec: 0, tx_sec: 0 };
           
-          if (lastData) {
+          // Use pre-calculated speeds from agent if available
+          if (metrics.network.rx_speed !== undefined && metrics.network.tx_speed !== undefined) {
+            newSpeed = {
+              rx_sec: metrics.network.rx_speed,
+              tx_sec: metrics.network.tx_speed
+            };
+          } else if (lastData) {
+            // Fallback: calculate from totals difference
             const timeDiff = (now - lastData.time) / 1000;
             if (timeDiff > 0) {
               const rxDiff = metrics.network.total_rx - lastData.metrics.network.total_rx;

@@ -22,7 +22,7 @@ use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::ServeDir;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::config::{load_config, DB_FILE};
+use crate::config::{load_config, reset_admin_password, DB_FILE};
 use crate::db::{aggregate_daily, aggregate_hourly, cleanup_old_data, init_database};
 use crate::handlers::{
     add_server, change_password, delete_server, get_agent_script, get_all_metrics, get_history,
@@ -139,6 +139,18 @@ async fn fallback_handler(_uri: Uri) -> Response {
 
 #[tokio::main]
 async fn main() {
+    // Check for --reset-password argument
+    let args: Vec<String> = std::env::args().collect();
+    if args.iter().any(|a| a == "--reset-password") {
+        let new_password = reset_admin_password();
+        println!("\n╔════════════════════════════════════════════════════════════════╗");
+        println!("║                    🔑 PASSWORD RESET                           ║");
+        println!("╠════════════════════════════════════════════════════════════════╣");
+        println!("║  New admin password: {:<40} ║", new_password);
+        println!("╚════════════════════════════════════════════════════════════════╝\n");
+        return;
+    }
+
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer())
         .with(tracing_subscriber::EnvFilter::from_default_env())
@@ -148,7 +160,20 @@ async fn main() {
     let db = init_database().expect("Failed to initialize database");
     tracing::info!("📦 Database initialized: {}", DB_FILE);
 
-    let config = load_config();
+    let (config, initial_password) = load_config();
+    
+    // If this is first run, show the generated password
+    if let Some(password) = initial_password {
+        tracing::info!("╔════════════════════════════════════════════════════════════════╗");
+        tracing::info!("║              🎉 FIRST RUN - SAVE YOUR PASSWORD!               ║");
+        tracing::info!("╠════════════════════════════════════════════════════════════════╣");
+        tracing::info!("║  Admin password: {:<44} ║", password);
+        tracing::info!("║                                                                ║");
+        tracing::info!("║  ⚠️  Save this password! It won't be shown again.              ║");
+        tracing::info!("║  To reset: ./xprob-server --reset-password                     ║");
+        tracing::info!("╚════════════════════════════════════════════════════════════════╝");
+    }
+    
     let (tx, _) = broadcast::channel::<String>(16);
 
     let state = AppState {
@@ -299,8 +324,8 @@ async fn main() {
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
 
     tracing::info!("🚀 Server running on http://{}", addr);
-    tracing::info!("📝 Default password: admin");
     tracing::info!("📡 Agent WebSocket: ws://{}:{}/ws/agent", addr.ip(), port);
+    tracing::info!("🔑 Reset password: ./xprob-server --reset-password");
 
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();

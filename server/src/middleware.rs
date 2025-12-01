@@ -5,7 +5,7 @@ use axum::{
 };
 use jsonwebtoken::{decode, DecodingKey, Validation};
 
-use crate::config::JWT_SECRET;
+use crate::config::get_jwt_secret;
 use crate::types::Claims;
 
 pub async fn auth_middleware(
@@ -20,7 +20,7 @@ pub async fn auth_middleware(
         if let Some(token) = auth.strip_prefix("Bearer ") {
             if decode::<Claims>(
                 token,
-                &DecodingKey::from_secret(JWT_SECRET.as_bytes()),
+                &DecodingKey::from_secret(get_jwt_secret().as_bytes()),
                 &Validation::default(),
             )
             .is_ok()

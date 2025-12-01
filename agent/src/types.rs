@@ -61,6 +61,10 @@ pub struct NetworkMetrics {
     pub interfaces: Vec<NetworkInterface>,
     pub total_rx: u64,
     pub total_tx: u64,
+    #[serde(default)]
+    pub rx_speed: u64,
+    #[serde(default)]
+    pub tx_speed: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -323,11 +323,7 @@ export default function Dashboard() {
           </h1>
           <p className="text-gray-500 text-xs mt-0.5 font-mono">{siteSettings.site_description || 'Real-time Server Monitoring'}</p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="text-right">
-            <div className="text-[10px] text-gray-600 uppercase tracking-wider">Servers</div>
-            <div className="text-2xl font-bold text-white">{servers.length}</div>
-          </div>
+        <div className="flex items-center gap-3">
           {/* View Mode Toggle */}
           <button
             onClick={toggleViewMode}

@@ -11,7 +11,7 @@ use std::{collections::HashMap, time::Duration as StdDuration};
 use sysinfo::{CpuRefreshKind, Disks, Networks, System};
 
 use crate::collector::collect_metrics;
-use crate::config::{save_config, RemoteServer, SiteSettings, JWT_SECRET};
+use crate::config::{get_jwt_secret, save_config, RemoteServer, SiteSettings};
 use crate::state::AppState;
 use crate::types::{
     AddServerRequest, AgentRegisterRequest, AgentRegisterResponse, ChangePasswordRequest, Claims,
@@ -30,7 +30,8 @@ pub async fn login(
     let config = state.config.read().await;
 
     if bcrypt::verify(&req.password, &config.admin_password_hash).unwrap_or(false) {
-        let expires_at = Utc::now() + Duration::hours(24);
+        // Token valid for 7 days
+        let expires_at = Utc::now() + Duration::days(7);
         let claims = Claims {
             sub: "admin".to_string(),
             exp: expires_at.timestamp(),
@@ -39,7 +40,7 @@ pub async fn login(
         let token = encode(
             &Header::default(),
             &claims,
-            &EncodingKey::from_secret(JWT_SECRET.as_bytes()),
+            &EncodingKey::from_secret(get_jwt_secret().as_bytes()),
         )
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -64,7 +65,7 @@ pub async fn verify_token(
 
     decode::<Claims>(
         token,
-        &DecodingKey::from_secret(JWT_SECRET.as_bytes()),
+        &DecodingKey::from_secret(get_jwt_secret().as_bytes()),
         &Validation::default(),
     )
     .map_err(|_| StatusCode::UNAUTHORIZED)?;
@@ -170,7 +171,7 @@ pub async fn register_agent(
 
     decode::<Claims>(
         token,
-        &DecodingKey::from_secret(JWT_SECRET.as_bytes()),
+        &DecodingKey::from_secret(get_jwt_secret().as_bytes()),
         &Validation::default(),
     )
     .map_err(|_| StatusCode::UNAUTHORIZED)?;
@@ -416,7 +417,7 @@ pub async fn get_install_command(
 
     decode::<Claims>(
         token,
-        &DecodingKey::from_secret(JWT_SECRET.as_bytes()),
+        &DecodingKey::from_secret(get_jwt_secret().as_bytes()),
         &Validation::default(),
     )
     .map_err(|_| StatusCode::UNAUTHORIZED)?;

@@ -14,6 +14,10 @@ pub struct MetricsCollector {
     networks: Networks,
     hostname: String,
     os_info: OsInfo,
+    // Track previous network readings for speed calculation
+    last_network_rx: u64,
+    last_network_tx: u64,
+    last_network_time: std::time::Instant,
 }
 
 impl MetricsCollector {
@@ -34,12 +38,22 @@ impl MetricsCollector {
             arch: std::env::consts::ARCH.to_string(),
         };
         
+        let networks = Networks::new_with_refreshed_list();
+        
+        // Get initial network totals
+        let (init_rx, init_tx) = networks.iter().fold((0u64, 0u64), |(rx, tx), (_, data)| {
+            (rx.saturating_add(data.total_received()), tx.saturating_add(data.total_transmitted()))
+        });
+        
         Self {
             sys,
             disks: Disks::new_with_refreshed_list(),
-            networks: Networks::new_with_refreshed_list(),
+            networks,
             hostname,
             os_info,
+            last_network_rx: init_rx,
+            last_network_tx: init_tx,
+            last_network_time: std::time::Instant::now(),
         }
     }
     
@@ -51,6 +65,8 @@ impl MetricsCollector {
         self.disks.refresh();
         self.networks.refresh();
         
+        let network = self.collect_network();
+        
         SystemMetrics {
             timestamp: Utc::now(),
             hostname: self.hostname.clone(),
@@ -58,7 +74,7 @@ impl MetricsCollector {
             cpu: self.collect_cpu(),
             memory: self.collect_memory(),
             disks: self.collect_disks(),
-            network: self.collect_network(),
+            network,
             uptime: System::uptime(),
             load_average: self.collect_load_average(),
         }
@@ -131,7 +147,7 @@ impl MetricsCollector {
             .collect()
     }
     
-    fn collect_network(&self) -> NetworkMetrics {
+    fn collect_network(&mut self) -> NetworkMetrics {
         let mut total_rx: u64 = 0;
         let mut total_tx: u64 = 0;
         
@@ -153,10 +169,44 @@ impl MetricsCollector {
             })
             .collect();
         
+        // Calculate speed (bytes per second)
+        let now = std::time::Instant::now();
+        let elapsed_secs = now.duration_since(self.last_network_time).as_secs_f64();
+        
+        let (rx_speed, tx_speed) = if elapsed_secs > 0.1 {
+            // Only calculate if enough time has passed
+            let rx_diff = total_rx.saturating_sub(self.last_network_rx);
+            let tx_diff = total_tx.saturating_sub(self.last_network_tx);
+            
+            // If totals went down (counter reset), use 0 for this interval
+            let rx_speed = if total_rx >= self.last_network_rx {
+                (rx_diff as f64 / elapsed_secs) as u64
+            } else {
+                0
+            };
+            let tx_speed = if total_tx >= self.last_network_tx {
+                (tx_diff as f64 / elapsed_secs) as u64
+            } else {
+                0
+            };
+            
+            // Update tracking
+            self.last_network_rx = total_rx;
+            self.last_network_tx = total_tx;
+            self.last_network_time = now;
+            
+            (rx_speed, tx_speed)
+        } else {
+            // Not enough time passed, return 0 to avoid spikes
+            (0, 0)
+        };
+        
         NetworkMetrics {
             interfaces,
             total_rx,
             total_tx,
+            rx_speed,
+            tx_speed,
         }
     }
     
