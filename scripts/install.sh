@@ -43,8 +43,13 @@ success() { echo -e "${GREEN}[OK]${NC} $1"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 
-# Check if running as root
+# Check if running as root (skip on macOS)
 check_root() {
+    if [ "$OS" = "darwin" ]; then
+        # macOS doesn't need root for most operations
+        return 0
+    fi
+    
     if [ "$EUID" -ne 0 ]; then
         error "Please run as root (use sudo)"
     fi
@@ -123,6 +128,13 @@ install_deps() {
 # Create installation directory
 setup_dirs() {
     info "Setting up directories..."
+    
+    # On macOS, use user directory if not root
+    if [ "$OS" = "darwin" ] && [ "$EUID" -ne 0 ]; then
+        INSTALL_DIR="$HOME/.vstats"
+        info "Using user directory: $INSTALL_DIR"
+    fi
+    
     mkdir -p "$INSTALL_DIR"
     mkdir -p "$INSTALL_DIR/data"
     mkdir -p "$INSTALL_DIR/web"
@@ -199,8 +211,8 @@ EOF
     fi
 }
 
-# Create systemd service
-create_service() {
+# Create systemd service (Linux)
+create_systemd_service() {
     info "Creating systemd service..."
     
     cat > /etc/systemd/system/$SERVICE_NAME.service << EOF
@@ -230,8 +242,71 @@ EOF
     success "Service created and started"
 }
 
+# Create launchd service (macOS)
+create_launchd_service() {
+    info "Creating launchd service..."
+    
+    PLIST_FILE="$HOME/Library/LaunchAgents/com.vstats.server.plist"
+    mkdir -p "$HOME/Library/LaunchAgents"
+    
+    cat > "$PLIST_FILE" << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.vstats.server</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>$INSTALL_DIR/vstats-server</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>$INSTALL_DIR/data</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>$INSTALL_DIR/data/vstats.log</string>
+    <key>StandardErrorPath</key>
+    <string>$INSTALL_DIR/data/vstats.error.log</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>RUST_LOG</key>
+        <string>info</string>
+        <key>VSTATS_PORT</key>
+        <string>$DEFAULT_PORT</string>
+        <key>VSTATS_WEB_DIR</key>
+        <string>$INSTALL_DIR/web</string>
+    </dict>
+</dict>
+</plist>
+EOF
+
+    # Load the service
+    launchctl unload "$PLIST_FILE" 2>/dev/null || true
+    launchctl load "$PLIST_FILE"
+    
+    success "Service created and started"
+}
+
+# Create service (OS-agnostic wrapper)
+create_service() {
+    if [ "$OS" = "darwin" ]; then
+        create_launchd_service
+    else
+        create_systemd_service
+    fi
+}
+
 # Configure firewall
 configure_firewall() {
+    if [ "$OS" = "darwin" ]; then
+        # macOS firewall is usually managed through System Preferences
+        warn "macOS firewall: Please manually allow port $DEFAULT_PORT in System Preferences > Security & Privacy > Firewall"
+        return
+    fi
+    
     info "Configuring firewall..."
     
     if command -v ufw &> /dev/null; then
@@ -248,7 +323,11 @@ configure_firewall() {
 
 # Print completion message
 print_complete() {
-    LOCAL_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || curl -s ifconfig.me 2>/dev/null || echo "your-server-ip")
+    if [ "$OS" = "darwin" ]; then
+        LOCAL_IP=$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || echo "localhost")
+    else
+        LOCAL_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || curl -s ifconfig.me 2>/dev/null || echo "your-server-ip")
+    fi
     
     echo ""
     echo -e "${GREEN}╔═══════════════════════════════════════════════════════════╗${NC}"
@@ -267,10 +346,17 @@ print_complete() {
     echo -e "  ${WHITE}  --token \"your-token\"${NC}"
     echo ""
     echo -e "  ${CYAN}Service Commands:${NC}"
-    echo "    systemctl status $SERVICE_NAME   # Check status"
-    echo "    systemctl restart $SERVICE_NAME  # Restart"
-    echo "    systemctl stop $SERVICE_NAME     # Stop"
-    echo "    journalctl -u $SERVICE_NAME -f   # View logs"
+    if [ "$OS" = "darwin" ]; then
+        echo "    launchctl list | grep vstats        # Check status"
+        echo "    launchctl unload ~/Library/LaunchAgents/com.vstats.server.plist  # Stop"
+        echo "    launchctl load ~/Library/LaunchAgents/com.vstats.server.plist    # Start"
+        echo "    tail -f $INSTALL_DIR/data/vstats.log  # View logs"
+    else
+        echo "    systemctl status $SERVICE_NAME   # Check status"
+        echo "    systemctl restart $SERVICE_NAME  # Restart"
+        echo "    systemctl stop $SERVICE_NAME     # Stop"
+        echo "    journalctl -u $SERVICE_NAME -f   # View logs"
+    fi
     echo ""
     echo -e "  ${CYAN}Documentation:${NC} https://vstats.zsoft.cc"
     echo ""
@@ -280,10 +366,16 @@ print_complete() {
 uninstall() {
     echo -e "${YELLOW}Uninstalling vStats...${NC}"
     
-    systemctl stop $SERVICE_NAME 2>/dev/null || true
-    systemctl disable $SERVICE_NAME 2>/dev/null || true
-    rm -f /etc/systemd/system/$SERVICE_NAME.service
-    systemctl daemon-reload
+    if [ "$OS" = "darwin" ]; then
+        PLIST_FILE="$HOME/Library/LaunchAgents/com.vstats.server.plist"
+        launchctl unload "$PLIST_FILE" 2>/dev/null || true
+        rm -f "$PLIST_FILE"
+    else
+        systemctl stop $SERVICE_NAME 2>/dev/null || true
+        systemctl disable $SERVICE_NAME 2>/dev/null || true
+        rm -f /etc/systemd/system/$SERVICE_NAME.service
+        systemctl daemon-reload
+    fi
     
     read -p "Remove all data? (y/N) " -n 1 -r
     echo
@@ -317,14 +409,23 @@ upgrade() {
         info "Upgrading from $CURRENT_VERSION to $LATEST_VERSION"
     fi
     
-    systemctl stop $SERVICE_NAME 2>/dev/null || true
+    if [ "$OS" = "darwin" ]; then
+        PLIST_FILE="$HOME/Library/LaunchAgents/com.vstats.server.plist"
+        launchctl unload "$PLIST_FILE" 2>/dev/null || true
+    else
+        systemctl stop $SERVICE_NAME 2>/dev/null || true
+    fi
     
     download_binary
     download_web
     
     echo "$LATEST_VERSION" > "$INSTALL_DIR/version"
     
-    systemctl start $SERVICE_NAME
+    if [ "$OS" = "darwin" ]; then
+        launchctl load "$PLIST_FILE" 2>/dev/null || true
+    else
+        systemctl start $SERVICE_NAME
+    fi
     
     success "Upgraded to $LATEST_VERSION"
     exit 0
@@ -347,10 +448,12 @@ main() {
     # Handle flags
     case "$1" in
         uninstall|--uninstall|-u)
+            detect_system
             check_root
             uninstall
             ;;
         upgrade|--upgrade)
+            detect_system
             check_root
             upgrade
             ;;
@@ -359,8 +462,8 @@ main() {
             ;;
     esac
     
-    check_root
     detect_system
+    check_root
     get_latest_version
     install_deps
     setup_dirs

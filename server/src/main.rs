@@ -1,8 +1,8 @@
 use axum::{
     extract::{ws::{Message, WebSocket, WebSocketUpgrade}, State},
-    http::{Method, StatusCode, header},
+    http::{Method, StatusCode, Uri, header},
     middleware::{self, Next},
-    response::{IntoResponse, Response},
+    response::{IntoResponse, Response, Html},
     routing::{get, post, delete},
     Json, Router,
 };
@@ -14,14 +14,15 @@ use std::{collections::HashMap, fs, net::SocketAddr, path::PathBuf, sync::Arc, t
 use sysinfo::{CpuRefreshKind, Disks, Networks, System};
 use tokio::sync::{broadcast, RwLock};
 use tower_http::cors::{Any, CorsLayer};
+use tower_http::services::ServeDir;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 // ============================================================================
 // Configuration
 // ============================================================================
 
-const JWT_SECRET: &str = "xprob-super-secret-key-change-in-production";
-const CONFIG_FILE: &str = "xprob-config.json";
+const JWT_SECRET: &str = "vstats-super-secret-key-change-in-production";
+const CONFIG_FILE: &str = "vstats-config.json";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
@@ -466,6 +467,140 @@ async fn health_check() -> &'static str {
 }
 
 // ============================================================================
+// Static File Serving
+// ============================================================================
+
+// Embedded index.html as fallback
+const EMBEDDED_INDEX_HTML: &str = r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>vStats - Server Monitor</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      color: #e8e8e8; min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .container { text-align: center; padding: 2rem; }
+    h1 { font-size: 3rem; margin-bottom: 1rem; background: linear-gradient(90deg, #00d9ff, #00ff88); 
+         -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    p { color: #888; margin-bottom: 2rem; }
+    .status { background: rgba(0,217,255,0.1); border: 1px solid rgba(0,217,255,0.3);
+              border-radius: 12px; padding: 2rem; margin-top: 2rem; }
+    .status h2 { color: #00d9ff; margin-bottom: 1rem; }
+    code { background: rgba(0,0,0,0.3); padding: 0.5rem 1rem; border-radius: 6px; 
+           display: block; margin: 0.5rem 0; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>vStats</h1>
+    <p>Server Monitoring Dashboard</p>
+    <div class="status">
+      <h2>Server is Running</h2>
+      <p>Web assets not found. API is available at:</p>
+      <code>GET /api/metrics</code>
+      <code>GET /health</code>
+      <code>WS /ws</code>
+      <p style="margin-top: 1rem; font-size: 0.85rem; color: #666;">
+        To serve the web UI, place web assets in the web directory or set VSTATS_WEB_DIR
+      </p>
+    </div>
+  </div>
+</body>
+</html>"#;
+
+fn get_web_dir() -> PathBuf {
+    // Check environment variable first
+    if let Ok(dir) = std::env::var("VSTATS_WEB_DIR") {
+        let path = PathBuf::from(&dir);
+        if path.exists() && path.join("index.html").exists() {
+            return path;
+        }
+        // Try subdirectories
+        let dist = path.join("dist");
+        if dist.exists() && dist.join("index.html").exists() {
+            return dist;
+        }
+    }
+    
+    // Get executable path and try to find web directory relative to it
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            // Try relative to executable
+            let candidates = [
+                exe_dir.join("../web/dist"),
+                exe_dir.join("web/dist"),
+                exe_dir.join("../../web/dist"),
+                exe_dir.join("../dist"),
+            ];
+            
+            for path in &candidates {
+                if path.exists() && path.join("index.html").exists() {
+                    return path.clone();
+                }
+            }
+        }
+    }
+    
+    // Check common locations (relative to current working directory)
+    let candidates = [
+        PathBuf::from("./web/dist"),
+        PathBuf::from("./web"),
+        PathBuf::from("./dist"),
+        PathBuf::from("../web/dist"),
+        PathBuf::from("../../web/dist"),
+    ];
+    
+    for path in &candidates {
+        if path.exists() && path.join("index.html").exists() {
+            return path.clone();
+        }
+    }
+    
+    // Check absolute paths (for installed version)
+    let absolute_candidates = [
+        PathBuf::from("/opt/vstats/web/dist"),
+        PathBuf::from("/opt/vstats/web"),
+        PathBuf::from(format!("{}/.vstats/web/dist", std::env::var("HOME").unwrap_or_default())),
+    ];
+    
+    for path in &absolute_candidates {
+        if path.exists() && path.join("index.html").exists() {
+            return path.clone();
+        }
+    }
+    
+    // Return default even if it doesn't exist (will use fallback HTML)
+    PathBuf::from("./web/dist")
+}
+
+async fn fallback_handler(uri: Uri) -> Response {
+    let web_dir = get_web_dir();
+    let web_dir_abs = web_dir.canonicalize().unwrap_or_else(|_| web_dir.clone());
+    let index_path = web_dir_abs.join("index.html");
+    
+    // For SPA routing, serve index.html for all non-asset paths
+    if index_path.exists() {
+        if let Ok(content) = tokio::fs::read_to_string(&index_path).await {
+            tracing::debug!("Serving index.html from: {:?}", index_path);
+            return Html(content).into_response();
+        } else {
+            tracing::warn!("Failed to read index.html from: {:?}", index_path);
+        }
+    } else {
+        tracing::debug!("index.html not found at: {:?}, using fallback", index_path);
+    }
+    
+    // Return embedded fallback
+    Html(EMBEDDED_INDEX_HTML).into_response()
+}
+
+// ============================================================================
 // Installation Script Handlers
 // ============================================================================
 
@@ -611,6 +746,25 @@ async fn main() {
         .route("/api/auth/password", post(change_password))
         .layer(middleware::from_fn(auth_middleware));
 
+    // Get web directory for static file serving
+    let web_dir = get_web_dir();
+    let web_dir_abs = web_dir.canonicalize().unwrap_or_else(|_| web_dir.clone());
+    tracing::info!("📁 Web directory: {:?}", web_dir_abs);
+    
+    // Check if index.html exists
+    let index_path = web_dir_abs.join("index.html");
+    if index_path.exists() {
+        tracing::info!("✅ Found index.html at: {:?}", index_path);
+    } else {
+        tracing::warn!("⚠️  index.html not found at: {:?}, will use fallback", index_path);
+    }
+    
+    // Static file service with fallback to index.html for SPA
+    let serve_dir = ServeDir::new(&web_dir_abs)
+        .not_found_service(tower::service_fn(|req: axum::http::Request<axum::body::Body>| async move {
+            Ok::<_, std::convert::Infallible>(fallback_handler(req.uri().clone()).await)
+        }));
+
     // Public routes
     let app = Router::new()
         .route("/health", get(health_check))
@@ -623,9 +777,15 @@ async fn main() {
         .route("/ws", get(ws_handler))
         .merge(protected_routes)
         .layer(cors)
-        .with_state(state);
+        .with_state(state)
+        .fallback_service(serve_dir);
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3001));
+    let port: u16 = std::env::var("VSTATS_PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(3001);
+    
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
     tracing::info!("🚀 Server running on http://{}", addr);
     tracing::info!("📝 Default password: admin");
 
