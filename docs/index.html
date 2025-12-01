@@ -759,16 +759,27 @@
                     <div id="agent-panel" class="install-panel">
                         <div class="code-block">
                             <div class="code-header">
-                                <span>bash</span>
+                                <span>bash - Rust Agent (推荐)</span>
                                 <button class="copy-btn" onclick="copyCode('agent-code')">复制</button>
                             </div>
-                            <pre><code id="agent-code"><span class="comment"># 在需要监控的服务器上运行</span>
+                            <pre><code id="agent-code"><span class="comment"># 下载 Rust Agent 二进制</span>
+<span class="command">curl -fsSL https://github.com/zsai001/vstats/releases/latest/download/vstats-agent-linux-x86_64-gnu -o vstats-agent
+chmod +x vstats-agent</span>
+
+<span class="comment"># 注册并安装为服务</span>
+<span class="command">sudo ./vstats-agent register --server http://YOUR_DASHBOARD_IP:3001 --token "YOUR_TOKEN"
+sudo ./vstats-agent install</span></code></pre>
+                        </div>
+                        <div class="code-block" style="border-top: 1px solid var(--border);">
+                            <div class="code-header">
+                                <span>bash - Shell Agent (轻量)</span>
+                                <button class="copy-btn" onclick="copyCode('agent-code-shell')">复制</button>
+                            </div>
+                            <pre><code id="agent-code-shell"><span class="comment"># 或使用 Shell 脚本安装</span>
 <span class="command">curl -fsSL https://vstats.zsoft.cc/agent.sh | sudo bash -s -- \
   --server http://YOUR_DASHBOARD_IP:3001 \
   --name "$(hostname)" \
-  --token "YOUR_TOKEN"</span>
-
-<span class="comment"># 可选参数: --location "US" --provider "Vultr"</span></code></pre>
+  --token "YOUR_TOKEN"</span></code></pre>
                         </div>
                     </div>
                     <div id="docker-panel" class="install-panel">

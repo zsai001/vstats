@@ -1,0 +1,53 @@
+[package]
+name = "vstats-agent"
+version = "1.0.0"
+edition = "2021"
+description = "vStats Monitoring Agent - Push metrics to dashboard"
+authors = ["vStats"]
+license = "MIT"
+
+[[bin]]
+name = "vstats-agent"
+path = "src/main.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# WebSocket client
+tokio-tungstenite = { version = "0.21", features = ["native-tls"] }
+futures-util = "0.3"
+
+# System metrics
+sysinfo = "0.31"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# CLI arguments
+clap = { version = "4", features = ["derive"] }
+
+# HTTP client (for registration)
+reqwest = { version = "0.11", features = ["json", "native-tls"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# URL parsing
+url = "2"
+
+# Config file
+dirs = "5"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+

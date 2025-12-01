@@ -280,20 +280,32 @@ create_shell_agent() {
 # vStats Shell Agent - Push metrics to dashboard via WebSocket
 
 CONFIG_FILE="/opt/vstats-agent/config.json"
+RECONNECT_DELAY=5
+MAX_RECONNECT_DELAY=60
 
 # Load config
-if [ -f "$CONFIG_FILE" ]; then
-    DASHBOARD_URL=$(grep -o '"dashboard_url":"[^"]*"' "$CONFIG_FILE" | cut -d'"' -f4)
-    SERVER_ID=$(grep -o '"server_id":"[^"]*"' "$CONFIG_FILE" | cut -d'"' -f4)
-    AGENT_TOKEN=$(grep -o '"agent_token":"[^"]*"' "$CONFIG_FILE" | cut -d'"' -f4)
-else
-    echo "[ERROR] Config file not found: $CONFIG_FILE"
+load_config() {
+    if [ -f "$CONFIG_FILE" ]; then
+        DASHBOARD_URL=$(grep -o '"dashboard_url":"[^"]*"' "$CONFIG_FILE" | cut -d'"' -f4)
+        SERVER_ID=$(grep -o '"server_id":"[^"]*"' "$CONFIG_FILE" | cut -d'"' -f4)
+        AGENT_TOKEN=$(grep -o '"agent_token":"[^"]*"' "$CONFIG_FILE" | cut -d'"' -f4)
+        return 0
+    else
+        echo "[ERROR] Config file not found: $CONFIG_FILE"
+        return 1
+    fi
+}
+
+if ! load_config; then
     exit 1
 fi
 
 # Convert HTTP URL to WebSocket URL
-WS_URL=$(echo "$DASHBOARD_URL" | sed 's|^http://|ws://|; s|^https://|wss://|')
-WS_URL="${WS_URL}/ws/agent"
+get_ws_url() {
+    echo "$DASHBOARD_URL" | sed 's|^http://|ws://|; s|^https://|wss://|'
+}
+
+WS_URL="$(get_ws_url)/ws/agent"
 
 echo "[INFO] Dashboard URL: $DASHBOARD_URL"
 echo "[INFO] WebSocket URL: $WS_URL"
@@ -306,19 +318,34 @@ collect_metrics() {
     ARCH=$(uname -m)
     UPTIME=$(cat /proc/uptime 2>/dev/null | cut -d' ' -f1 | cut -d'.' -f1 || echo "0")
     
-    # CPU
-    CPU_USAGE=$(top -bn1 2>/dev/null | grep "Cpu(s)" | awk '{print $2}' | cut -d'%' -f1 || echo "0")
+    # CPU - more robust parsing
+    CPU_USAGE=$(top -bn1 2>/dev/null | grep -E "^%?Cpu|^CPU" | head -1 | sed 's/,/./g' | awk '{
+        for(i=1;i<=NF;i++) {
+            if($i ~ /^[0-9.]+$/ && $(i+1) ~ /us|user/) { print $i; exit }
+            if($i ~ /us|user/ && $(i-1) ~ /^[0-9.]+$/) { print $(i-1); exit }
+        }
+        # Fallback: try to find first number
+        for(i=1;i<=NF;i++) {
+            if($i ~ /^[0-9.]+$/) { print $i; exit }
+        }
+    }' || echo "0")
+    
+    # Ensure CPU_USAGE is a valid number
+    if [ -z "$CPU_USAGE" ] || ! echo "$CPU_USAGE" | grep -qE '^[0-9.]+$'; then
+        CPU_USAGE="0"
+    fi
+    
     CPU_CORES=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo "1")
-    CPU_BRAND=$(cat /proc/cpuinfo 2>/dev/null | grep "model name" | head -1 | cut -d':' -f2 | sed 's/^ //' || echo "Unknown")
+    CPU_BRAND=$(cat /proc/cpuinfo 2>/dev/null | grep "model name" | head -1 | cut -d':' -f2 | sed 's/^ //; s/"/\\"/g' || echo "Unknown")
     
     # Memory
     if [ -f /proc/meminfo ]; then
-        MEM_TOTAL=$(grep MemTotal /proc/meminfo | awk '{print $2 * 1024}')
-        MEM_AVAILABLE=$(grep MemAvailable /proc/meminfo | awk '{print $2 * 1024}')
+        MEM_TOTAL=$(awk '/MemTotal/ {print $2 * 1024}' /proc/meminfo)
+        MEM_AVAILABLE=$(awk '/MemAvailable/ {print $2 * 1024}' /proc/meminfo)
         MEM_USED=$((MEM_TOTAL - MEM_AVAILABLE))
         MEM_PERCENT=$(awk "BEGIN {printf \"%.1f\", ($MEM_USED / $MEM_TOTAL) * 100}")
-        SWAP_TOTAL=$(grep SwapTotal /proc/meminfo | awk '{print $2 * 1024}')
-        SWAP_FREE=$(grep SwapFree /proc/meminfo | awk '{print $2 * 1024}')
+        SWAP_TOTAL=$(awk '/SwapTotal/ {print $2 * 1024}' /proc/meminfo)
+        SWAP_FREE=$(awk '/SwapFree/ {print $2 * 1024}' /proc/meminfo)
         SWAP_USED=$((SWAP_TOTAL - SWAP_FREE))
     else
         MEM_TOTAL=$(sysctl -n hw.memsize 2>/dev/null || echo "0")
@@ -387,49 +414,124 @@ collect_metrics() {
         fi
     fi
     
-    # Output JSON
-    cat << EOF
-{
-  "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "hostname": "$HOSTNAME",
-  "os": {"name": "$OS_NAME", "version": "$OS_VERSION", "kernel": "$OS_VERSION", "arch": "$ARCH"},
-  "cpu": {"brand": "$CPU_BRAND", "cores": $CPU_CORES, "usage": ${CPU_USAGE:-0}, "frequency": 0, "per_core": $PER_CORE},
-  "memory": {"total": ${MEM_TOTAL:-0}, "used": ${MEM_USED:-0}, "available": ${MEM_AVAILABLE:-0}, "swap_total": ${SWAP_TOTAL:-0}, "swap_used": ${SWAP_USED:-0}, "usage_percent": ${MEM_PERCENT:-0}},
-  "disks": [{"name": "/", "mount_point": "/", "fs_type": "ext4", "total": ${DISK_TOTAL:-0}, "used": ${DISK_USED:-0}, "available": ${DISK_AVAIL:-0}, "usage_percent": ${DISK_PERCENT:-0}}],
-  "network": {"interfaces": $NET_INTERFACES, "total_rx": $NET_RX, "total_tx": $NET_TX},
-  "uptime": ${UPTIME:-0},
-  "load_average": {"one": ${LOAD_1:-0}, "five": ${LOAD_5:-0}, "fifteen": ${LOAD_15:-0}}
-}
-EOF
+    # Output JSON (compact, single line for WebSocket)
+    printf '{"timestamp":"%s","hostname":"%s","os":{"name":"%s","version":"%s","kernel":"%s","arch":"%s"},"cpu":{"brand":"%s","cores":%s,"usage":%s,"frequency":0,"per_core":%s},"memory":{"total":%s,"used":%s,"available":%s,"swap_total":%s,"swap_used":%s,"usage_percent":%s},"disks":[{"name":"/","mount_point":"/","fs_type":"ext4","total":%s,"used":%s,"available":%s,"usage_percent":%s}],"network":{"interfaces":%s,"total_rx":%s,"total_tx":%s},"uptime":%s,"load_average":{"one":%s,"five":%s,"fifteen":%s}}' \
+        "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+        "$HOSTNAME" \
+        "$OS_NAME" \
+        "$OS_VERSION" \
+        "$OS_VERSION" \
+        "$ARCH" \
+        "$CPU_BRAND" \
+        "${CPU_CORES:-1}" \
+        "${CPU_USAGE:-0}" \
+        "$PER_CORE" \
+        "${MEM_TOTAL:-0}" \
+        "${MEM_USED:-0}" \
+        "${MEM_AVAILABLE:-0}" \
+        "${SWAP_TOTAL:-0}" \
+        "${SWAP_USED:-0}" \
+        "${MEM_PERCENT:-0}" \
+        "${DISK_TOTAL:-0}" \
+        "${DISK_USED:-0}" \
+        "${DISK_AVAIL:-0}" \
+        "${DISK_PERCENT:-0}" \
+        "$NET_INTERFACES" \
+        "$NET_RX" \
+        "$NET_TX" \
+        "${UPTIME:-0}" \
+        "${LOAD_1:-0}" \
+        "${LOAD_5:-0}" \
+        "${LOAD_15:-0}"
 }
 
 # WebSocket client using websocat or curl
 send_to_dashboard() {
     if command -v websocat &> /dev/null; then
-        websocat_agent
+        websocat_agent_loop
     else
         curl_agent
     fi
 }
 
-# Agent using websocat
-websocat_agent() {
-    echo "[INFO] Starting WebSocket agent with websocat..."
+# Agent using websocat with reconnection loop
+websocat_agent_loop() {
+    local delay=$RECONNECT_DELAY
     
-    {
-        # Send auth message
-        echo "{\"type\":\"auth\",\"server_id\":\"$SERVER_ID\",\"token\":\"$AGENT_TOKEN\"}"
-        sleep 1
+    while true; do
+        echo "[INFO] Connecting to WebSocket at $WS_URL..."
+        websocat_agent
+        local exit_code=$?
         
-        # Continuously send metrics
-        while true; do
-            METRICS=$(collect_metrics)
-            echo "{\"type\":\"metrics\",\"metrics\":$METRICS}"
-            sleep 1
-        done
-    } | websocat -t "$WS_URL" 2>&1 | while read line; do
-        echo "[WS] $line"
+        echo "[WARN] WebSocket connection closed (exit code: $exit_code)"
+        echo "[INFO] Reconnecting in ${delay}s..."
+        sleep $delay
+        
+        # Exponential backoff with max delay
+        delay=$((delay * 2))
+        if [ $delay -gt $MAX_RECONNECT_DELAY ]; then
+            delay=$MAX_RECONNECT_DELAY
+        fi
+        
+        # Reload config in case it changed
+        load_config
+        WS_URL="$(get_ws_url)/ws/agent"
     done
+}
+
+# Single WebSocket connection attempt
+websocat_agent() {
+    echo "[INFO] Starting WebSocket session..."
+    
+    # Create a named pipe for bidirectional communication
+    PIPE_DIR=$(mktemp -d)
+    SEND_PIPE="$PIPE_DIR/send"
+    mkfifo "$SEND_PIPE"
+    
+    # Cleanup on exit
+    cleanup() {
+        rm -rf "$PIPE_DIR" 2>/dev/null
+    }
+    trap cleanup EXIT
+    
+    # Start websocat in background, reading from pipe
+    websocat -t "$WS_URL" < "$SEND_PIPE" 2>&1 &
+    WS_PID=$!
+    
+    # Open pipe for writing (keep it open)
+    exec 3>"$SEND_PIPE"
+    
+    # Send auth message
+    echo "[INFO] Sending auth message..."
+    printf '{"type":"auth","server_id":"%s","token":"%s"}\n' "$SERVER_ID" "$AGENT_TOKEN" >&3
+    
+    # Wait a moment for auth response
+    sleep 2
+    
+    # Check if websocat is still running
+    if ! kill -0 $WS_PID 2>/dev/null; then
+        echo "[ERROR] WebSocket connection failed - server may have rejected authentication"
+        exec 3>&-
+        wait $WS_PID 2>/dev/null
+        return 1
+    fi
+    
+    echo "[INFO] Connected! Sending metrics..."
+    
+    # Continuously send metrics
+    while kill -0 $WS_PID 2>/dev/null; do
+        METRICS=$(collect_metrics)
+        if ! printf '{"type":"metrics","metrics":%s}\n' "$METRICS" >&3 2>/dev/null; then
+            echo "[ERROR] Failed to send metrics - connection may be closed"
+            break
+        fi
+        sleep 1
+    done
+    
+    # Cleanup
+    exec 3>&-
+    wait $WS_PID 2>/dev/null
+    return 1
 }
 
 # Fallback agent using curl (less reliable)
@@ -456,6 +558,7 @@ curl_agent() {
 }
 
 echo "[INFO] Starting vStats agent..."
+echo "[INFO] Press Ctrl+C to stop"
 send_to_dashboard
 AGENT_SCRIPT
 

@@ -1,6 +1,7 @@
 server/target
 server/*.db
 server/*-config.json
+agent/target
 test-data/
 test-web/
 web/node_modules/
