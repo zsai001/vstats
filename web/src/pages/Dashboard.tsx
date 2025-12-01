@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useServerManager, formatBytes, formatSpeed, formatUptime, type ServerState } from '../hooks/useMetrics';
+import { useServerManager, formatSpeed, formatUptime, type ServerState } from '../hooks/useMetrics';
 import { getOsIcon, getProviderIcon } from '../components/Icons';
 
 const FLAGS: Record<string, string> = {

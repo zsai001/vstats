@@ -24,7 +24,7 @@ export interface ServerState {
 }
 
 // Initial fake data for demo servers
-const createFakeMetrics = (id: string, name: string): SystemMetrics => ({
+const createFakeMetrics = (_id: string, name: string): SystemMetrics => ({
   timestamp: new Date().toISOString(),
   hostname: name,
   os: { name: 'Ubuntu', version: '22.04 LTS', kernel: '5.15.0', arch: 'x86_64' },
