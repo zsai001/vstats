@@ -14,8 +14,8 @@ path = "src/main.rs"
 # Async runtime
 tokio = { version = "1", features = ["full"] }
 
-# WebSocket client
-tokio-tungstenite = { version = "0.21", features = ["native-tls"] }
+# WebSocket client (use rustls to avoid OpenSSL dependency)
+tokio-tungstenite = { version = "0.21", features = ["rustls-tls-native-roots"] }
 futures-util = "0.3"
 
 # System metrics
@@ -28,8 +28,8 @@ serde_json = "1"
 # CLI arguments
 clap = { version = "4", features = ["derive"] }
 
-# HTTP client (for registration)
-reqwest = { version = "0.11", features = ["json", "native-tls"] }
+# HTTP client (use rustls to avoid OpenSSL dependency)
+reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls"] }
 
 # Logging
 tracing = "0.1"
