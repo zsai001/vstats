@@ -127,7 +127,7 @@ build_server() {
         cargo build --release --target "$target"
     fi
     
-    local binary_path="target/$target/release/xprob-server"
+    local binary_path="target/$target/release/vstats-server"
     
     if [ -f "$binary_path" ]; then
         mkdir -p "$RELEASE_DIR"
