@@ -821,8 +821,10 @@ export default function ServerDetail() {
               <div key={i}>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-300 font-mono">{disk.name || disk.mount_point}</span>
-                    <span className="text-[10px] text-gray-600 px-1.5 py-0.5 rounded bg-white/5">{disk.fs_type}</span>
+                    <span className="text-sm text-gray-300 font-mono">{disk.model || disk.name}</span>
+                    {disk.disk_type && (
+                      <span className="text-[10px] text-gray-600 px-1.5 py-0.5 rounded bg-white/5">{disk.disk_type}</span>
+                    )}
                   </div>
                   <span className={`text-lg font-bold font-mono ${disk.usage_percent > 90 ? 'text-red-400' : 'text-amber-400'}`}>
                     {disk.usage_percent.toFixed(1)}%
@@ -836,7 +838,7 @@ export default function ServerDetail() {
                 </div>
                 <div className="flex justify-between text-xs text-gray-500">
                   <span>{formatBytes(disk.used)} used</span>
-                  <span>{formatBytes(disk.available)} free</span>
+                  <span>{formatBytes(disk.total - disk.used)} free</span>
                   <span>{formatBytes(disk.total)} total</span>
                 </div>
               </div>
