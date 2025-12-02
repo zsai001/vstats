@@ -44,25 +44,25 @@
 
 .light-theme {
   --bg-primary: #f1f5f9;
-  --bg-secondary: rgba(255, 255, 255, 0.92);
-  --bg-secondary-hover: rgba(255, 255, 255, 0.96);
-  --bg-tertiary: rgba(0, 0, 0, 0.02);
-  --bg-card: rgba(255, 255, 255, 0.9);
-  --bg-input: rgba(0, 0, 0, 0.06);
+  --bg-secondary: rgba(255, 255, 255, 0.95);
+  --bg-secondary-hover: rgba(255, 255, 255, 0.98);
+  --bg-tertiary: rgba(0, 0, 0, 0.03);
+  --bg-card: rgba(255, 255, 255, 0.95);
+  --bg-input: rgba(0, 0, 0, 0.08);
   
   --text-primary: #0f172a;
-  --text-secondary: #334155;
-  --text-tertiary: #475569;
-  --text-muted: #64748b;
+  --text-secondary: #1e293b;
+  --text-tertiary: #334155;
+  --text-muted: #475569;
   
-  --border-primary: rgba(0, 0, 0, 0.08);
-  --border-secondary: rgba(0, 0, 0, 0.12);
-  --border-hover: rgba(0, 0, 0, 0.2);
+  --border-primary: rgba(0, 0, 0, 0.12);
+  --border-secondary: rgba(0, 0, 0, 0.16);
+  --border-hover: rgba(0, 0, 0, 0.24);
   
   --overlay-bg: rgba(241, 245, 249, 0.7);
   --backdrop-blur: blur(16px);
   
-  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.08);
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.12);
   
   color-scheme: light;
 }
@@ -128,6 +128,10 @@ body::before {
 .nezha-progress-track {
   @apply h-1.5 w-full rounded-full overflow-hidden;
   background: rgba(128, 128, 128, 0.2);
+}
+
+.light-theme .nezha-progress-track {
+  background: rgba(0, 0, 0, 0.15);
 }
 
 .nezha-progress-bar {
@@ -311,39 +315,43 @@ input::placeholder {
 }
 
 .light-theme .text-gray-400 {
-  color: #475569 !important;
+  color: #334155 !important; /* Darker for better contrast */
 }
 
 .light-theme .text-gray-500 {
-  color: #64748b !important;
+  color: #475569 !important; /* Darker for better contrast */
 }
 
 .light-theme .text-gray-600 {
-  color: #94a3b8 !important;
+  color: #334155 !important; /* Darker for better contrast */
+}
+
+.light-theme .text-gray-700 {
+  color: #1e293b !important; /* Darker for better contrast */
 }
 
 .light-theme .bg-white\/5 {
-  background-color: rgba(0, 0, 0, 0.04);
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 .light-theme .bg-white\/10 {
-  background-color: rgba(0, 0, 0, 0.06);
+  background-color: rgba(0, 0, 0, 0.08);
 }
 
 .light-theme .bg-white\/\[0\.02\] {
-  background-color: rgba(0, 0, 0, 0.02);
+  background-color: rgba(0, 0, 0, 0.04);
 }
 
 .light-theme .border-white\/5 {
-  border-color: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.1);
 }
 
 .light-theme .border-white\/10 {
-  border-color: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.12);
 }
 
 .light-theme .border-white\/20 {
-  border-color: rgba(0, 0, 0, 0.12);
+  border-color: rgba(0, 0, 0, 0.18);
 }
 
 .light-theme .hover\:text-white:hover {
@@ -351,11 +359,11 @@ input::placeholder {
 }
 
 .light-theme .bg-gray-700\/50 {
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: rgba(0, 0, 0, 0.15);
 }
 
 .light-theme .bg-gray-800\/50 {
-  background-color: rgba(0, 0, 0, 0.08);
+  background-color: rgba(0, 0, 0, 0.12);
 }
 
 .light-theme .bg-black\/40 {
@@ -367,11 +375,27 @@ input::placeholder {
 }
 
 .light-theme .hover\:bg-white\/10:hover {
-  background-color: rgba(0, 0, 0, 0.08);
+  background-color: rgba(0, 0, 0, 0.1);
 }
 
 .light-theme .hover\:bg-white\/20:hover {
-  background-color: rgba(0, 0, 0, 0.12);
+  background-color: rgba(0, 0, 0, 0.15);
+}
+
+/* Improve contrast for light theme text colors */
+.light-theme .text-gray-300 {
+  color: #1e293b !important; /* Much darker for better contrast */
+}
+
+/* Improve skeleton/loading states in light theme */
+.light-theme .skeleton-bg {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* Improve card shadows in light theme for better depth */
+.light-theme .nezha-card {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.12);
 }
 
 /* Social icons styling */
