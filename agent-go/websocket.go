@@ -3,7 +3,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
+	"os"
+	"os/exec"
+	"runtime"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -176,8 +182,96 @@ func (wsc *WebSocketClient) connectAndRun() error {
 
 func (wsc *WebSocketClient) handleUpdateCommand(downloadURL string) {
 	log.Println("Starting self-update process...")
-	// Update implementation would go here
-	// For now, just log
-	log.Printf("Update command received with URL: %s", downloadURL)
+
+	// Get the current executable path
+	currentExe, err := os.Executable()
+	if err != nil {
+		log.Printf("Failed to get current executable path: %v", err)
+		return
+	}
+
+	// Determine download URL
+	url := downloadURL
+	if url == "" {
+		// Default to the server's agent binary endpoint
+		url = fmt.Sprintf("%s/releases/vstats-agent", strings.TrimSuffix(wsc.config.DashboardURL, "/"))
+	}
+
+	log.Printf("Downloading update from: %s", url)
+
+	// Download to a temporary file
+	tempPath := currentExe + ".new"
+
+	if err := downloadFile(url, tempPath); err != nil {
+		log.Printf("Failed to download update: %v", err)
+		return
+	}
+
+	log.Println("Download complete, applying update...")
+
+	// On Unix, set execute permissions
+	if runtime.GOOS != "windows" {
+		if err := os.Chmod(tempPath, 0755); err != nil {
+			log.Printf("Failed to set permissions: %v", err)
+			os.Remove(tempPath)
+			return
+		}
+	}
+
+	// Backup current executable
+	backupPath := currentExe + ".backup"
+	if err := os.Rename(currentExe, backupPath); err != nil {
+		log.Printf("Failed to backup current executable: %v", err)
+		os.Remove(tempPath)
+		return
+	}
+
+	// Move new executable to current path
+	if err := os.Rename(tempPath, currentExe); err != nil {
+		log.Printf("Failed to install new executable: %v", err)
+		// Try to restore backup
+		os.Rename(backupPath, currentExe)
+		return
+	}
+
+	// Remove backup
+	os.Remove(backupPath)
+
+	log.Println("Update installed successfully! Restarting...")
+
+	// Restart the agent
+	if runtime.GOOS == "linux" {
+		// Use systemctl if available
+		exec.Command("systemctl", "restart", "vstats-agent").Start()
+	}
+
+	// Exit to allow restart
+	os.Exit(0)
 }
 
+// downloadFile downloads a file from URL to path
+func downloadFile(url, path string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("HTTP request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("download failed with status: %d", resp.StatusCode)
+	}
+
+	out, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("failed to create file: %w", err)
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		os.Remove(path)
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	return nil
+}

@@ -408,4 +408,3 @@ const embeddedIndexHTML = `<!DOCTYPE html>
   </div>
 </body>
 </html>`
-
