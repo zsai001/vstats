@@ -20,6 +20,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+      - name: Get version from tag
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+          fi
+          VERSION="${TAG#v}"
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+      
+      - name: Update version in Cargo.toml
+        run: |
+          sed -i 's/^version = ".*"/version = "${{ steps.version.outputs.VERSION }}"/' agent/Cargo.toml
+          sed -i 's/^version = ".*"/version = "${{ steps.version.outputs.VERSION }}"/' server/Cargo.toml
+          echo "Agent version:"
+          grep '^version' agent/Cargo.toml
+          echo "Server version:"
+          grep '^version' server/Cargo.toml
+      
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -61,6 +82,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Get version from tag
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+          fi
+          VERSION="${TAG#v}"
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+      
+      - name: Update version in Cargo.toml
+        run: |
+          sed -i 's/^version = ".*"/version = "${{ steps.version.outputs.VERSION }}"/' agent/Cargo.toml
+          sed -i 's/^version = ".*"/version = "${{ steps.version.outputs.VERSION }}"/' server/Cargo.toml
       
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -109,6 +146,22 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Get version from tag
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+          fi
+          VERSION="${TAG#v}"
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+      
+      - name: Update version in Cargo.toml
+        run: |
+          sed -i '' 's/^version = ".*"/version = "${{ steps.version.outputs.VERSION }}"/' agent/Cargo.toml
+          sed -i '' 's/^version = ".*"/version = "${{ steps.version.outputs.VERSION }}"/' server/Cargo.toml
       
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
