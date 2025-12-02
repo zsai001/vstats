@@ -296,6 +296,7 @@ async fn main() {
                         provider: server.provider.clone(),
                         tag: server.tag.clone(),
                         version,
+                        ip: server.ip.clone(),
                         online,
                         metrics: metrics_data.map(|m| m.metrics.clone()),
                     }
@@ -381,5 +382,10 @@ async fn main() {
     tracing::info!("🔑 Reset password: ./vstats-server --reset-password");
 
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await
+    .unwrap();
 }

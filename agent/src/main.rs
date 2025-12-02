@@ -303,9 +303,98 @@ WantedBy=multi-user.target
         Ok(())
     }
     
-    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    #[cfg(target_os = "windows")]
     {
-        Err("Service installation is only supported on Linux and macOS".to_string())
+        use std::fs;
+        use std::process::Command;
+        
+        let exe_path = std::env::current_exe()
+            .map_err(|e| format!("Failed to get executable path: {}", e))?;
+        
+        let config_path_str = config_path.to_string_lossy();
+        
+        // Create log directory in ProgramData
+        let log_dir = std::env::var("PROGRAMDATA")
+            .map(|p| PathBuf::from(p).join("vstats-agent").join("logs"))
+            .unwrap_or_else(|_| PathBuf::from("C:\\ProgramData\\vstats-agent\\logs"));
+        
+        let _ = fs::create_dir_all(&log_dir);
+        
+        // Build the command line for the service
+        let bin_path = format!(
+            "\"{}\" run --config \"{}\"",
+            exe_path.display(),
+            config_path_str
+        );
+        
+        info!("Creating Windows service with command: {}", bin_path);
+        
+        // Create the service using sc.exe
+        let status = Command::new("sc")
+            .args([
+                "create",
+                "vstats-agent",
+                "binPath=", &bin_path,
+                "DisplayName=", "vStats Monitoring Agent",
+                "start=", "auto",
+                "obj=", "LocalSystem",
+            ])
+            .status()
+            .map_err(|e| format!("Failed to create service: {}. Run as Administrator.", e))?;
+        
+        if !status.success() {
+            return Err("Failed to create service. Make sure you're running as Administrator.".to_string());
+        }
+        
+        // Set service description
+        let _ = Command::new("sc")
+            .args([
+                "description",
+                "vstats-agent",
+                "vStats Monitoring Agent - Push system metrics to dashboard",
+            ])
+            .status();
+        
+        // Configure service to restart on failure
+        let _ = Command::new("sc")
+            .args([
+                "failure",
+                "vstats-agent",
+                "reset=", "86400",
+                "actions=", "restart/10000/restart/10000/restart/10000",
+            ])
+            .status();
+        
+        // Start the service
+        let start_status = Command::new("sc")
+            .args(["start", "vstats-agent"])
+            .status()
+            .map_err(|e| format!("Failed to start service: {}", e))?;
+        
+        if !start_status.success() {
+            println!();
+            println!("⚠️  Service created but failed to start.");
+            println!("   You may need to start it manually.");
+        } else {
+            println!();
+            println!("✅ Service installed and started!");
+        }
+        
+        println!();
+        println!("Useful commands (run as Administrator):");
+        println!("  sc query vstats-agent           # Check status");
+        println!("  sc stop vstats-agent            # Stop service");
+        println!("  sc start vstats-agent           # Start service");
+        println!("  sc delete vstats-agent          # Remove service");
+        println!();
+        println!("View logs in Event Viewer > Windows Logs > Application");
+        
+        Ok(())
+    }
+    
+    #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+    {
+        Err("Service installation is only supported on Linux, macOS, and Windows".to_string())
     }
 }
 
@@ -365,9 +454,36 @@ fn uninstall_service() -> Result<(), String> {
         Ok(())
     }
     
-    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    #[cfg(target_os = "windows")]
     {
-        Err("Service uninstallation is only supported on Linux and macOS".to_string())
+        use std::process::Command;
+        
+        // Stop the service first
+        let _ = Command::new("sc")
+            .args(["stop", "vstats-agent"])
+            .status();
+        
+        // Wait a moment for the service to stop
+        std::thread::sleep(std::time::Duration::from_secs(2));
+        
+        // Delete the service
+        let status = Command::new("sc")
+            .args(["delete", "vstats-agent"])
+            .status()
+            .map_err(|e| format!("Failed to delete service: {}. Run as Administrator.", e))?;
+        
+        if !status.success() {
+            return Err("Failed to delete service. Make sure you're running as Administrator.".to_string());
+        }
+        
+        println!("✅ Service uninstalled successfully!");
+        
+        Ok(())
+    }
+    
+    #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+    {
+        Err("Service uninstallation is only supported on Linux, macOS, and Windows".to_string())
     }
 }
 

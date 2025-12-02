@@ -20,6 +20,8 @@ pub struct SystemMetrics {
     pub ping: Option<PingMetrics>,
     #[serde(default)]
     pub version: Option<String>,
+    #[serde(default)]
+    pub ip_addresses: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

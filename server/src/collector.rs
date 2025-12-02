@@ -117,6 +117,7 @@ pub fn collect_metrics(sys: &mut System, disks: &Disks, networks: &Networks) -> 
         },
         ping: None,
         version: None,
+        ip_addresses: None,
     }
 }
 

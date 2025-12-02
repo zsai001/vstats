@@ -220,6 +220,7 @@ pub async fn add_server(
         tag: req.tag,
         token: agent_token,
         version: String::new(),
+        ip: String::new(),
     };
 
     config.servers.push(server.clone());
@@ -305,6 +306,7 @@ pub async fn register_agent(
         tag: String::new(),
         token: agent_token.clone(),
         version: String::new(),
+        ip: String::new(),
     };
 
     config.servers.push(server);
@@ -525,6 +527,7 @@ pub async fn get_all_metrics(State(state): State<AppState>) -> Json<Vec<ServerMe
                 provider: server.provider.clone(),
                 tag: server.tag.clone(),
                 version,
+                ip: server.ip.clone(),
                 online,
                 metrics: metrics_data.map(|m| m.metrics.clone()),
             }

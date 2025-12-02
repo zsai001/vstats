@@ -30,7 +30,10 @@ pub struct MetricsCollector {
     last_network_time: std::time::Instant,
     // Ping metrics (updated in background)
     ping_results: Arc<Mutex<Option<PingMetrics>>>,
+    #[allow(dead_code)] // Used during initialization for background thread
     gateway_ip: Option<String>,
+    // Cached IP addresses
+    ip_addresses: Vec<String>,
 }
 
 impl MetricsCollector {
@@ -77,6 +80,9 @@ impl MetricsCollector {
             }
         });
         
+        // Collect IP addresses
+        let ip_addresses = Self::collect_ip_addresses();
+        
         Self {
             sys,
             disks: Disks::new_with_refreshed_list(),
@@ -88,7 +94,103 @@ impl MetricsCollector {
             last_network_time: std::time::Instant::now(),
             ping_results,
             gateway_ip,
+            ip_addresses,
         }
+    }
+    
+    /// Collect local IP addresses (IPv4 only, excluding loopback)
+    fn collect_ip_addresses() -> Vec<String> {
+        let mut ips = Vec::new();
+        
+        #[cfg(target_os = "linux")]
+        {
+            if let Ok(output) = Command::new("hostname")
+                .args(["-I"])
+                .output()
+            {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                for ip in stdout.split_whitespace() {
+                    // Only include IPv4 addresses
+                    if ip.contains('.') && !ip.starts_with("127.") {
+                        ips.push(ip.to_string());
+                    }
+                }
+            }
+            
+            // Fallback to ip addr
+            if ips.is_empty() {
+                if let Ok(output) = Command::new("ip")
+                    .args(["addr", "show"])
+                    .output()
+                {
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    for line in stdout.lines() {
+                        if line.contains("inet ") && !line.contains("127.0.0.1") {
+                            if let Some(ip_part) = line.split_whitespace().nth(1) {
+                                if let Some(ip) = ip_part.split('/').next() {
+                                    ips.push(ip.to_string());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        #[cfg(target_os = "macos")]
+        {
+            if let Ok(output) = Command::new("ifconfig")
+                .output()
+            {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                for line in stdout.lines() {
+                    let line = line.trim();
+                    if line.starts_with("inet ") && !line.contains("127.0.0.1") {
+                        if let Some(ip) = line.split_whitespace().nth(1) {
+                            ips.push(ip.to_string());
+                        }
+                    }
+                }
+            }
+        }
+        
+        #[cfg(target_os = "windows")]
+        {
+            // Try PowerShell first for cleaner output
+            if let Ok(output) = Command::new("powershell")
+                .args(["-Command", "(Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -ne '127.0.0.1' }).IPAddress"])
+                .output()
+            {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                for line in stdout.lines() {
+                    let ip = line.trim();
+                    if !ip.is_empty() && ip.contains('.') && !ip.starts_with("127.") {
+                        ips.push(ip.to_string());
+                    }
+                }
+            }
+            
+            // Fallback to ipconfig
+            if ips.is_empty() {
+                if let Ok(output) = Command::new("ipconfig")
+                    .output()
+                {
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    for line in stdout.lines() {
+                        if line.contains("IPv4") || line.contains("IP Address") {
+                            if let Some(ip_part) = line.split(':').nth(1) {
+                                let ip = ip_part.trim();
+                                if ip.contains('.') && !ip.starts_with("127.") {
+                                    ips.push(ip.to_string());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        ips
     }
     
     /// Detect default gateway IP
@@ -122,6 +224,41 @@ impl MetricsCollector {
                             return Some(ip.trim().to_string());
                         }
                     }
+                }
+            }
+        }
+        
+        #[cfg(target_os = "windows")]
+        {
+            // Use 'route print' to get the default gateway
+            if let Ok(output) = Command::new("cmd")
+                .args(["/C", "route", "print", "0.0.0.0"])
+                .output()
+            {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                // Look for lines containing "0.0.0.0" that indicate default route
+                for line in stdout.lines() {
+                    let parts: Vec<&str> = line.split_whitespace().collect();
+                    // Route table format: Network Destination, Netmask, Gateway, Interface, Metric
+                    // Look for 0.0.0.0 destination with a valid gateway IP
+                    if parts.len() >= 3 && parts[0] == "0.0.0.0" {
+                        let gateway = parts[2];
+                        // Validate it looks like an IP address
+                        if gateway.contains('.') && gateway != "0.0.0.0" {
+                            return Some(gateway.to_string());
+                        }
+                    }
+                }
+            }
+            
+            // Alternative: use PowerShell
+            if let Ok(output) = Command::new("powershell")
+                .args(["-Command", "(Get-NetRoute -DestinationPrefix '0.0.0.0/0' | Select-Object -First 1).NextHop"])
+                .output()
+            {
+                let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                if !stdout.is_empty() && stdout.contains('.') {
+                    return Some(stdout);
                 }
             }
         }
@@ -242,6 +379,7 @@ impl MetricsCollector {
             load_average: self.collect_load_average(),
             ping,
             version: Some(env!("CARGO_PKG_VERSION").to_string()),
+            ip_addresses: if self.ip_addresses.is_empty() { None } else { Some(self.ip_addresses.clone()) },
         }
     }
     

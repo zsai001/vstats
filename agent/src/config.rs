@@ -25,25 +25,47 @@ fn default_interval() -> u64 {
 impl AgentConfig {
     /// Get the default config file path
     pub fn default_path() -> PathBuf {
-        // Try /etc/vstats-agent/ first (for system-wide install)
-        let system_path = PathBuf::from("/etc/vstats-agent").join(CONFIG_FILENAME);
-        if system_path.parent().map(|p| p.exists()).unwrap_or(false) {
-            return system_path;
+        #[cfg(windows)]
+        {
+            // On Windows, try ProgramData first (for system-wide install)
+            if let Ok(program_data) = std::env::var("PROGRAMDATA") {
+                let system_path = PathBuf::from(&program_data).join("vstats-agent").join(CONFIG_FILENAME);
+                if system_path.parent().map(|p| p.exists()).unwrap_or(false) {
+                    return system_path;
+                }
+            }
+            
+            // Fall back to user's AppData\Roaming
+            if let Some(config_dir) = dirs::config_dir() {
+                return config_dir.join("vstats-agent").join(CONFIG_FILENAME);
+            }
+            
+            // Last resort: current directory
+            PathBuf::from(CONFIG_FILENAME)
         }
         
-        // Try /opt/vstats-agent/ (for compatibility with shell agent)
-        let opt_path = PathBuf::from("/opt/vstats-agent/config.json");
-        if opt_path.exists() {
-            return opt_path;
+        #[cfg(not(windows))]
+        {
+            // Try /etc/vstats-agent/ first (for system-wide install)
+            let system_path = PathBuf::from("/etc/vstats-agent").join(CONFIG_FILENAME);
+            if system_path.parent().map(|p| p.exists()).unwrap_or(false) {
+                return system_path;
+            }
+            
+            // Try /opt/vstats-agent/ (for compatibility with shell agent)
+            let opt_path = PathBuf::from("/opt/vstats-agent/config.json");
+            if opt_path.exists() {
+                return opt_path;
+            }
+            
+            // Fall back to user config directory
+            if let Some(config_dir) = dirs::config_dir() {
+                return config_dir.join("vstats-agent").join(CONFIG_FILENAME);
+            }
+            
+            // Last resort: current directory
+            PathBuf::from(CONFIG_FILENAME)
         }
-        
-        // Fall back to user config directory
-        if let Some(config_dir) = dirs::config_dir() {
-            return config_dir.join("vstats-agent").join(CONFIG_FILENAME);
-        }
-        
-        // Last resort: current directory
-        PathBuf::from(CONFIG_FILENAME)
     }
     
     /// Load config from file

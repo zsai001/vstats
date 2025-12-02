@@ -1,12 +1,13 @@
 use axum::{
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
-        State,
+        ConnectInfo, State,
     },
     response::IntoResponse,
 };
 use chrono::Utc;
 use futures::{SinkExt, StreamExt};
+use std::net::SocketAddr;
 use tokio::sync::mpsc;
 
 use crate::db::store_metrics;
@@ -50,6 +51,7 @@ async fn handle_dashboard_socket(socket: WebSocket, state: AppState) {
                     provider: server.provider.clone(),
                     tag: server.tag.clone(),
                     version,
+                    ip: server.ip.clone(),
                     online,
                     metrics: metrics_data.map(|m| m.metrics.clone()),
                 }
@@ -96,16 +98,20 @@ async fn handle_dashboard_socket(socket: WebSocket, state: AppState) {
 pub async fn agent_ws_handler(
     ws: WebSocketUpgrade,
     State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| handle_agent_socket(socket, state))
+    let client_ip = addr.ip().to_string();
+    ws.on_upgrade(move |socket| handle_agent_socket(socket, state, client_ip))
 }
 
-async fn handle_agent_socket(socket: WebSocket, state: AppState) {
+async fn handle_agent_socket(socket: WebSocket, state: AppState, client_ip: String) {
     let (mut sender, mut receiver) = socket.split();
     let mut authenticated_server_id: Option<String> = None;
     
     // Create channel for sending commands to this agent
     let (cmd_tx, mut cmd_rx) = mpsc::channel::<Message>(16);
+    
+    tracing::debug!("Agent connection from IP: {}", client_ip);
 
     loop {
         tokio::select! {
@@ -167,12 +173,37 @@ async fn handle_agent_socket(socket: WebSocket, state: AppState) {
                                                 }
                                             }
 
-                                            // Update version in server config if provided
-                                            if let Some(ref version) = metrics.version {
+                                            // Determine the IP address to use:
+                                            // 1. Use agent-reported IPs if available
+                                            // 2. Fall back to client connection IP
+                                            let agent_ip = metrics.ip_addresses
+                                                .as_ref()
+                                                .and_then(|ips| ips.first().cloned())
+                                                .unwrap_or_else(|| client_ip.clone());
+
+                                            // Update version and IP in server config if provided
+                                            {
                                                 let mut config = state.config.write().await;
                                                 if let Some(server) = config.servers.iter_mut().find(|s| s.id == *server_id) {
-                                                    server.version = version.clone();
-                                                    crate::config::save_config(&config);
+                                                    let mut changed = false;
+                                                    
+                                                    if let Some(ref version) = metrics.version {
+                                                        if server.version != *version {
+                                                            server.version = version.clone();
+                                                            changed = true;
+                                                        }
+                                                    }
+                                                    
+                                                    // Update IP if changed
+                                                    if server.ip != agent_ip {
+                                                        server.ip = agent_ip.clone();
+                                                        changed = true;
+                                                        tracing::info!("Agent {} IP updated to: {}", server_id, agent_ip);
+                                                    }
+                                                    
+                                                    if changed {
+                                                        crate::config::save_config(&config);
+                                                    }
                                                 }
                                             }
 
@@ -214,6 +245,7 @@ async fn handle_agent_socket(socket: WebSocket, state: AppState) {
                                                         provider: server.provider.clone(),
                                                         tag: server.tag.clone(),
                                                         version,
+                                                        ip: server.ip.clone(),
                                                         online,
                                                         metrics: metrics_data.map(|m| m.metrics.clone()),
                                                     }
@@ -304,6 +336,7 @@ async fn handle_agent_socket(socket: WebSocket, state: AppState) {
                     provider: server.provider.clone(),
                     tag: server.tag.clone(),
                     version,
+                    ip: server.ip.clone(),
                     online,
                     metrics: metrics_data.map(|m| m.metrics.clone()),
                 }

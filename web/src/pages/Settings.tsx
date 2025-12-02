@@ -53,6 +53,7 @@ interface RemoteServer {
   tag?: string;
   version?: string;
   token?: string;
+  ip?: string;
 }
 
 const PLATFORM_OPTIONS = [
@@ -97,7 +98,9 @@ export default function Settings() {
   // Install command
   const [showInstallCommand, setShowInstallCommand] = useState(false);
   const [installCommand, setInstallCommand] = useState('');
+  const [windowsInstallCommand, setWindowsInstallCommand] = useState('');
   const [copied, setCopied] = useState(false);
+  const [installPlatform, setInstallPlatform] = useState<'linux' | 'windows'>('linux');
   
   // Version info
   const [serverVersion, setServerVersion] = useState<string>('');
@@ -294,21 +297,29 @@ export default function Settings() {
     const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
     const baseUrl = `${protocol}://${host}`;
     
-    const command = `curl -fsSL ${baseUrl}/agent.sh | sudo bash -s -- \\
+    // Linux/macOS command
+    const linuxCommand = `curl -fsSL ${baseUrl}/agent.sh | sudo bash -s -- \\
   --server ${baseUrl} \\
   --token "${token}" \\
   --name "$(hostname)"`;
     
-    setInstallCommand(command);
+    // Windows PowerShell command
+    const windowsCommand = `# Download and run installer (Run as Administrator)
+Invoke-WebRequest -Uri "${baseUrl}/agent.ps1" -OutFile "agent.ps1"
+.\\agent.ps1 -Server "${baseUrl}" -Token "${token}" -Name $env:COMPUTERNAME`;
+    
+    setInstallCommand(linuxCommand);
+    setWindowsInstallCommand(windowsCommand);
   };
   
   const copyToClipboard = useCallback(async () => {
-    const success = await copyTextToClipboard(installCommand);
+    const commandToCopy = installPlatform === 'windows' ? windowsInstallCommand : installCommand;
+    const success = await copyTextToClipboard(commandToCopy);
     if (success) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
-  }, [installCommand]);
+  }, [installCommand, windowsInstallCommand, installPlatform]);
   
   // Copy token to clipboard with feedback
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
@@ -680,20 +691,58 @@ export default function Settings() {
         </p>
         
         {showInstallCommand && (
-          <div className="relative">
-            <pre className="p-4 rounded-xl bg-black/40 border border-white/10 text-sm text-emerald-400 font-mono overflow-x-auto whitespace-pre-wrap break-all">
-              {installCommand}
-            </pre>
-            <button
-              onClick={copyToClipboard}
-              className={`absolute top-3 right-3 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                copied 
-                  ? 'bg-emerald-500/20 text-emerald-400' 
-                  : 'bg-white/10 hover:bg-white/20 text-gray-400 hover:text-white'
-              }`}
-            >
-              {copied ? 'Copied!' : 'Copy'}
-            </button>
+          <div>
+            {/* Platform Tabs */}
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={() => setInstallPlatform('linux')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                  installPlatform === 'linux'
+                    ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                    : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-transparent'
+                }`}
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12.504 0c-.155 0-.315.008-.48.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.832-.41 1.684-.287 2.489a.424.424 0 00-.11.135c-.26.268-.45.6-.663.839-.199.199-.485.267-.797.4-.313.136-.658.269-.864.68-.09.189-.136.394-.132.602 0 .199.027.4.055.536.058.399.116.728.04.97-.249.68-.28 1.145-.106 1.484.174.334.535.47.94.601.81.2 1.91.135 2.774.6.926.466 1.866.67 2.616.47.526-.116.97-.464 1.208-.946.587-.003 1.23-.269 2.26-.334.699-.058 1.574.267 2.577.2.025.134.063.198.114.333l.003.003c.391.778 1.113 1.132 1.884 1.071.771-.06 1.592-.536 2.257-1.306.631-.765 1.683-1.084 2.378-1.503.348-.199.629-.469.649-.853.023-.4-.2-.811-.714-1.376v-.097l-.003-.003c-.17-.2-.25-.535-.338-.926-.085-.401-.182-.786-.492-1.046h-.003c-.059-.054-.123-.067-.188-.135a.357.357 0 00-.19-.064c.431-1.278.264-2.55-.173-3.694-.533-1.41-1.465-2.638-2.175-3.483-.796-1.005-1.576-1.957-1.56-3.368.026-2.152.236-6.133-3.544-6.139zm.529 3.405h.013c.213 0 .396.062.584.198.19.135.33.332.438.533.105.259.158.459.166.724 0-.02.006-.04.006-.06v.105a.086.086 0 01-.004-.021l-.004-.024a1.807 1.807 0 01-.15.706.953.953 0 01-.213.335.71.71 0 00-.088-.042c-.104-.045-.198-.064-.284-.133a1.312 1.312 0 00-.22-.066c.05-.06.146-.133.183-.198.053-.128.082-.264.088-.402v-.02a1.21 1.21 0 00-.061-.4c-.045-.134-.101-.2-.183-.333-.084-.066-.167-.132-.267-.132h-.016c-.093 0-.176.03-.262.132a.8.8 0 00-.205.334 1.18 1.18 0 00-.09.4v.019c.002.089.008.179.02.267-.193-.067-.438-.135-.607-.202a1.635 1.635 0 01-.018-.2v-.02a1.772 1.772 0 01.15-.768c.082-.22.232-.406.43-.533a.985.985 0 01.594-.2zm-2.962.059h.036c.142 0 .27.048.399.135.146.129.264.288.344.465.09.199.14.4.153.667v.004c.007.134.006.2-.002.266v.08c-.03.007-.056.018-.083.024-.152.055-.274.135-.393.2.012-.09.013-.18.003-.267v-.015c-.012-.133-.04-.2-.082-.333a.613.613 0 00-.166-.267.248.248 0 00-.183-.064h-.021c-.071.006-.13.04-.186.132a.552.552 0 00-.12.27.944.944 0 00-.023.33v.015c.012.135.037.2.08.334.046.134.098.2.166.268.01.009.02.018.034.024-.07.057-.117.07-.176.136a.304.304 0 01-.131.068 2.62 2.62 0 01-.275-.402 1.772 1.772 0 01-.155-.667 1.759 1.759 0 01.08-.668 1.43 1.43 0 01.283-.535c.128-.133.26-.2.418-.2zm1.37 1.706c.332 0 .733.065 1.216.399.293.2.523.269 1.052.468h.003c.255.136.405.266.478.399v-.131a.571.571 0 01.016.47c-.123.31-.516.643-1.063.842v.002c-.268.135-.501.333-.775.465-.276.135-.588.292-1.012.267a1.139 1.139 0 01-.448-.067 3.566 3.566 0 01-.322-.198c-.195-.135-.363-.332-.612-.465v-.005h-.005c-.4-.246-.616-.512-.686-.71-.07-.268-.005-.47.193-.6.224-.135.38-.271.483-.336.104-.074.143-.102.176-.131h.002v-.003c.169-.202.436-.47.839-.601.139-.036.294-.065.466-.065zm2.8 2.142c.358 1.417 1.196 3.475 1.735 4.473.286.534.855 1.659 1.102 3.024.156-.005.33.018.513.064.646-1.671-.546-3.467-1.089-3.966-.22-.2-.232-.335-.123-.335.59.534 1.365 1.572 1.646 2.757.13.535.16 1.104.021 1.67.067.028.135.06.205.067 1.032.534 1.413.938 1.23 1.537v-.002c-.06-.135-.12-.2-.181-.265-.193-.135-.512-.266-.925-.4-.332-.066-.503-.2-.656-.336l-.003-.005c-.083-.066-.167-.133-.335-.2a1.086 1.086 0 00-.5-.134c-.124 0-.27.044-.405.134-.453.332-.892.27-1.323.27-.663 0-.875-.27-1.455-.8a2.473 2.473 0 00-.584-.4 1.232 1.232 0 00-.407-.134 1.315 1.315 0 00-.396.06c-.179.067-.336.133-.483.267-.05.05-.1.066-.148.066-.013 0-.026-.003-.038-.003a2.4 2.4 0 00-.406-.003c-.135.018-.27.06-.405.135-.262.133-.534.27-.936.4-.402.066-.795.2-1.164.2-.176 0-.349-.018-.518-.067a.671.671 0 00-.594.2c-.09.132-.132.2-.132.266 0 .066.023.133.053.2.066.134.2.2.332.266.066 0 .2.067.267.067.135 0 .27-.067.405-.067.135-.066.265-.066.4-.2.132-.066.265-.2.467-.2.135 0 .27.067.402.133.135.066.269.2.403.2.135.066.266.133.4.133.134 0 .265-.067.4-.067.135 0 .27.067.4.067.135 0 .265.067.4.067.265 0 .535-.066.8-.133.266-.066.534-.133.8-.133.135 0 .265.066.4.066.265.066.534.133.8.2.268.066.535.067.802.067h.265c.266 0 .534-.066.8-.133.534-.133.935-.266 1.403-.533.534-.2.935-.465 1.2-.6.201-.134.336-.2.336-.267 0-.066-.068-.133-.202-.2-.268-.066-.602-.266-.87-.533a2.84 2.84 0 01-.403-.467c-.067-.067-.201-.2-.27-.2-.066 0-.133.067-.2.134-.27.266-.535.466-.935.533a2.05 2.05 0 01-.936-.134c-.201-.066-.4-.2-.602-.333a1.4 1.4 0 00-.47-.333 1.358 1.358 0 00-.467-.134c-.066 0-.135 0-.203.067-.27.067-.534.2-.8.267a2.97 2.97 0 01-.87.2c-.066 0-.135-.067-.201-.067-.2-.133-.334-.2-.535-.333a2.3 2.3 0 00-.535-.2 1.536 1.536 0 00-.467-.067c-.2 0-.335.067-.535.134-.2.066-.334.2-.535.266-.066.067-.2.067-.267.134h-.069c-.2-.133-.334-.2-.468-.333-.134-.067-.202-.134-.336-.2-.068-.067-.135-.067-.203-.134a3.19 3.19 0 01-.468-.467c-.135-.133-.269-.266-.402-.533-.134-.2-.202-.465-.27-.732v-.068c0-.135.068-.2.27-.2.2 0 .468.068.735.2.069.066.135.066.203.133.2.067.4.2.602.267.135.067.27.133.402.2.134.066.27.066.4.066.335 0 .536-.133.67-.266a.69.69 0 00.2-.4c.002-.2-.066-.4-.2-.534-.134-.066-.27-.2-.469-.333-.2-.2-.402-.333-.602-.467-.2-.066-.335-.2-.535-.266-.2-.133-.402-.2-.602-.333-.2-.068-.4-.202-.535-.268a.642.642 0 00-.269-.066c-.135 0-.2.066-.268.133-.202.2-.27.467-.27.735a2.1 2.1 0 00.135.666c.068.2.135.4.27.534.066.133.133.2.2.266.066.068.133.134.268.2.2.135.4.267.6.4.068.067.135.067.27.134.135.133.268.2.402.266.135.067.27.134.4.2.07.068.136.068.2.134v.067c-.066.2-.2.4-.334.6-.2.2-.4.4-.735.4h-.066c-.135-.067-.2-.134-.336-.134-.2-.133-.335-.2-.535-.2-.2-.067-.4-.133-.602-.133-.2-.067-.4-.067-.6-.067-.2.067-.335.067-.536.134-.2 0-.335.066-.535.066-.2.067-.335.067-.535.134-.134 0-.27.066-.402.066-.066 0-.135.067-.2.067-.068.067-.136.067-.27.134-.068.066-.136.066-.27.133a1.315 1.315 0 00-.268.2 3.476 3.476 0 00-.27.266c-.066.2-.133.335-.133.535 0 .133.067.266.133.4.068.2.135.333.268.533.135.133.269.267.4.4.202.133.402.2.67.266.2.067.4.134.67.067.2 0 .4-.067.6-.2.2-.067.4-.2.535-.333.068-.067.135-.133.27-.2h.002c.066-.2.2-.334.332-.467.135-.133.27-.2.47-.266.134-.067.334-.067.467-.067.2 0 .335.067.535.134.2.066.335.2.535.333.135.133.27.2.402.333.066.067.133.067.2.134.135.066.202.2.336.266.2.134.4.2.6.267.203.066.403.133.67.133h.002c.2 0 .4-.067.602-.133.134-.067.27-.134.402-.2.133-.067.2-.134.332-.2.135-.134.203-.2.336-.334.135-.133.202-.266.336-.4.133-.133.2-.266.267-.4.133-.2.2-.4.2-.6 0-.135-.067-.2-.067-.335 0-.066-.068-.2-.068-.266-.066-.067-.066-.2-.133-.266-.067-.134-.134-.2-.2-.334-.068-.133-.135-.2-.27-.333a3.19 3.19 0 00-.266-.267c-.135-.067-.203-.133-.336-.133-.135-.067-.27-.067-.4-.134-.135-.066-.27-.066-.403-.066-.2 0-.335.066-.468.066-.135.067-.27.067-.402.134-.135.066-.202.133-.336.2-.133.066-.2.133-.332.2-.07.133-.203.2-.27.333z"/>
+                </svg>
+                Linux / macOS
+              </button>
+              <button
+                onClick={() => setInstallPlatform('windows')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                  installPlatform === 'windows'
+                    ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                    : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-transparent'
+                }`}
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/>
+                </svg>
+                Windows
+              </button>
+            </div>
+            
+            <div className="relative">
+              <pre className="p-4 rounded-xl bg-black/40 border border-white/10 text-sm text-emerald-400 font-mono overflow-x-auto whitespace-pre-wrap break-all">
+                {installPlatform === 'windows' ? windowsInstallCommand : installCommand}
+              </pre>
+              <button
+                onClick={copyToClipboard}
+                className={`absolute top-3 right-3 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  copied 
+                    ? 'bg-emerald-500/20 text-emerald-400' 
+                    : 'bg-white/10 hover:bg-white/20 text-gray-400 hover:text-white'
+                }`}
+              >
+                {copied ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+            
+            {installPlatform === 'windows' && (
+              <p className="mt-3 text-xs text-gray-500">
+                💡 Run PowerShell as Administrator before executing the command.
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -904,8 +953,11 @@ export default function Settings() {
                             {isOnline ? 'Online' : 'Offline'}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
                           <div className="text-xs text-gray-500 font-mono">ID: {server.id.slice(0, 8)}...</div>
+                          {server.ip && (
+                            <span className="text-xs text-cyan-400 font-mono">{server.ip}</span>
+                          )}
                           {server.version && (
                             <span className="text-xs text-gray-600 font-mono">v{server.version}</span>
                           )}

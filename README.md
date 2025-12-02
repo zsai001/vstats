@@ -35,6 +35,8 @@ curl -fsSL https://vstats.zsoft.cc/install.sh | sudo bash
 
 登录 Dashboard 后，进入 **Settings** 页面获取安装命令，或直接运行：
 
+#### Linux / macOS
+
 ```bash
 curl -fsSL https://vstats.zsoft.cc/agent.sh | sudo bash -s -- \
   --server http://YOUR_DASHBOARD_IP:3001 \
@@ -44,7 +46,25 @@ curl -fsSL https://vstats.zsoft.cc/agent.sh | sudo bash -s -- \
   --provider "Vultr"
 ```
 
+#### Windows (PowerShell 管理员模式)
+
+```powershell
+# 下载安装脚本
+Invoke-WebRequest -Uri "https://vstats.zsoft.cc/agent.ps1" -OutFile "agent.ps1"
+
+# 运行安装
+.\agent.ps1 -Server "http://YOUR_DASHBOARD_IP:3001" -Token "your-jwt-token" -Name $env:COMPUTERNAME
+```
+
+或一行命令安装：
+
+```powershell
+irm https://vstats.zsoft.cc/agent.ps1 -OutFile agent.ps1; .\agent.ps1 -Server "http://YOUR_DASHBOARD_IP:3001" -Token "your-jwt-token"
+```
+
 ### 升级
+
+#### Linux / macOS
 
 ```bash
 # 升级主控端
@@ -54,7 +74,16 @@ curl -fsSL https://vstats.zsoft.cc/install.sh | sudo bash -s -- --upgrade
 curl -fsSL https://vstats.zsoft.cc/agent.sh | sudo bash -s -- --upgrade
 ```
 
+#### Windows (PowerShell 管理员模式)
+
+```powershell
+# 升级探针
+.\agent.ps1 -Upgrade
+```
+
 ### 卸载
+
+#### Linux / macOS
 
 ```bash
 # 卸载主控端
@@ -62,6 +91,13 @@ curl -fsSL https://vstats.zsoft.cc/install.sh | sudo bash -s -- --uninstall
 
 # 卸载探针
 curl -fsSL https://vstats.zsoft.cc/agent.sh | sudo bash -s -- --uninstall
+```
+
+#### Windows (PowerShell 管理员模式)
+
+```powershell
+# 卸载探针
+.\agent.ps1 -Uninstall
 ```
 
 ## 🏗️ 架构
@@ -135,11 +171,13 @@ vstats/
 │   └── package.json
 ├── scripts/                # 安装脚本
 │   ├── install.sh         # 主控端安装脚本
-│   └── agent.sh           # 探针安装脚本
+│   ├── agent.sh           # 探针安装脚本 (Linux/macOS)
+│   └── agent.ps1          # 探针安装脚本 (Windows)
 ├── docs/                   # GitHub Pages 文档站
 │   ├── index.html         # 落地页
 │   ├── install.sh         # 安装脚本 (镜像)
-│   └── agent.sh           # 探针脚本 (镜像)
+│   ├── agent.sh           # 探针脚本 (镜像)
+│   └── agent.ps1          # Windows 探针脚本 (镜像)
 └── .github/
     └── workflows/
         ├── release.yml    # 构建发布工作流
@@ -190,6 +228,8 @@ interface SystemMetrics {
 
 ## 🛠️ 服务管理
 
+### Linux (systemd)
+
 ```bash
 # 查看状态
 systemctl status vstats
@@ -202,6 +242,27 @@ journalctl -u vstats -f
 
 # 停止服务
 systemctl stop vstats
+```
+
+### Windows (管理员模式)
+
+```powershell
+# 查看状态
+sc query vstats-agent
+# 或
+Get-Service vstats-agent
+
+# 重启服务
+Restart-Service vstats-agent
+
+# 停止服务
+Stop-Service vstats-agent
+
+# 启动服务
+Start-Service vstats-agent
+
+# 查看日志
+Get-EventLog -LogName Application -Source vstats-agent -Newest 50
 ```
 
 ## 🔧 技术栈
@@ -230,7 +291,7 @@ systemctl stop vstats
    ```
 
 2. GitHub Actions 自动:
-   - 构建多平台二进制文件 (Linux x86_64/aarch64, macOS x86_64/aarch64)
+   - 构建多平台二进制文件 (Linux x86_64/aarch64, macOS x86_64/aarch64, Windows x86_64/aarch64)
    - 构建 Web 资源
    - 创建 GitHub Release
    - 上传所有构建产物

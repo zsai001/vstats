@@ -120,6 +120,8 @@ pub struct RemoteServer {
     pub token: String,
     #[serde(default)]
     pub version: String,
+    #[serde(default)]
+    pub ip: String,
 }
 
 impl Default for AppConfig {
