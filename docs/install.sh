@@ -83,16 +83,15 @@ get_latest_version() {
     info "Fetching latest version..."
     
     if command -v curl &> /dev/null; then
-        LATEST_VERSION=$(curl -fsSL "$GITHUB_API" | grep '"tag_name"' | head -1 | cut -d'"' -f4)
+        LATEST_VERSION=$(curl -fsSL "$GITHUB_API" 2>/dev/null | grep '"tag_name"' | head -1 | cut -d'"' -f4)
     elif command -v wget &> /dev/null; then
-        LATEST_VERSION=$(wget -qO- "$GITHUB_API" | grep '"tag_name"' | head -1 | cut -d'"' -f4)
+        LATEST_VERSION=$(wget -qO- "$GITHUB_API" 2>/dev/null | grep '"tag_name"' | head -1 | cut -d'"' -f4)
     else
         error "curl or wget is required"
     fi
     
     if [ -z "$LATEST_VERSION" ]; then
-        warn "Could not fetch latest version, using v1.0.0"
-        LATEST_VERSION="v1.0.0"
+        error "Could not fetch latest version from GitHub. This may be due to rate limiting. Please try again later or check your network connection."
     fi
     
     success "Latest version: $LATEST_VERSION"
