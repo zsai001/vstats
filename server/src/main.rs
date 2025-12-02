@@ -26,8 +26,8 @@ use crate::config::{get_config_path, get_db_path, load_config, reset_admin_passw
 use crate::db::{aggregate_daily, aggregate_hourly, cleanup_old_data, init_database};
 use crate::handlers::{
     add_server, change_password, check_latest_version, delete_server, get_agent_script, get_all_metrics, get_history,
-    get_install_command, get_local_node_config, get_metrics, get_servers, get_server_version, get_site_settings, health_check, login,
-    register_agent, update_agent, update_local_node_config, update_server, update_site_settings, verify_token,
+    get_install_command, get_local_node_config, get_metrics, get_probe_settings, get_servers, get_server_version, get_site_settings, health_check, login,
+    register_agent, update_agent, update_local_node_config, update_probe_settings, update_server, update_site_settings, verify_token,
 };
 use crate::middleware::auth_middleware;
 use crate::state::AppState;
@@ -339,6 +339,8 @@ async fn main() {
         .route("/api/settings/site", put(update_site_settings))
         .route("/api/settings/local-node", get(get_local_node_config))
         .route("/api/settings/local-node", put(update_local_node_config))
+        .route("/api/settings/probe", get(get_probe_settings))
+        .route("/api/settings/probe", put(update_probe_settings))
         .layer(axum_middleware::from_fn(auth_middleware));
 
     let web_dir = get_web_dir();

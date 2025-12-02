@@ -122,6 +122,12 @@ pub struct MetricsMessage {
     pub metrics: SystemMetrics,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PingTargetConfig {
+    pub name: String,
+    pub host: String,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct ServerResponse {
     #[serde(rename = "type")]
@@ -130,6 +136,8 @@ pub struct ServerResponse {
     pub message: Option<String>,
     pub command: Option<String>,
     pub download_url: Option<String>,
+    #[serde(default)]
+    pub ping_targets: Option<Vec<PingTargetConfig>>,
 }
 
 // ============================================================================

@@ -56,6 +56,15 @@ interface RemoteServer {
   ip?: string;
 }
 
+interface PingTargetConfig {
+  name: string;
+  host: string;
+}
+
+interface ProbeSettings {
+  ping_targets: PingTargetConfig[];
+}
+
 const PLATFORM_OPTIONS = [
   { value: 'github', label: 'GitHub' },
   { value: 'twitter', label: 'Twitter/X' },
@@ -120,6 +129,12 @@ export default function Settings() {
   const [showLocalNodeForm, setShowLocalNodeForm] = useState(false);
   const [localNodeSaving, setLocalNodeSaving] = useState(false);
   const [localNodeSuccess, setLocalNodeSuccess] = useState(false);
+  
+  // Probe settings
+  const [probeSettings, setProbeSettings] = useState<ProbeSettings>({ ping_targets: [] });
+  const [showProbeSettings, setShowProbeSettings] = useState(false);
+  const [probeSaving, setProbeSaving] = useState(false);
+  const [probeSuccess, setProbeSuccess] = useState(false);
 
   useEffect(() => {
     // Wait for auth check to complete before redirecting
@@ -132,6 +147,7 @@ export default function Settings() {
     fetchServers();
     fetchSiteSettings();
     fetchLocalNodeConfig();
+    fetchProbeSettings();
     generateInstallCommand();
     fetchAgentStatus();
     fetchServerVersion();
@@ -245,6 +261,69 @@ export default function Settings() {
     }
     
     setLocalNodeSaving(false);
+  };
+  
+  const fetchProbeSettings = async () => {
+    try {
+      const res = await fetch('/api/settings/probe', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setProbeSettings(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch probe settings', e);
+    }
+  };
+  
+  const saveProbeSettings = async () => {
+    setProbeSaving(true);
+    setProbeSuccess(false);
+    
+    try {
+      const res = await fetch('/api/settings/probe', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(probeSettings)
+      });
+      
+      if (res.ok) {
+        setProbeSuccess(true);
+        setTimeout(() => {
+          setProbeSuccess(false);
+        }, 2000);
+      }
+    } catch (e) {
+      console.error('Failed to save probe settings', e);
+    }
+    
+    setProbeSaving(false);
+  };
+  
+  const addPingTarget = () => {
+    setProbeSettings({
+      ...probeSettings,
+      ping_targets: [...probeSettings.ping_targets, { name: '', host: '' }]
+    });
+  };
+  
+  const removePingTarget = (index: number) => {
+    setProbeSettings({
+      ...probeSettings,
+      ping_targets: probeSettings.ping_targets.filter((_, i) => i !== index)
+    });
+  };
+  
+  const updatePingTarget = (index: number, field: 'name' | 'host', value: string) => {
+    const newTargets = [...probeSettings.ping_targets];
+    newTargets[index] = { ...newTargets[index], [field]: value };
+    setProbeSettings({ ...probeSettings, ping_targets: newTargets });
   };
   
   const saveSiteSettings = async () => {
@@ -662,6 +741,103 @@ Invoke-WebRequest -Uri "${baseUrl}/agent.ps1" -OutFile "agent.ps1"
                 className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium transition-colors disabled:opacity-50"
               >
                 {siteSettingsSaving ? 'Saving...' : 'Save Settings'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Probe Settings Section */}
+      <div className="nezha-card p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+            Probe Settings
+          </h2>
+          <button
+            onClick={() => setShowProbeSettings(!showProbeSettings)}
+            className="px-4 py-2 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 text-sm font-medium transition-colors"
+          >
+            {showProbeSettings ? 'Hide' : 'Edit'}
+          </button>
+        </div>
+        
+        <p className="text-gray-400 text-sm mb-4">
+          Configure ping targets for latency monitoring. Agents will ping these IPs and report latency.
+          Common use case: monitor latency to major carriers for return routes.
+        </p>
+        
+        {probeSuccess && (
+          <div className="mb-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm">
+            Probe settings saved! Agents will update on next connection.
+          </div>
+        )}
+        
+        {showProbeSettings && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <label className="text-xs text-gray-500 uppercase tracking-wider">Ping Targets</label>
+              <button
+                type="button"
+                onClick={addPingTarget}
+                className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+              >
+                + Add Target
+              </button>
+            </div>
+            
+            {probeSettings.ping_targets.length === 0 ? (
+              <div className="text-gray-600 text-sm text-center py-4 border border-dashed border-white/10 rounded-lg">
+                No ping targets configured. Using defaults (Google DNS, Cloudflare).
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {probeSettings.ping_targets.map((target, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={target.name}
+                      onChange={(e) => updatePingTarget(index, 'name', e.target.value)}
+                      className="w-40 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-purple-500/50"
+                      placeholder="Name (e.g., CT)"
+                    />
+                    <input
+                      type="text"
+                      value={target.host}
+                      onChange={(e) => updatePingTarget(index, 'host', e.target.value)}
+                      className="flex-1 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-purple-500/50 font-mono"
+                      placeholder="IP Address (e.g., 202.97.1.1)"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removePingTarget(index)}
+                      className="p-2 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            <div className="pt-4 border-t border-white/5 text-xs text-gray-500">
+              <p className="mb-2">Common China carrier IPs for reference:</p>
+              <div className="grid grid-cols-3 gap-2 font-mono text-gray-400">
+                <span>CT: 202.97.1.1</span>
+                <span>CU: 219.158.1.1</span>
+                <span>CM: 223.120.2.1</span>
+              </div>
+            </div>
+            
+            <div className="flex justify-end pt-4">
+              <button
+                onClick={saveProbeSettings}
+                disabled={probeSaving}
+                className="px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                {probeSaving ? 'Saving...' : 'Save Probe Settings'}
               </button>
             </div>
           </div>

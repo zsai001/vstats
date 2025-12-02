@@ -7,7 +7,7 @@ use std::thread;
 
 use crate::types::{
     CpuMetrics, DiskMetrics, LoadAverage, MemoryMetrics, NetworkInterface, NetworkMetrics,
-    OsInfo, SystemMetrics, PingMetrics, PingTarget,
+    OsInfo, SystemMetrics, PingMetrics, PingTarget, PingTargetConfig,
 };
 
 /// Default ping targets for latency monitoring
@@ -34,6 +34,8 @@ pub struct MetricsCollector {
     gateway_ip: Option<String>,
     // Cached IP addresses
     ip_addresses: Vec<String>,
+    // Custom ping targets from server config
+    custom_ping_targets: Arc<Mutex<Option<Vec<PingTargetConfig>>>>,
 }
 
 impl MetricsCollector {
@@ -67,12 +69,18 @@ impl MetricsCollector {
         // Initialize ping results
         let ping_results = Arc::new(Mutex::new(None));
         
+        // Initialize custom ping targets
+        let custom_ping_targets: Arc<Mutex<Option<Vec<PingTargetConfig>>>> = Arc::new(Mutex::new(None));
+        
         // Start background ping thread
         let ping_results_clone = Arc::clone(&ping_results);
+        let custom_targets_clone = Arc::clone(&custom_ping_targets);
         let gateway_clone = gateway_ip.clone();
         thread::spawn(move || {
             loop {
-                let results = Self::collect_ping_static(&gateway_clone);
+                // Check for custom targets from server config
+                let custom_targets = custom_targets_clone.lock().ok().and_then(|guard| guard.clone());
+                let results = Self::collect_ping_with_targets(&gateway_clone, custom_targets.as_ref());
                 if let Ok(mut guard) = ping_results_clone.lock() {
                     *guard = Some(results);
                 }
@@ -95,6 +103,18 @@ impl MetricsCollector {
             ping_results,
             gateway_ip,
             ip_addresses,
+            custom_ping_targets,
+        }
+    }
+    
+    /// Update ping targets from server configuration
+    pub fn set_ping_targets(&self, targets: Vec<PingTargetConfig>) {
+        if let Ok(mut guard) = self.custom_ping_targets.lock() {
+            if targets.is_empty() {
+                *guard = None; // Use defaults if empty
+            } else {
+                *guard = Some(targets);
+            }
         }
     }
     
@@ -325,30 +345,48 @@ impl MetricsCollector {
         }
     }
     
-    /// Collect ping metrics (static version for background thread)
-    fn collect_ping_static(gateway_ip: &Option<String>) -> PingMetrics {
+    /// Collect ping metrics with custom targets from server config
+    fn collect_ping_with_targets(gateway_ip: &Option<String>, custom_targets: Option<&Vec<PingTargetConfig>>) -> PingMetrics {
         let mut targets = Vec::new();
         
-        for (name, host) in DEFAULT_PING_TARGETS {
-            let actual_host = if host.is_empty() {
-                // Use gateway IP if available
-                match gateway_ip {
-                    Some(gw) => gw.clone(),
-                    None => continue,
+        // Use custom targets if provided, otherwise use defaults
+        if let Some(custom) = custom_targets {
+            for target in custom {
+                if target.host.is_empty() {
+                    continue;
                 }
-            } else {
-                host.to_string()
-            };
-            
-            let (latency, packet_loss, status) = Self::ping_host(&actual_host);
-            
-            targets.push(PingTarget {
-                name: name.to_string(),
-                host: actual_host,
-                latency_ms: latency,
-                packet_loss,
-                status,
-            });
+                let (latency, packet_loss, status) = Self::ping_host(&target.host);
+                targets.push(PingTarget {
+                    name: target.name.clone(),
+                    host: target.host.clone(),
+                    latency_ms: latency,
+                    packet_loss,
+                    status,
+                });
+            }
+        } else {
+            // Fallback to default targets
+            for (name, host) in DEFAULT_PING_TARGETS {
+                let actual_host = if host.is_empty() {
+                    // Use gateway IP if available
+                    match gateway_ip {
+                        Some(gw) => gw.clone(),
+                        None => continue,
+                    }
+                } else {
+                    host.to_string()
+                };
+                
+                let (latency, packet_loss, status) = Self::ping_host(&actual_host);
+                
+                targets.push(PingTarget {
+                    name: name.to_string(),
+                    host: actual_host,
+                    latency_ms: latency,
+                    packet_loss,
+                    status,
+                });
+            }
         }
         
         PingMetrics { targets }

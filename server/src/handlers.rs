@@ -12,7 +12,7 @@ use std::{collections::HashMap, time::Duration as StdDuration};
 use sysinfo::{CpuRefreshKind, Disks, Networks, System};
 
 use crate::collector::collect_metrics;
-use crate::config::{get_jwt_secret, save_config, LocalNodeConfig, RemoteServer, SiteSettings};
+use crate::config::{get_jwt_secret, save_config, LocalNodeConfig, ProbeSettings, RemoteServer, SiteSettings};
 use crate::state::AppState;
 use crate::types::{
     AddServerRequest, AgentRegisterRequest, AgentRegisterResponse, ChangePasswordRequest, Claims,
@@ -193,6 +193,25 @@ pub async fn update_local_node_config(
     let local_node = config.local_node.clone();
     save_config(&config);
     Ok(Json(local_node))
+}
+
+// ============================================================================
+// Probe Settings Handlers
+// ============================================================================
+
+pub async fn get_probe_settings(State(state): State<AppState>) -> Json<ProbeSettings> {
+    let config = state.config.read().await;
+    Json(config.probe_settings.clone())
+}
+
+pub async fn update_probe_settings(
+    State(state): State<AppState>,
+    Json(settings): Json<ProbeSettings>,
+) -> StatusCode {
+    let mut config = state.config.write().await;
+    config.probe_settings = settings;
+    save_config(&config);
+    StatusCode::OK
 }
 
 // ============================================================================

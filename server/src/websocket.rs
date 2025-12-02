@@ -138,10 +138,19 @@ async fn handle_agent_socket(socket: WebSocket, state: AppState, client_ip: Stri
                                                     connections.insert(server_id.clone(), cmd_tx.clone());
                                                 }
                                                 
+                                                // Send auth success with probe config
+                                                let probe_config = {
+                                                    let ping_targets: Vec<serde_json::Value> = config.probe_settings.ping_targets.iter()
+                                                        .map(|t| serde_json::json!({"name": t.name, "host": t.host}))
+                                                        .collect();
+                                                    serde_json::json!({
+                                                        "type": "auth",
+                                                        "status": "ok",
+                                                        "ping_targets": ping_targets
+                                                    }).to_string()
+                                                };
                                                 let _ = sender
-                                                    .send(Message::Text(
-                                                        r#"{"type":"auth","status":"ok"}"#.into(),
-                                                    ))
+                                                    .send(Message::Text(probe_config.into()))
                                                     .await;
                                                 tracing::info!("Agent {} authenticated and registered", server_id);
                                             } else {

@@ -80,6 +80,8 @@ pub struct AppConfig {
     pub site_settings: SiteSettings,
     #[serde(default)]
     pub local_node: LocalNodeConfig,
+    #[serde(default)]
+    pub probe_settings: ProbeSettings,
 }
 
 fn default_jwt_secret() -> String {
@@ -94,6 +96,18 @@ pub struct SiteSettings {
     pub site_description: String,
     #[serde(default)]
     pub social_links: Vec<SocialLink>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PingTargetConfig {
+    pub name: String,
+    pub host: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ProbeSettings {
+    #[serde(default)]
+    pub ping_targets: Vec<PingTargetConfig>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -139,6 +153,7 @@ impl Default for AppConfig {
                 social_links: vec![],
             },
             local_node: LocalNodeConfig::default(),
+            probe_settings: ProbeSettings::default(),
         }
     }
 }
@@ -158,6 +173,7 @@ impl AppConfig {
                 social_links: vec![],
             },
             local_node: LocalNodeConfig::default(),
+            probe_settings: ProbeSettings::default(),
         };
         (config, password)
     }

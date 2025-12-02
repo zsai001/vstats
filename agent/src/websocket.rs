@@ -203,6 +203,14 @@ impl WebSocketClient {
                 ));
             }
             
+            // Update ping targets from server config if provided
+            if let Some(ping_targets) = response.ping_targets {
+                if !ping_targets.is_empty() {
+                    info!("Received {} ping targets from server", ping_targets.len());
+                    self.collector.set_ping_targets(ping_targets);
+                }
+            }
+            
             info!("Authentication successful!");
         } else {
             return Err("Unexpected auth response type".to_string());

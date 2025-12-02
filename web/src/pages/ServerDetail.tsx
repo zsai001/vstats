@@ -727,7 +727,7 @@ export default function ServerDetail() {
               <div key={i}>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-300 font-mono">{disk.mount_point}</span>
+                    <span className="text-sm text-gray-300 font-mono">{disk.name || disk.mount_point}</span>
                     <span className="text-[10px] text-gray-600 px-1.5 py-0.5 rounded bg-white/5">{disk.fs_type}</span>
                   </div>
                   <span className={`text-lg font-bold font-mono ${disk.usage_percent > 90 ? 'text-red-400' : 'text-amber-400'}`}>
@@ -785,8 +785,9 @@ export default function ServerDetail() {
           <div className="pt-4 border-t border-white/5">
             <div className="text-xs text-gray-500 mb-3">Network Interfaces</div>
             <div className="space-y-2 max-h-48 overflow-y-auto">
-              {metrics.network.interfaces
+              {[...metrics.network.interfaces]
                 .filter(iface => iface.rx_bytes > 0 || iface.tx_bytes > 0)
+                .sort((a, b) => a.name.localeCompare(b.name))
                 .map((iface, i) => (
                   <div key={i} className="flex items-center justify-between py-2 px-3 rounded-lg bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
                     <span className="font-mono text-gray-300 text-sm">{iface.name}</span>
