@@ -140,8 +140,38 @@ jobs:
           path: ${{ matrix.output }}
           retention-days: 30
 
+  build-web:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: web
+        run: npm run build
+
+      - name: Upload web artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist
+          retention-days: 30
+
   release:
-    needs: build
+    needs: [build, build-web]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     permissions:
@@ -164,6 +194,19 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+
+      - name: Download web artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: artifacts/web-dist
+
+      - name: Create web archive
+        run: |
+          cd artifacts/web-dist
+          zip -r ../web-dist.zip .
+          cd ../..
+          echo "Web distribution archive created"
 
       - name: Create checksums
         run: |
@@ -189,6 +232,10 @@ jobs:
             - macOS (amd64, arm64)
             - Windows (amd64)
             - FreeBSD (amd64, arm64)
+
+            ### Web Frontend
+            - Pre-built web assets included in `web-dist.zip`
+            - Extract and serve the contents with your server
 
             ### Installation
             Download the appropriate binary for your platform and architecture.
