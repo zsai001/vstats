@@ -142,6 +142,7 @@ func main() {
 	if webDir != "" {
 		// Serve static files from web directory
 		r.Static("/assets", webDir+"/assets")
+		r.Static("/logos", webDir+"/logos") // Serve logo files
 		r.StaticFile("/favicon.ico", webDir+"/favicon.ico")
 		r.StaticFile("/vite.svg", webDir+"/vite.svg")
 		r.GET("/", func(c *gin.Context) {
@@ -151,7 +152,9 @@ func main() {
 			// For SPA, serve index.html for all non-API routes
 			if !strings.HasPrefix(c.Request.URL.Path, "/api") && 
 			   !strings.HasPrefix(c.Request.URL.Path, "/ws") &&
-			   !strings.HasPrefix(c.Request.URL.Path, "/agent.sh") {
+			   !strings.HasPrefix(c.Request.URL.Path, "/agent.sh") &&
+			   !strings.HasPrefix(c.Request.URL.Path, "/logos") &&
+			   !strings.HasPrefix(c.Request.URL.Path, "/assets") {
 				c.File(webDir + "/index.html")
 			} else {
 				c.Status(404)
