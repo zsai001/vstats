@@ -39,11 +39,17 @@ async fn handle_dashboard_socket(socket: WebSocket, state: AppState) {
                     .map(|m| Utc::now().signed_duration_since(m.last_updated).num_seconds() < 30)
                     .unwrap_or(false);
 
+                let version = metrics_data
+                    .and_then(|m| m.metrics.version.clone())
+                    .unwrap_or_else(|| server.version.clone());
+
                 ServerMetricsUpdate {
                     server_id: server.id.clone(),
                     server_name: server.name.clone(),
                     location: server.location.clone(),
                     provider: server.provider.clone(),
+                    tag: server.tag.clone(),
+                    version,
                     online,
                     metrics: metrics_data.map(|m| m.metrics.clone()),
                 }
@@ -161,6 +167,15 @@ async fn handle_agent_socket(socket: WebSocket, state: AppState) {
                                                 }
                                             }
 
+                                            // Update version in server config if provided
+                                            if let Some(ref version) = metrics.version {
+                                                let mut config = state.config.write().await;
+                                                if let Some(server) = config.servers.iter_mut().find(|s| s.id == *server_id) {
+                                                    server.version = version.clone();
+                                                    crate::config::save_config(&config);
+                                                }
+                                            }
+
                                             // Update in-memory state
                                             let mut agent_metrics = state.agent_metrics.write().await;
                                             agent_metrics.insert(
@@ -188,11 +203,17 @@ async fn handle_agent_socket(socket: WebSocket, state: AppState) {
                                                         })
                                                         .unwrap_or(false);
 
+                                                    let version = metrics_data
+                                                        .and_then(|m| m.metrics.version.clone())
+                                                        .unwrap_or_else(|| server.version.clone());
+
                                                     ServerMetricsUpdate {
                                                         server_id: server.id.clone(),
                                                         server_name: server.name.clone(),
                                                         location: server.location.clone(),
                                                         provider: server.provider.clone(),
+                                                        tag: server.tag.clone(),
+                                                        version,
                                                         online,
                                                         metrics: metrics_data.map(|m| m.metrics.clone()),
                                                     }
@@ -272,11 +293,17 @@ async fn handle_agent_socket(socket: WebSocket, state: AppState) {
                         .unwrap_or(false)
                 };
 
+                let version = metrics_data
+                    .and_then(|m| m.metrics.version.clone())
+                    .unwrap_or_else(|| server.version.clone());
+
                 ServerMetricsUpdate {
                     server_id: server.id.clone(),
                     server_name: server.name.clone(),
                     location: server.location.clone(),
                     provider: server.provider.clone(),
+                    tag: server.tag.clone(),
+                    version,
                     online,
                     metrics: metrics_data.map(|m| m.metrics.clone()),
                 }

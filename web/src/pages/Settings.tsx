@@ -9,6 +9,8 @@ interface RemoteServer {
   url: string;
   location: string;
   provider: string;
+  tag?: string;
+  version?: string;
   token?: string;
 }
 
@@ -42,7 +44,7 @@ export default function Settings() {
   
   // New server form
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newServer, setNewServer] = useState({ name: '', url: '', location: '', provider: '' });
+  const [newServer, setNewServer] = useState({ name: '', url: '', location: '', provider: '', tag: '' });
   const [addLoading, setAddLoading] = useState(false);
   
   // Password change
@@ -55,6 +57,17 @@ export default function Settings() {
   const [showInstallCommand, setShowInstallCommand] = useState(false);
   const [installCommand, setInstallCommand] = useState('');
   const [copied, setCopied] = useState(false);
+  
+  // Version info
+  const [serverVersion, setServerVersion] = useState<string>('');
+  const [latestVersion, setLatestVersion] = useState<string | null>(null);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [checkingVersion, setCheckingVersion] = useState(false);
+  
+  // Edit server
+  const [editingServer, setEditingServer] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', location: '', provider: '', tag: '' });
+  const [editLoading, setEditLoading] = useState(false);
 
   useEffect(() => {
     // Wait for auth check to complete before redirecting
@@ -68,6 +81,8 @@ export default function Settings() {
     fetchSiteSettings();
     generateInstallCommand();
     fetchAgentStatus();
+    fetchServerVersion();
+    checkLatestVersion();
   }, [isAuthenticated, authLoading, navigate]);
   
   // Refresh agent status periodically
@@ -188,9 +203,7 @@ export default function Settings() {
     const command = `curl -fsSL ${baseUrl}/agent.sh | sudo bash -s -- \\
   --server ${baseUrl} \\
   --token "${token}" \\
-  --name "$(hostname)" \\
-  --location "US" \\
-  --provider "Unknown"`;
+  --name "$(hostname)"`;
     
     setInstallCommand(command);
   };
@@ -217,6 +230,70 @@ export default function Settings() {
     }
     setLoading(false);
   };
+  
+  const fetchServerVersion = async () => {
+    try {
+      const res = await fetch('/api/version');
+      if (res.ok) {
+        const data = await res.json();
+        setServerVersion(data.version);
+      }
+    } catch (e) {
+      console.error('Failed to fetch server version', e);
+    }
+  };
+  
+  const checkLatestVersion = async () => {
+    setCheckingVersion(true);
+    try {
+      const res = await fetch('/api/version/check');
+      if (res.ok) {
+        const data = await res.json();
+        setLatestVersion(data.latest);
+        setUpdateAvailable(data.update_available);
+      }
+    } catch (e) {
+      console.error('Failed to check latest version', e);
+    } finally {
+      setCheckingVersion(false);
+    }
+  };
+  
+  const startEditServer = (server: RemoteServer) => {
+    setEditingServer(server.id);
+    setEditForm({
+      name: server.name,
+      location: server.location,
+      provider: server.provider,
+      tag: server.tag || ''
+    });
+  };
+  
+  const saveEditServer = async () => {
+    if (!editingServer) return;
+    setEditLoading(true);
+    try {
+      const res = await fetch(`/api/servers/${editingServer}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(editForm)
+      });
+      
+      if (res.ok) {
+        const updated = await res.json();
+        setServers(servers.map(s => s.id === editingServer ? updated : s));
+        setEditingServer(null);
+        setEditForm({ name: '', location: '', provider: '', tag: '' });
+      }
+    } catch (e) {
+      console.error('Failed to update server', e);
+    } finally {
+      setEditLoading(false);
+    }
+  };
 
   const addServer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -235,7 +312,7 @@ export default function Settings() {
       if (res.ok) {
         const server = await res.json();
         setServers([...servers, server]);
-        setNewServer({ name: '', url: '', location: '', provider: '' });
+        setNewServer({ name: '', url: '', location: '', provider: '', tag: '' });
         setShowAddForm(false);
       }
     } catch (e) {
@@ -513,7 +590,7 @@ export default function Settings() {
 
         {showAddForm && (
           <form onSubmit={addServer} className="mb-6 p-4 rounded-xl bg-white/[0.02] border border-white/10">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Server Name</label>
                 <input
@@ -526,6 +603,16 @@ export default function Settings() {
                 />
               </div>
               <div>
+                <label className="block text-xs text-gray-500 mb-1">Tag</label>
+                <input
+                  type="text"
+                  value={newServer.tag}
+                  onChange={(e) => setNewServer({ ...newServer, tag: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-emerald-500/50"
+                  placeholder="e.g., Production, Test"
+                />
+              </div>
+              <div>
                 <label className="block text-xs text-gray-500 mb-1">Location Code</label>
                 <input
                   type="text"
@@ -533,7 +620,6 @@ export default function Settings() {
                   onChange={(e) => setNewServer({ ...newServer, location: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-emerald-500/50"
                   placeholder="e.g., US, HK, JP"
-                  required
                 />
               </div>
               <div>
@@ -584,7 +670,17 @@ export default function Settings() {
                             {isOnline ? 'Online' : 'Offline'}
                           </span>
                         </div>
-                        <div className="text-xs text-gray-500 font-mono">ID: {server.id.slice(0, 8)}...</div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="text-xs text-gray-500 font-mono">ID: {server.id.slice(0, 8)}...</div>
+                          {server.version && (
+                            <span className="text-xs text-gray-600 font-mono">v{server.version}</span>
+                          )}
+                          {server.tag && (
+                            <span className="px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 text-xs">
+                              {server.tag}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -593,6 +689,16 @@ export default function Settings() {
                           {server.provider}
                         </span>
                       )}
+                      {/* Edit Button */}
+                      <button
+                        onClick={() => startEditServer(server)}
+                        className="p-2 rounded-lg hover:bg-blue-500/10 text-gray-500 hover:text-blue-400 transition-colors"
+                        title="Edit Server"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
                       {/* Update Button */}
                       <button
                         onClick={() => updateAgent(server.id)}
@@ -626,6 +732,73 @@ export default function Settings() {
                       </button>
                     </div>
                   </div>
+                  
+                  {/* Edit Form */}
+                  {editingServer === server.id && (
+                    <div className="mt-4 pt-4 border-t border-white/5">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">Name</label>
+                          <input
+                            type="text"
+                            value={editForm.name}
+                            onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-blue-500/50"
+                            placeholder="Server name"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">Tag</label>
+                          <input
+                            type="text"
+                            value={editForm.tag}
+                            onChange={(e) => setEditForm({ ...editForm, tag: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-blue-500/50"
+                            placeholder="e.g., Production, Test"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">Location</label>
+                          <input
+                            type="text"
+                            value={editForm.location}
+                            onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-blue-500/50"
+                            placeholder="e.g., US, CN, HK"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">Provider</label>
+                          <input
+                            type="text"
+                            value={editForm.provider}
+                            onChange={(e) => setEditForm({ ...editForm, provider: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-blue-500/50"
+                            placeholder="e.g., AWS, Vultr"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => {
+                            setEditingServer(null);
+                            setEditForm({ name: '', location: '', provider: '', tag: '' });
+                          }}
+                          className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 text-sm transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={saveEditServer}
+                          disabled={editLoading}
+                          className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium transition-colors disabled:opacity-50"
+                        >
+                          {editLoading ? 'Saving...' : 'Save'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
                   {server.token && (
                     <div className="mt-3 pt-3 border-t border-white/5">
                       <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Agent Token</div>
@@ -642,6 +815,56 @@ export default function Settings() {
             })}
           </div>
         )}
+      </div>
+
+      {/* Version Info Section */}
+      <div className="nezha-card p-6 mb-6">
+        <h2 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
+          <span className="w-2 h-2 rounded-full bg-cyan-500"></span>
+          Version Information
+        </h2>
+        
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm text-gray-400">Current Version</div>
+              <div className="text-lg font-mono text-white">{serverVersion || 'Loading...'}</div>
+            </div>
+            <button
+              onClick={checkLatestVersion}
+              disabled={checkingVersion}
+              className="px-4 py-2 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              {checkingVersion ? 'Checking...' : 'Check Update'}
+            </button>
+          </div>
+          
+          {latestVersion && (
+            <div className="pt-3 border-t border-white/5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm text-gray-400">Latest Version</div>
+                  <div className="text-lg font-mono text-white">{latestVersion}</div>
+                </div>
+                {updateAvailable && (
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 text-xs font-medium">
+                      Update Available
+                    </span>
+                    <a
+                      href={`https://github.com/zsai001/vstats/releases/tag/v${latestVersion}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium transition-colors"
+                    >
+                      Download Update
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Security Section */}

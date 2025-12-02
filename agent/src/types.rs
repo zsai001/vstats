@@ -18,6 +18,8 @@ pub struct SystemMetrics {
     pub load_average: LoadAverage,
     #[serde(default)]
     pub ping: Option<PingMetrics>,
+    #[serde(default)]
+    pub version: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

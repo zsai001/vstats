@@ -25,9 +25,9 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use crate::config::{get_config_path, get_db_path, load_config, reset_admin_password};
 use crate::db::{aggregate_daily, aggregate_hourly, cleanup_old_data, init_database};
 use crate::handlers::{
-    add_server, change_password, delete_server, get_agent_script, get_all_metrics, get_history,
-    get_install_command, get_metrics, get_servers, get_site_settings, health_check, login,
-    register_agent, update_agent, update_site_settings, verify_token,
+    add_server, change_password, check_latest_version, delete_server, get_agent_script, get_all_metrics, get_history,
+    get_install_command, get_metrics, get_servers, get_server_version, get_site_settings, health_check, login,
+    register_agent, update_agent, update_server, update_site_settings, verify_token,
 };
 use crate::middleware::auth_middleware;
 use crate::state::AppState;
@@ -285,11 +285,17 @@ async fn main() {
                         })
                         .unwrap_or(false);
 
+                    let version = metrics_data
+                        .and_then(|m| m.metrics.version.clone())
+                        .unwrap_or_else(|| server.version.clone());
+
                     ServerMetricsUpdate {
                         server_id: server.id.clone(),
                         server_name: server.name.clone(),
                         location: server.location.clone(),
                         provider: server.provider.clone(),
+                        tag: server.tag.clone(),
+                        version,
                         online,
                         metrics: metrics_data.map(|m| m.metrics.clone()),
                     }
@@ -325,6 +331,7 @@ async fn main() {
     let protected_routes = Router::new()
         .route("/api/servers", post(add_server))
         .route("/api/servers/:id", delete(delete_server))
+        .route("/api/servers/:id", put(update_server))
         .route("/api/servers/:id/update", post(update_agent))
         .route("/api/auth/password", post(change_password))
         .route("/api/agent/register", post(register_agent))
@@ -351,6 +358,8 @@ async fn main() {
         .route("/api/auth/login", post(login))
         .route("/api/auth/verify", get(verify_token))
         .route("/api/install-command", get(get_install_command))
+        .route("/api/version", get(get_server_version))
+        .route("/api/version/check", get(check_latest_version))
         .route("/agent.sh", get(get_agent_script))
         .route("/ws", get(ws_handler))
         .route("/ws/agent", get(agent_ws_handler))

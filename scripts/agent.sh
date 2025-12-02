@@ -59,14 +59,6 @@ parse_args() {
                 AUTH_TOKEN="$2"
                 shift 2
                 ;;
-            --location|-l)
-                LOCATION="$2"
-                shift 2
-                ;;
-            --provider|-p)
-                PROVIDER="$2"
-                shift 2
-                ;;
             --uninstall)
                 UNINSTALL=true
                 shift
@@ -88,8 +80,6 @@ parse_args() {
     
     # Set defaults
     SERVER_NAME=${SERVER_NAME:-$(hostname)}
-    LOCATION=${LOCATION:-"Unknown"}
-    PROVIDER=${PROVIDER:-"Unknown"}
 }
 
 show_help() {
@@ -213,8 +203,6 @@ register_agent() {
         --server "$DASHBOARD_URL" \
         --token "$AUTH_TOKEN" \
         --name "$SERVER_NAME" \
-        --location "$LOCATION" \
-        --provider "$PROVIDER" \
         --config "$CONFIG_DIR/vstats-agent.json"
     
     if [ $? -ne 0 ]; then

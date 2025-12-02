@@ -43,14 +43,6 @@ enum Commands {
         /// Server display name (default: hostname)
         #[arg(short, long)]
         name: Option<String>,
-        
-        /// Server location (e.g., US, CN)
-        #[arg(short, long, default_value = "Unknown")]
-        location: String,
-        
-        /// Hosting provider (e.g., Vultr, AWS)
-        #[arg(short, long, default_value = "Unknown")]
-        provider: String,
     },
     
     /// Install systemd service
@@ -78,8 +70,8 @@ async fn main() {
     
     let result = match cli.command.unwrap_or(Commands::Run) {
         Commands::Run => run_agent(&config_path).await,
-        Commands::Register { server, token, name, location, provider } => {
-            register_agent(&config_path, &server, &token, name, &location, &provider).await
+        Commands::Register { server, token, name } => {
+            register_agent(&config_path, &server, &token, name).await
         }
         Commands::Install => install_service(&config_path),
         Commands::Uninstall => uninstall_service(),
@@ -113,8 +105,6 @@ async fn register_agent(
     server_url: &str,
     admin_token: &str,
     name: Option<String>,
-    location: &str,
-    provider: &str,
 ) -> Result<(), String> {
     let server_name = name.unwrap_or_else(|| {
         sysinfo::System::host_name().unwrap_or_else(|| "Unknown".to_string())
@@ -122,16 +112,14 @@ async fn register_agent(
     
     info!("Registering with dashboard at {}", server_url);
     info!("  Name: {}", server_name);
-    info!("  Location: {}", location);
-    info!("  Provider: {}", provider);
     
     let client = reqwest::Client::new();
     let register_url = format!("{}/api/agent/register", server_url.trim_end_matches('/'));
     
     let request = RegisterRequest {
         name: server_name.clone(),
-        location: location.to_string(),
-        provider: provider.to_string(),
+        location: String::new(),
+        provider: String::new(),
     };
     
     let response = client
@@ -163,8 +151,8 @@ async fn register_agent(
         server_id: register_response.id,
         agent_token: register_response.token,
         server_name,
-        location: location.to_string(),
-        provider: provider.to_string(),
+        location: String::new(),
+        provider: String::new(),
         interval_secs: 1,
     };
     

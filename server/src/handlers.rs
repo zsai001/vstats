@@ -4,6 +4,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use serde::Serialize;
 use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use rusqlite::params;
@@ -16,8 +17,11 @@ use crate::state::AppState;
 use crate::types::{
     AddServerRequest, AgentRegisterRequest, AgentRegisterResponse, ChangePasswordRequest, Claims,
     HistoryPoint, HistoryQuery, HistoryResponse, InstallCommand, LoginRequest, LoginResponse,
-    ServerMetricsUpdate, SystemMetrics, UpdateAgentRequest, UpdateAgentResponse,
+    ServerMetricsUpdate, SystemMetrics, UpdateAgentRequest, UpdateAgentResponse, UpdateServerRequest,
 };
+
+// Version constants
+pub const SERVER_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 // ============================================================================
 // Auth Handlers
@@ -193,7 +197,9 @@ pub async fn add_server(
         url: req.url,
         location: req.location,
         provider: req.provider,
+        tag: req.tag,
         token: agent_token,
+        version: String::new(),
     };
 
     config.servers.push(server.clone());
@@ -210,6 +216,35 @@ pub async fn delete_server(State(state): State<AppState>, Path(id): Path<String>
     metrics.remove(&id);
 
     StatusCode::OK
+}
+
+pub async fn update_server(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Json(req): Json<UpdateServerRequest>,
+) -> Result<Json<RemoteServer>, StatusCode> {
+    let mut config = state.config.write().await;
+    
+    let server = config.servers.iter_mut()
+        .find(|s| s.id == id)
+        .ok_or(StatusCode::NOT_FOUND)?;
+    
+    if let Some(name) = req.name {
+        server.name = name;
+    }
+    if let Some(location) = req.location {
+        server.location = location;
+    }
+    if let Some(provider) = req.provider {
+        server.provider = provider;
+    }
+    if let Some(tag) = req.tag {
+        server.tag = tag;
+    }
+    
+    let server_clone = server.clone();
+    save_config(&config);
+    Ok(Json(server_clone))
 }
 
 // ============================================================================
@@ -247,7 +282,9 @@ pub async fn register_agent(
         url: String::new(),
         location: req.location,
         provider: req.provider,
+        tag: String::new(),
         token: agent_token.clone(),
+        version: String::new(),
     };
 
     config.servers.push(server);
@@ -444,11 +481,17 @@ pub async fn get_all_metrics(State(state): State<AppState>) -> Json<Vec<ServerMe
                 .map(|m| Utc::now().signed_duration_since(m.last_updated).num_seconds() < 30)
                 .unwrap_or(false);
 
+            let version = metrics_data
+                .and_then(|m| m.metrics.version.clone())
+                .unwrap_or_else(|| server.version.clone());
+
             ServerMetricsUpdate {
                 server_id: server.id.clone(),
                 server_name: server.name.clone(),
                 location: server.location.clone(),
                 provider: server.provider.clone(),
+                tag: server.tag.clone(),
+                version,
                 online,
                 metrics: metrics_data.map(|m| m.metrics.clone()),
             }
@@ -500,7 +543,7 @@ pub async fn get_install_command(
     let base_url = format!("{}://{}", protocol, host);
 
     let command = format!(
-        r#"curl -fsSL {}/agent.sh | sudo bash -s -- --server {} --token "{}" --name "$(hostname)" --location "Unknown" --provider "Unknown""#,
+        r#"curl -fsSL {}/agent.sh | sudo bash -s -- --server {} --token "{}" --name "$(hostname)""#,
         base_url, base_url, token
     );
 
@@ -561,5 +604,77 @@ pub async fn update_agent(
 
 pub async fn health_check() -> &'static str {
     "OK"
+}
+
+// ============================================================================
+// Version Check Handlers
+// ============================================================================
+
+#[derive(Debug, Serialize)]
+pub struct VersionInfo {
+    pub current: String,
+    pub latest: Option<String>,
+    pub update_available: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ServerVersionInfo {
+    pub version: String,
+}
+
+pub async fn get_server_version() -> Json<ServerVersionInfo> {
+    Json(ServerVersionInfo {
+        version: SERVER_VERSION.to_string(),
+    })
+}
+
+pub async fn check_latest_version() -> Result<Json<VersionInfo>, StatusCode> {
+    let current = SERVER_VERSION.to_string();
+    
+    // Fetch latest version from GitHub releases
+    let latest = match fetch_latest_github_version("zsai001", "vstats").await {
+        Ok(version) => Some(version),
+        Err(_) => None,
+    };
+    
+    let update_available = latest.as_ref()
+        .map(|v| v != &current)
+        .unwrap_or(false);
+    
+    Ok(Json(VersionInfo {
+        current,
+        latest,
+        update_available,
+    }))
+}
+
+async fn fetch_latest_github_version(owner: &str, repo: &str) -> Result<String, String> {
+    let url = format!("https://api.github.com/repos/{}/{}/releases/latest", owner, repo);
+    let client = reqwest::Client::builder()
+        .user_agent("vstats-server")
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+    
+    let response = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to fetch release info: {}", e))?;
+    
+    if !response.status().is_success() {
+        return Err(format!("GitHub API returned status: {}", response.status()));
+    }
+    
+    let json: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse JSON: {}", e))?;
+    
+    let tag_name = json.get("tag_name")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "No tag_name in response".to_string())?;
+    
+    // Remove 'v' prefix if present
+    Ok(tag_name.trim_start_matches('v').to_string())
 }
 

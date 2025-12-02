@@ -9,6 +9,7 @@ export interface SystemMetrics {
   uptime: number;
   load_average: LoadAverage;
   ping?: PingMetrics;
+  version?: string;
 }
 
 export interface OsInfo {

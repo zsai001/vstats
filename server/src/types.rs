@@ -35,8 +35,23 @@ pub struct AddServerRequest {
     pub name: String,
     #[serde(default)]
     pub url: String,
+    #[serde(default)]
     pub location: String,
+    #[serde(default)]
     pub provider: String,
+    #[serde(default)]
+    pub tag: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateServerRequest {
+    pub name: Option<String>,
+    #[serde(default)]
+    pub location: Option<String>,
+    #[serde(default)]
+    pub provider: Option<String>,
+    #[serde(default)]
+    pub tag: Option<String>,
 }
 
 // ============================================================================
@@ -46,7 +61,9 @@ pub struct AddServerRequest {
 #[derive(Debug, Deserialize)]
 pub struct AgentRegisterRequest {
     pub name: String,
+    #[serde(default)]
     pub location: String,
+    #[serde(default)]
     pub provider: String,
 }
 
@@ -106,6 +123,8 @@ pub struct SystemMetrics {
     pub load_average: LoadAverage,
     #[serde(default)]
     pub ping: Option<PingMetrics>,
+    #[serde(default)]
+    pub version: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -213,6 +232,10 @@ pub struct ServerMetricsUpdate {
     pub server_name: String,
     pub location: String,
     pub provider: String,
+    #[serde(default)]
+    pub tag: String,
+    #[serde(default)]
+    pub version: String,
     pub online: bool,
     pub metrics: Option<SystemMetrics>,
 }

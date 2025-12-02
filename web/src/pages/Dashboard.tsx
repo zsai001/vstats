@@ -121,7 +121,7 @@ function ServerCard({ server, onClick }: { server: ServerState; onClick: () => v
             <h3 className="font-bold text-white truncate text-sm group-hover:text-emerald-300 transition-colors">{config.name}</h3>
             <span className={`w-2 h-2 rounded-full shrink-0 ${isConnected ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]' : 'bg-red-500'}`} />
           </div>
-          <div className="flex items-center gap-2 mt-1.5">
+          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
             {OsIcon && (
               <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20" title={metrics.os.name}>
                 <OsIcon className="w-3.5 h-3.5 text-blue-400" />
@@ -132,6 +132,16 @@ function ServerCard({ server, onClick }: { server: ServerState; onClick: () => v
               <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20" title={config.provider}>
                 <ProviderIcon className="w-3.5 h-3.5 text-amber-400" />
               </div>
+            )}
+            {config.tag && (
+              <span className="px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 text-[10px] font-medium">
+                {config.tag}
+              </span>
+            )}
+            {(config.version || metrics.version) && (
+              <span className="text-[10px] text-gray-600 font-mono">
+                v{config.version || metrics.version}
+              </span>
             )}
             <span className="text-[10px] text-gray-500">{formatUptime(metrics.uptime)}</span>
           </div>
@@ -281,8 +291,18 @@ function ServerGridCard({ server, onClick }: { server: ServerState; onClick: () 
 
       {/* Footer Info */}
       <div className="flex items-center justify-between pt-2 text-[10px] border-theme" style={{ borderTopWidth: '1px' }}>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-wrap">
           {OsIcon && <OsIcon className="w-3 h-3 text-blue-500" />}
+          {config.tag && (
+            <span className="px-1 py-0.5 rounded bg-purple-500/10 text-purple-400 text-[9px]">
+              {config.tag}
+            </span>
+          )}
+          {(config.version || metrics.version) && (
+            <span className="text-gray-600 font-mono text-[9px]">
+              v{config.version || metrics.version}
+            </span>
+          )}
           <span style={{ color: 'var(--text-muted)' }}>{formatUptime(metrics.uptime)}</span>
         </div>
         <div className="flex gap-2 font-mono">

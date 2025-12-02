@@ -12,6 +12,8 @@ export interface ServerConfig {
   type: 'real' | 'local';
   location?: string;
   provider?: string;
+  tag?: string;
+  version?: string;
 }
 
 export interface ServerState {
@@ -34,6 +36,8 @@ interface ServerMetricsUpdate {
   server_name: string;
   location: string;
   provider: string;
+  tag?: string;
+  version?: string;
   online: boolean;
   metrics: SystemMetrics | null;
 }
@@ -122,6 +126,8 @@ export function useServerManager() {
                       type: 'real' as const,
                       location: serverUpdate.location,
                       provider: serverUpdate.provider,
+                      tag: serverUpdate.tag,
+                      version: serverUpdate.version || serverUpdate.metrics?.version,
                     },
                     metrics: serverUpdate.metrics,
                     speed: newSpeed,

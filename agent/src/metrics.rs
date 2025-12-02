@@ -241,6 +241,7 @@ impl MetricsCollector {
             uptime: System::uptime(),
             load_average: self.collect_load_average(),
             ping,
+            version: Some(env!("CARGO_PKG_VERSION").to_string()),
         }
     }
     

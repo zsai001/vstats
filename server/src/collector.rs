@@ -116,6 +116,7 @@ pub fn collect_metrics(sys: &mut System, disks: &Disks, networks: &Networks) -> 
             fifteen: load_avg.fifteen,
         },
         ping: None,
+        version: None,
     }
 }
 
