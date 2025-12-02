@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os/exec"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -531,6 +532,39 @@ func CheckLatestVersion(c *gin.Context) {
 		Current:         ServerVersion,
 		Latest:          latest,
 		UpdateAvailable: updateAvailable,
+	})
+}
+
+// ============================================================================
+// Server Upgrade Handler
+// ============================================================================
+
+type UpgradeServerResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Output  string `json:"output,omitempty"`
+}
+
+func UpgradeServer(c *gin.Context) {
+	// Execute upgrade command
+	cmd := exec.Command("bash", "-c", "curl -fsSL https://vstats.zsoft.cc/install.sh | sudo bash -s -- --upgrade")
+	
+	output, err := cmd.CombinedOutput()
+	outputStr := string(output)
+	
+	if err != nil {
+		c.JSON(http.StatusOK, UpgradeServerResponse{
+			Success: false,
+			Message: fmt.Sprintf("Upgrade failed: %v", err),
+			Output:  outputStr,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, UpgradeServerResponse{
+		Success: true,
+		Message: "Upgrade command executed successfully",
+		Output:  outputStr,
 	})
 }
 

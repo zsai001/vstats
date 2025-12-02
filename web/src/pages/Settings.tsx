@@ -117,6 +117,8 @@ export default function Settings() {
   const [latestVersion, setLatestVersion] = useState<string | null>(null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [checkingVersion, setCheckingVersion] = useState(false);
+  const [upgrading, setUpgrading] = useState(false);
+  const [upgradeResult, setUpgradeResult] = useState<{ success: boolean; message: string } | null>(null);
   
   // Edit server
   const [editingServer, setEditingServer] = useState<string | null>(null);
@@ -449,6 +451,59 @@ Invoke-WebRequest -Uri "${baseUrl}/agent.ps1" -OutFile "agent.ps1"
       console.error('Failed to check latest version', e);
     } finally {
       setCheckingVersion(false);
+    }
+  };
+
+  const upgradeServer = async () => {
+    if (!confirm('Are you sure you want to upgrade the server? This will restart the service.')) {
+      return;
+    }
+
+    setUpgrading(true);
+    setUpgradeResult(null);
+    
+    try {
+      const res = await fetch('/api/server/upgrade', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setUpgradeResult({
+          success: data.success,
+          message: data.message
+        });
+        
+        if (data.success) {
+          showToast('Upgrade command executed successfully! The server will restart.', 'success');
+          // Refresh version after a delay
+          setTimeout(() => {
+            fetchServerVersion();
+            checkLatestVersion();
+          }, 3000);
+        } else {
+          showToast(`Upgrade failed: ${data.message}`, 'error');
+        }
+      } else {
+        setUpgradeResult({
+          success: false,
+          message: 'Failed to execute upgrade command'
+        });
+        showToast('Failed to execute upgrade command', 'error');
+      }
+    } catch (e) {
+      console.error('Failed to upgrade server', e);
+      setUpgradeResult({
+        success: false,
+        message: 'Network error: Failed to execute upgrade command'
+      });
+      showToast('Failed to execute upgrade command', 'error');
+    } finally {
+      setUpgrading(false);
     }
   };
   
@@ -1323,14 +1378,13 @@ Invoke-WebRequest -Uri "${baseUrl}/agent.ps1" -OutFile "agent.ps1"
                     <span className="px-3 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 text-xs font-medium">
                       Update Available
                     </span>
-                    <a
-                      href={`https://github.com/zsai001/vstats/releases/tag/v${latestVersion}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium transition-colors"
+                    <button
+                      onClick={upgradeServer}
+                      disabled={upgrading}
+                      className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Download Update
-                    </a>
+                      {upgrading ? 'Upgrading...' : 'Execute Upgrade'}
+                    </button>
                   </div>
                 )}
               </div>

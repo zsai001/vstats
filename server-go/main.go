@@ -135,6 +135,7 @@ func main() {
 		protected.PUT("/api/settings/local-node", state.UpdateLocalNodeConfig)
 		protected.GET("/api/settings/probe", state.GetProbeSettings)
 		protected.PUT("/api/settings/probe", state.UpdateProbeSettings)
+		protected.POST("/api/server/upgrade", UpgradeServer)
 	}
 
 	// Static file serving
