@@ -111,25 +111,62 @@ function ServerCard({ server, onClick }: { server: ServerState; onClick: () => v
     );
   }
 
+  // Format CPU frequency
+  const formatFreq = (mhz: number) => {
+    if (mhz >= 1000) return `${(mhz / 1000).toFixed(1)}GHz`;
+    return `${mhz}MHz`;
+  };
+
+  // Get short CPU brand name
+  const getShortCpuBrand = (brand: string) => {
+    // Remove common verbose parts
+    return brand
+      .replace(/\(R\)|\(TM\)|CPU|Processor|@.*$/gi, '')
+      .replace(/Intel Core |AMD Ryzen |AMD EPYC |Intel Xeon /gi, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 20);
+  };
+
+  // Format disk size
+  const formatDiskSize = (bytes: number) => {
+    const gb = bytes / (1024 * 1024 * 1024);
+    if (gb >= 1000) return `${(gb / 1024).toFixed(0)}T`;
+    return `${gb.toFixed(0)}G`;
+  };
+
+  // Calculate total disk
+  const totalDisk = metrics.disks.reduce((acc, d) => acc + d.total, 0);
+  const diskCount = metrics.disks.length;
+
   return (
     <div 
-      className="nezha-card p-4 md:p-5 flex flex-col lg:flex-row items-start lg:items-center gap-4 lg:gap-6 hover:scale-[1.005] hover:border-white/20 transition-all cursor-pointer group"
+      className="nezha-card p-4 md:p-5 flex flex-col lg:flex-row items-start lg:items-center gap-4 lg:gap-6 hover:scale-[1.005] hover:border-white/20 transition-all cursor-pointer group relative overflow-hidden"
       onClick={onClick}
     >
+      {/* Provider Logo Background */}
+      {providerLogo && (
+        <div className="absolute -right-6 -bottom-6 w-28 h-28 opacity-[0.04] pointer-events-none group-hover:opacity-[0.08] transition-opacity">
+          <LogoImage 
+            src={providerLogo} 
+            alt="" 
+            className="w-full h-full object-contain transform rotate-[-15deg]" 
+          />
+        </div>
+      )}
+
       {/* Column 1: Identity with Icons */}
-      <div className="w-full lg:w-56 shrink-0 flex items-center gap-3">
+      <div className="w-full lg:w-56 shrink-0 flex items-center gap-3 relative z-10">
         {/* Main Icon: System Logo */}
-        <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 group-hover:border-white/20 flex items-center justify-center shrink-0 transition-colors overflow-hidden">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-500/5 border border-blue-500/30 group-hover:border-blue-500/50 flex items-center justify-center shrink-0 transition-colors overflow-hidden">
           {distributionLogo ? (
-            <LogoImage src={distributionLogo} alt={metrics.os.name} className="w-8 h-8 object-contain p-1" />
+            <LogoImage src={distributionLogo} alt={metrics.os.name} className="w-7 h-7 object-contain" />
           ) : OsIcon ? (
             <OsIcon className="w-6 h-6 text-blue-400" />
           ) : (
-            <div className="w-6 h-6 bg-blue-500/20 rounded flex items-center justify-center">
-              <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-              </svg>
-            </div>
+            <svg className="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+            </svg>
           )}
         </div>
         <div className="min-w-0 flex-1">
@@ -168,28 +205,60 @@ function ServerCard({ server, onClick }: { server: ServerState; onClick: () => v
         </div>
       </div>
 
-      {/* Column 2: Resources */}
-      <div className="flex-1 w-full grid grid-cols-3 gap-3 lg:gap-6">
-        {[
-          { label: 'CPU', value: metrics.cpu.usage, thresholds: [50, 80] },
-          { label: 'RAM', value: metrics.memory.usage_percent, thresholds: [50, 80] },
-          { label: 'Disk', value: metrics.disks[0]?.usage_percent || 0, thresholds: [70, 90] },
-        ].map(({ label, value, thresholds }) => (
-          <div key={label} className="space-y-1">
-            <div className="flex justify-between text-[11px]">
-              <span className="text-gray-500">{label}</span>
-              <span className={`font-mono font-bold ${value > thresholds[1] ? 'text-red-400' : value > thresholds[0] ? 'text-yellow-400' : 'text-emerald-400'}`}>
-                {value.toFixed(0)}%
-              </span>
-            </div>
-            <div className="h-1 w-full bg-gray-700/50 rounded-full overflow-hidden">
-              <div 
-                className={`h-full rounded-full transition-all duration-500 ${value > thresholds[1] ? 'bg-red-500' : value > thresholds[0] ? 'bg-yellow-500' : 'bg-emerald-500'}`} 
-                style={{ width: `${value}%` }} 
-              />
-            </div>
+      {/* Column 2: Hardware Specs & Resources */}
+      <div className="flex-1 w-full relative z-10">
+        {/* Hardware Specs Row */}
+        <div className="flex flex-wrap gap-x-4 gap-y-1 mb-2 text-[10px]">
+          {/* CPU Info */}
+          <div className="flex items-center gap-1 text-gray-400" title={metrics.cpu.brand}>
+            <svg className="w-3 h-3 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+            </svg>
+            <span className="font-medium text-gray-300">{getShortCpuBrand(metrics.cpu.brand)}</span>
+            <span className="text-gray-500">{formatFreq(metrics.cpu.frequency)} × {metrics.cpu.cores}</span>
           </div>
-        ))}
+          {/* Memory Info */}
+          <div className="flex items-center gap-1 text-gray-400">
+            <svg className="w-3 h-3 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+            <span className="font-medium text-gray-300">{formatDiskSize(metrics.memory.total)}</span>
+          </div>
+          {/* Disk Info */}
+          <div className="flex items-center gap-1 text-gray-400">
+            <svg className="w-3 h-3 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+            </svg>
+            {metrics.disks[0]?.disk_type && (
+              <span className="text-gray-500">{metrics.disks[0].disk_type}</span>
+            )}
+            <span className="font-medium text-gray-300">{formatDiskSize(totalDisk)}</span>
+            {diskCount > 1 && <span className="text-gray-500">×{diskCount}</span>}
+          </div>
+        </div>
+        {/* Resource Usage Bars */}
+        <div className="grid grid-cols-3 gap-3 lg:gap-6">
+          {[
+            { label: 'CPU', value: metrics.cpu.usage, thresholds: [50, 80] },
+            { label: 'RAM', value: metrics.memory.usage_percent, thresholds: [50, 80] },
+            { label: 'Disk', value: metrics.disks[0]?.usage_percent || 0, thresholds: [70, 90] },
+          ].map(({ label, value, thresholds }) => (
+            <div key={label} className="space-y-1">
+              <div className="flex justify-between text-[11px]">
+                <span className="text-gray-500">{label}</span>
+                <span className={`font-mono font-bold ${value > thresholds[1] ? 'text-red-400' : value > thresholds[0] ? 'text-yellow-400' : 'text-emerald-400'}`}>
+                  {value.toFixed(0)}%
+                </span>
+              </div>
+              <div className="h-1 w-full bg-gray-700/50 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all duration-500 ${value > thresholds[1] ? 'bg-red-500' : value > thresholds[0] ? 'bg-yellow-500' : 'bg-emerald-500'}`} 
+                  style={{ width: `${value}%` }} 
+                />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Column 3: Network */}
@@ -250,22 +319,31 @@ function ServerGridCard({ server, onClick }: { server: ServerState; onClick: () 
 
   return (
     <div 
-      className="nezha-card p-4 hover:scale-[1.02] transition-all cursor-pointer group flex flex-col"
+      className="nezha-card p-4 hover:scale-[1.02] transition-all cursor-pointer group flex flex-col relative overflow-hidden"
       onClick={onClick}
     >
+      {/* Provider Logo Background */}
+      {providerLogo && (
+        <div className="absolute -right-4 -bottom-4 w-20 h-20 opacity-[0.04] pointer-events-none group-hover:opacity-[0.08] transition-opacity">
+          <LogoImage 
+            src={providerLogo} 
+            alt="" 
+            className="w-full h-full object-contain transform rotate-[-15deg]" 
+          />
+        </div>
+      )}
+
       {/* Header */}
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0 overflow-hidden">
+      <div className="flex items-center gap-2 mb-3 relative z-10">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-500/5 border border-blue-500/30 flex items-center justify-center shrink-0 overflow-hidden">
           {distributionLogo ? (
-            <LogoImage src={distributionLogo} alt={metrics?.os.name || ''} className="w-6 h-6 object-contain p-0.5" />
+            <LogoImage src={distributionLogo} alt={metrics?.os.name || ''} className="w-5 h-5 object-contain" />
           ) : OsIcon ? (
             <OsIcon className="w-5 h-5 text-blue-400" />
           ) : (
-            <div className="w-5 h-5 bg-blue-500/20 rounded flex items-center justify-center">
-              <svg className="w-3 h-3 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-              </svg>
-            </div>
+            <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+            </svg>
           )}
         </div>
         <h3 className="font-bold truncate text-sm flex-1 group-hover:text-emerald-500 transition-colors" style={{ color: 'var(--text-primary)' }}>

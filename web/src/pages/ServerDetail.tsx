@@ -627,10 +627,30 @@ export default function ServerDetail() {
       </button>
 
       {/* Header */}
-      <div className="nezha-card p-6 md:p-8 mb-6">
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-          <div className="w-20 h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-5xl">
-            {flag}
+      <div className="nezha-card p-6 md:p-8 mb-6 relative overflow-hidden">
+        {/* Provider Logo Background */}
+        {providerLogo && (
+          <div className="absolute -right-4 -bottom-4 w-32 h-32 opacity-[0.06] pointer-events-none">
+            <LogoImage 
+              src={providerLogo} 
+              alt="" 
+              className="w-full h-full object-contain transform rotate-[-15deg]" 
+            />
+          </div>
+        )}
+        
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-6 relative z-10">
+          {/* Main Icon: OS System Logo */}
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500/20 to-blue-500/5 border border-blue-500/30 flex items-center justify-center overflow-hidden">
+            {distributionLogo ? (
+              <LogoImage src={distributionLogo} alt={metrics.os.name} className="w-14 h-14 object-contain" />
+            ) : OsIcon ? (
+              <OsIcon className="w-12 h-12 text-blue-400" />
+            ) : (
+              <svg className="w-12 h-12 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+              </svg>
+            )}
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-3">
@@ -638,33 +658,36 @@ export default function ServerDetail() {
               <span className={`w-3 h-3 rounded-full ${isConnected ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.6)]' : 'bg-red-500'}`} />
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {distributionLogo ? (
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                  <LogoImage src={distributionLogo} alt={metrics.os.name} className="w-4 h-4 object-contain" />
-                  <span className="text-xs text-blue-300 font-medium">{metrics.os.name}</span>
+              {/* Location with flag */}
+              {config.location && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
+                  <span className="text-sm">{flag}</span>
+                  <span className="text-xs text-cyan-300 font-medium">{config.location}</span>
                 </div>
-              ) : OsIcon ? (
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                  <OsIcon className="w-4 h-4 text-blue-400" />
-                  <span className="text-xs text-blue-300 font-medium">{metrics.os.name}</span>
-                </div>
-              ) : null}
+              )}
+              {/* Provider */}
               {providerLogo ? (
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
                   <LogoImage src={providerLogo} alt={config.provider || ''} className="w-4 h-4 object-contain" />
                   <span className="text-xs text-amber-300 font-medium">{config.provider}</span>
                 </div>
               ) : ProviderIcon ? (
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
                   <ProviderIcon className="w-4 h-4 text-amber-400" />
                   <span className="text-xs text-amber-300 font-medium">{config.provider}</span>
                 </div>
               ) : null}
-              <div className="px-2.5 py-1 rounded-lg bg-purple-500/10 border border-purple-500/20">
-                <span className="text-xs text-purple-300">{metrics.os.arch}</span>
+              {/* OS Name */}
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                <span className="text-xs text-blue-300 font-medium">{metrics.os.name}</span>
               </div>
-              <div className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10">
-                <span className="text-xs text-gray-400">{metrics.cpu.cores} Cores</span>
+              {/* Architecture */}
+              <div className="px-2.5 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                <span className="text-xs text-purple-300 font-medium">{metrics.os.arch}</span>
+              </div>
+              {/* Cores */}
+              <div className="px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                <span className="text-xs text-emerald-300 font-medium">{metrics.cpu.cores} Cores</span>
               </div>
             </div>
           </div>

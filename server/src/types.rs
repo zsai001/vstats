@@ -181,6 +181,8 @@ pub struct DiskMetrics {
     pub used: u64,
     pub available: u64,
     pub usage_percent: f32,
+    #[serde(default)]
+    pub disk_type: Option<String>,  // "SSD", "HDD", "NVMe", "Unknown"
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -475,17 +475,73 @@ impl MetricsCollector {
                     0.0
                 };
                 
+                let disk_name = disk.name().to_string_lossy().to_string();
+                let disk_type = Self::detect_disk_type(&disk_name);
+                
                 DiskMetrics {
-                    name: disk.name().to_string_lossy().to_string(),
+                    name: disk_name,
                     mount_point: disk.mount_point().to_string_lossy().to_string(),
                     fs_type: disk.file_system().to_string_lossy().to_string(),
                     total,
                     used,
                     available,
                     usage_percent,
+                    disk_type,
                 }
             })
             .collect()
+    }
+    
+    /// Detect disk type (SSD, HDD, NVMe)
+    fn detect_disk_type(disk_name: &str) -> Option<String> {
+        // Extract device name from path (e.g., /dev/sda1 -> sda, /dev/nvme0n1p1 -> nvme0n1)
+        let device = disk_name
+            .trim_start_matches("/dev/")
+            .trim_end_matches(|c: char| c.is_ascii_digit());
+        
+        // NVMe detection by name
+        if device.starts_with("nvme") {
+            return Some("NVMe".to_string());
+        }
+        
+        // Get base device (remove partition number)
+        let base_device: String = device.chars().take_while(|c| !c.is_ascii_digit()).collect();
+        
+        #[cfg(target_os = "linux")]
+        {
+            // Check rotational flag: 0 = SSD, 1 = HDD
+            let rotational_path = format!("/sys/block/{}/queue/rotational", base_device);
+            if let Ok(content) = std::fs::read_to_string(&rotational_path) {
+                return match content.trim() {
+                    "0" => Some("SSD".to_string()),
+                    "1" => Some("HDD".to_string()),
+                    _ => None,
+                };
+            }
+            
+            // Fallback: check if it's a virtual device
+            if base_device.starts_with("vd") || base_device.starts_with("xvd") {
+                // Virtual disks are usually backed by SSDs in cloud environments
+                return Some("SSD".to_string());
+            }
+        }
+        
+        #[cfg(target_os = "macos")]
+        {
+            // On macOS, most disks are SSDs nowadays, but we can't easily detect
+            // Return None to not show incorrect info
+        }
+        
+        #[cfg(target_os = "windows")]
+        {
+            // On Windows, disk type detection requires WMI which is complex
+            // Virtual disks in VMs are usually SSDs
+            if disk_name.contains("VBOX") || disk_name.contains("VMware") || disk_name.contains("Virtual") {
+                return Some("SSD".to_string());
+            }
+        }
+        
+        None
     }
     
     fn collect_network(&mut self) -> NetworkMetrics {

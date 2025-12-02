@@ -44,6 +44,7 @@ export interface DiskMetrics {
   used: number;
   available: number;
   usage_percent: number;
+  disk_type?: string;  // "SSD", "HDD", "NVMe"
 }
 
 export interface NetworkMetrics {
