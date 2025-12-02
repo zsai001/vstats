@@ -45,6 +45,7 @@ pub fn collect_metrics(sys: &mut System, disks: &Disks, networks: &Networks) -> 
                 used,
                 available,
                 usage_percent: usage,
+                disk_type: None,
             }
         })
         .collect();

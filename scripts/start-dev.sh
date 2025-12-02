@@ -9,6 +9,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SERVER_DIR="$PROJECT_ROOT/server"
+AGENT_DIR="$PROJECT_ROOT/agent"
 WEB_DIR="$PROJECT_ROOT/web"
 
 # Colors
@@ -23,7 +24,7 @@ echo -e "${BLUE}═════════════════════�
 echo ""
 
 # Build frontend
-echo -e "${YELLOW}[1/3]${NC} Building frontend..."
+echo -e "${YELLOW}[1/4]${NC} Building frontend..."
 cd "$WEB_DIR"
 if [ ! -d "node_modules" ]; then
     npm install
@@ -33,10 +34,17 @@ echo -e "${GREEN}✓ Frontend built${NC}"
 echo ""
 
 # Build backend
-echo -e "${YELLOW}[2/3]${NC} Building backend..."
+echo -e "${YELLOW}[2/4]${NC} Building backend..."
 cd "$SERVER_DIR"
 cargo build --release
 echo -e "${GREEN}✓ Backend built${NC}"
+echo ""
+
+# Build agent
+echo -e "${YELLOW}[3/4]${NC} Building agent..."
+cd "$AGENT_DIR"
+cargo build --release
+echo -e "${GREEN}✓ Agent built${NC}"
 echo ""
 
 # Set environment variables
@@ -47,7 +55,7 @@ export VSTATS_WEB_DIR="$WEB_DIR/dist"
 SERVER_BINARY="$SERVER_DIR/target/release/vstats-server"
 
 # Kill existing vstats-server processes
-echo -e "${YELLOW}[0/3]${NC} Stopping existing services..."
+echo -e "${YELLOW}[0/4]${NC} Stopping existing services..."
 if pgrep -f "vstats-server" > /dev/null 2>&1; then
     echo -e "${YELLOW}  Found running vstats-server processes, stopping...${NC}"
     pkill -f "vstats-server" || true
@@ -64,7 +72,7 @@ fi
 echo ""
 
 # Reset password to get a fresh one for development
-echo -e "${YELLOW}[3/3]${NC} Resetting admin password..."
+echo -e "${YELLOW}[4/4]${NC} Resetting admin password..."
 cd "$SERVER_DIR"
 PASSWORD_OUTPUT=$("$SERVER_BINARY" --reset-password 2>&1)
 # Extract password from output (format: "New admin password: {password}")
