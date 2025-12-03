@@ -103,20 +103,23 @@ const formatPrice = (amount: string): string => {
   return `${currency}${Math.round(num)}`;
 };
 
-// Format purchase date to show only year
-const formatPurchaseYear = (dateStr: string): string => {
+// Format purchase date to YYYY-MM-DD
+const formatPurchaseDate = (dateStr: string): string => {
   try {
     const date = new Date(dateStr);
-    return date.getFullYear().toString();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   } catch {
     return dateStr;
   }
 };
 
-// Format latency to integer
+// Format latency to 1 decimal place
 const formatLatency = (ms: number | null): string => {
   if (ms === null) return 'N/A';
-  return `${Math.round(ms)}ms`;
+  return `${ms.toFixed(1)}ms`;
 };
 
 // Calculate remaining value based on price and purchase date
@@ -395,7 +398,7 @@ function VpsGridCard({ server, onClick, isDark }: { server: ServerState; onClick
             {config.purchase_date && (
               <div className={`vps-footer-info-item vps-footer-info-item--${themeClass}`}>
                 <span className="vps-footer-info-label">购买</span>
-                <span className="vps-footer-info-value">{formatPurchaseYear(config.purchase_date)}</span>
+                <span className="vps-footer-info-value">{formatPurchaseDate(config.purchase_date)}</span>
               </div>
             )}
           </div>
@@ -487,11 +490,44 @@ function VpsListCard({ server, onClick, isDark }: { server: ServerState; onClick
     : getTipBadgeLabel(config.tag);
   const pingMetrics = metrics.ping;
   const remainingValue = calculateRemainingValue(config.price, config.purchase_date);
-  const resourceRows = [
-    { label: 'CPU', value: metrics.cpu.usage, thresholds: [50, 80] as [number, number] },
-    { label: 'RAM', value: metrics.memory.usage_percent, thresholds: [50, 80] as [number, number] },
-    { label: 'Disk', value: metrics.disks[0]?.usage_percent || 0, thresholds: [70, 90] as [number, number] },
-    { label: 'Network', value: Math.min(100, Math.round(((speed.rx_sec + speed.tx_sec) * 8) / 1_000_000)), thresholds: [40, 70] as [number, number] },
+  
+  // Calculate metrics details (same as Grid card)
+  const diskUsage = metrics.disks[0]?.usage_percent || 0;
+  const diskDetail = `${metrics.disks[0]?.disk_type || 'SSD'} · ${formatDiskSize(totalDisk)} total`;
+  const memoryDetail = `${formatDiskSize(metrics.memory.total)}`;
+  const networkValue = Math.min(100, Math.round(((speed.rx_sec + speed.tx_sec) * 8) / 1_000_000));
+  const networkSubtitle = `↑ ${formatSpeed(speed.tx_sec)} · ↓ ${formatSpeed(speed.rx_sec)}`;
+
+  const listMetricIcons: Record<string, ReactElement> = {
+    CPU: (
+      <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" className="w-3 h-3">
+        <path strokeWidth={1.6} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9z" />
+      </svg>
+    ),
+    RAM: (
+      <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" className="w-3 h-3">
+        <path strokeWidth={1.6} d="M3 7a2 2 0 012-2h14a2 2 0 012 2v9H3z" />
+        <path strokeWidth={1.6} d="M6 18v2m4-2v2m4-2v2m4-2v2M7 7v5m10-5v5" />
+      </svg>
+    ),
+    Disk: (
+      <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" className="w-3 h-3">
+        <path strokeWidth={1.6} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7c0 2.21-3.582 4-8 4S4 9.21 4 7z" />
+        <path strokeWidth={1.6} d="M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+      </svg>
+    ),
+    Network: (
+      <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" className="w-3 h-3">
+        <path strokeWidth={1.6} d="M5 12h14M12 5l7 7-7 7" />
+      </svg>
+    ),
+  };
+
+  const metricRows = [
+    { label: 'CPU', subtitle: `${getShortCpuBrand(metrics.cpu.brand)} · ${metrics.cpu.cores} cores`, value: metrics.cpu.usage, thresholds: [50, 80] as [number, number] },
+    { label: 'RAM', subtitle: memoryDetail, value: metrics.memory.usage_percent, thresholds: [50, 80] as [number, number] },
+    { label: 'Disk', subtitle: diskDetail, value: diskUsage, thresholds: [70, 90] as [number, number] },
+    { label: 'Network', subtitle: networkSubtitle, value: networkValue, thresholds: [40, 70] as [number, number] },
   ];
 
   return (
@@ -534,72 +570,37 @@ function VpsListCard({ server, onClick, isDark }: { server: ServerState; onClick
         </div>
       </div>
 
-      {/* Column 2: Specs & Resources */}
+      {/* Column 2: Resources (same style as Grid card) */}
       <div className="vps-list-specs">
-        {/* Compact Specs */}
-        <div className="vps-list-specs-compact">
-          <div className="vps-list-spec-item">
-            <div className={`vps-list-spec-label vps-list-spec-label--${themeClass}`}>CPU</div>
-            <div className={`vps-list-spec-value vps-list-spec-value--${themeClass}`}>
-              {getShortCpuBrand(metrics.cpu.brand)} · {metrics.cpu.cores} cores
-            </div>
-          </div>
-          <div className="vps-list-spec-item">
-            <div className={`vps-list-spec-label vps-list-spec-label--${themeClass}`}>RAM</div>
-            <div className={`vps-list-spec-value vps-list-spec-value--${themeClass}`}>
-              {formatDiskSize(metrics.memory.total)}
-            </div>
-          </div>
-          <div className="vps-list-spec-item">
-            <div className={`vps-list-spec-label vps-list-spec-label--${themeClass}`}>Disk</div>
-            <div className={`vps-list-spec-value vps-list-spec-value--${themeClass}`}>
-              {formatDiskSize(totalDisk)}
-            </div>
-          </div>
-          <div className="vps-list-spec-item">
-            <div className={`vps-list-spec-label vps-list-spec-label--${themeClass}`}>Network</div>
-            <div className={`vps-list-spec-value vps-list-spec-value--${themeClass}`}>
-              ↑ {formatSpeed(speed.tx_sec)} · ↓ {formatSpeed(speed.rx_sec)}
-            </div>
-          </div>
-        </div>
-
-        {/* Resources Grid */}
         <div className="vps-list-resources">
-          {resourceRows.map(({ label, value, thresholds }) => {
+          {metricRows.map(({ label, subtitle, value, thresholds }) => {
             const state = getResourceState(value, thresholds);
             return (
-              <div key={label} className="vps-list-res-item">
-                <div className={`vps-list-res-header vps-list-res-header--${themeClass}`}>
-                  <span>{label}</span>
-                  <span className={`vps-resource-percent vps-resource-percent--${state}-${themeClass}`}>
-                    {Math.round(value)}%
-                  </span>
+              <div key={label} className="vps-resource-row">
+                <div className={`vps-resource-icon vps-resource-icon--${themeClass} vps-resource-icon--${state}`}>
+                  {listMetricIcons[label]}
                 </div>
-                <div className={`vps-resource-bar-track vps-resource-bar-track--${themeClass}`}>
-                  <div 
-                    className={`vps-resource-bar-fill vps-resource-bar-fill--${state}-${themeClass}`}
-                    style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
-                  />
+                <div className="vps-resource-content">
+                  <div className="vps-resource-info">
+                    <div className="vps-resource-title-row">
+                      <span className={`vps-resource-label vps-resource-label--${themeClass}`}>{label.toUpperCase()}</span>
+                      <span className={`vps-resource-detail vps-resource-detail--${themeClass}`}>{subtitle}</span>
+                    </div>
+                    <span className={`vps-resource-percent vps-resource-percent--${state}-${themeClass}`}>
+                      {Math.round(value)}%
+                    </span>
+                  </div>
+                  <div className={`vps-resource-bar-track vps-resource-bar-track--${themeClass}`}>
+                    <div 
+                      className={`vps-resource-bar-fill vps-resource-bar-fill--${state}-${themeClass}`}
+                      style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
+                    />
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
-
-        {/* Network Info */}
-        {pingMetrics && pingMetrics.targets && pingMetrics.targets.length > 0 && (
-          <div className={`vps-list-network-info vps-list-network-info--${themeClass}`}>
-            {pingMetrics.targets.slice(0, 2).map((target, idx) => (
-              <div key={idx} className="vps-list-net-item">
-                <div className={`vps-list-net-label vps-list-net-label--${themeClass}`}>{target.name}</div>
-                <div className={`vps-list-net-value vps-list-net-value--${themeClass}`}>
-                  {formatLatency(target.latency_ms)}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Column 3: Footer */}
@@ -621,7 +622,7 @@ function VpsListCard({ server, onClick, isDark }: { server: ServerState; onClick
             {config.purchase_date && (
               <div className={`vps-footer-info-item vps-footer-info-item--${themeClass}`}>
                 <span className="vps-footer-info-label">购买</span>
-                <span className="vps-footer-info-value">{formatPurchaseYear(config.purchase_date)}</span>
+                <span className="vps-footer-info-value">{formatPurchaseDate(config.purchase_date)}</span>
               </div>
             )}
           </div>
