@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, type ReactElement } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useServerManager, formatSpeed, formatUptime, type ServerState } from '../hooks/useMetrics';
-import { getOsIcon, getProviderIcon } from '../components/Icons';
+import { getOsIcon } from '../components/Icons';
 import { getProviderLogo, getDistributionLogo, LogoImage } from '../utils/logoUtils';
 import { useTheme } from '../context/ThemeContext';
 import type { SocialLink } from '../types';
@@ -66,7 +66,7 @@ function SocialIcon({ platform }: { platform: string }) {
   }
 }
 
-function SocialLinks({ links, className = '' }: { links: SocialLink[]; className?: string }) {
+function SocialLinks({ links, className = '', isDark }: { links: SocialLink[]; className?: string; isDark: boolean }) {
   if (!links || links.length === 0) return null;
   
   return (
@@ -77,7 +77,7 @@ function SocialLinks({ links, className = '' }: { links: SocialLink[]; className
           href={link.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-gray-400 hover:text-white transition-all"
+          className={`vps-btn ${isDark ? 'vps-btn-outline-dark' : 'vps-btn-outline-light'}`}
           title={link.label || link.platform}
         >
           <SocialIcon platform={link.platform} />
@@ -87,432 +87,592 @@ function SocialLinks({ links, className = '' }: { links: SocialLink[]; className
   );
 }
 
-function ServerCard({ server, onClick }: { server: ServerState; onClick: () => void }) {
+// Helper functions
+// Calculate remaining value based on price and purchase date
+const calculateRemainingValue = (price?: { amount: string; period: 'month' | 'year' }, purchaseDate?: string): string | null => {
+  if (!price || !purchaseDate) return null;
+  
+  try {
+    // Extract numeric value from price string (e.g., "$89.99" -> 89.99)
+    const priceMatch = price.amount.match(/[\d.]+/);
+    if (!priceMatch) return null;
+    
+    const priceValue = parseFloat(priceMatch[0]);
+    if (isNaN(priceValue)) return null;
+    
+    const purchase = new Date(purchaseDate);
+    const now = new Date();
+    
+    if (purchase > now) return null; // Invalid date
+    
+    // Calculate days elapsed
+    const daysElapsed = Math.floor((now.getTime() - purchase.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (price.period === 'month') {
+      // Monthly billing: calculate based on days in month
+      const daysInMonth = 30; // Approximate
+      const monthsElapsed = daysElapsed / daysInMonth;
+      const remainingMonths = Math.max(0, 1 - monthsElapsed);
+      const remainingValue = priceValue * remainingMonths;
+      
+      if (remainingValue <= 0) return null;
+      return `$${remainingValue.toFixed(2)}`;
+    } else if (price.period === 'year') {
+      // Yearly billing: calculate based on days in year
+      const daysInYear = 365;
+      const yearsElapsed = daysElapsed / daysInYear;
+      const remainingYears = Math.max(0, 1 - yearsElapsed);
+      const remainingValue = priceValue * remainingYears;
+      
+      if (remainingValue <= 0) return null;
+      return `$${remainingValue.toFixed(2)}`;
+    }
+  } catch (e) {
+    console.error('Failed to calculate remaining value', e);
+  }
+  
+  return null;
+};
+
+const getShortCpuBrand = (brand: string) => {
+  return brand
+    .replace(/\(R\)|\(TM\)|CPU|Processor|@.*$/gi, '')
+    .replace(/Intel Core |AMD Ryzen |AMD EPYC |Intel Xeon /gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 24);
+};
+
+const formatDiskSize = (bytes: number) => {
+  const gb = bytes / (1024 * 1024 * 1024);
+  if (gb >= 1000) return `${(gb / 1024).toFixed(0)}T`;
+  return `${gb.toFixed(0)}G`;
+};
+
+const getResourceState = (value: number, thresholds: [number, number]): 'ok' | 'warn' | 'bad' => {
+  if (value > thresholds[1]) return 'bad';
+  if (value > thresholds[0]) return 'warn';
+  return 'ok';
+};
+
+// VPS Grid Card Component
+function VpsGridCard({ server, onClick, isDark }: { server: ServerState; onClick: () => void; isDark: boolean }) {
   const { metrics, speed, isConnected, config } = server;
+  const themeClass = isDark ? 'dark' : 'light';
   
   const OsIcon = metrics ? getOsIcon(metrics.os.name) : null;
-  const ProviderIcon = config.provider && config.provider !== 'Local' ? getProviderIcon(config.provider) : null;
-  const providerLogo = config.provider && config.provider !== 'Local' ? getProviderLogo(config.provider) : null;
   const distributionLogo = metrics ? getDistributionLogo(metrics.os.name) : null;
+  const providerLogo = config.provider && config.provider !== 'Local' ? getProviderLogo(config.provider) : null;
   const flag = config.location ? FLAGS[config.location] : null;
 
   if (!metrics) {
     return (
-      <div className="nezha-card p-4 flex items-center gap-4 animate-pulse cursor-pointer" onClick={onClick}>
-        <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
-          <div className="w-6 h-6 bg-white/10 rounded"></div>
-        </div>
-        <div className="flex-1">
-          <div className="h-4 bg-white/10 rounded w-32 mb-2"></div>
-          <div className="h-3 bg-white/5 rounded w-24"></div>
-        </div>
-        <div className="text-gray-500 text-sm">Connecting...</div>
-      </div>
-    );
-  }
-
-  // Format CPU frequency
-  const formatFreq = (mhz: number) => {
-    if (mhz >= 1000) return `${(mhz / 1000).toFixed(1)}GHz`;
-    return `${mhz}MHz`;
-  };
-
-  // Get short CPU brand name
-  const getShortCpuBrand = (brand: string) => {
-    // Remove common verbose parts
-    return brand
-      .replace(/\(R\)|\(TM\)|CPU|Processor|@.*$/gi, '')
-      .replace(/Intel Core |AMD Ryzen |AMD EPYC |Intel Xeon /gi, '')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .slice(0, 20);
-  };
-
-  // Format disk size
-  const formatDiskSize = (bytes: number) => {
-    const gb = bytes / (1024 * 1024 * 1024);
-    if (gb >= 1000) return `${(gb / 1024).toFixed(0)}T`;
-    return `${gb.toFixed(0)}G`;
-  };
-
-  // Calculate total disk
-  const totalDisk = metrics.disks.reduce((acc, d) => acc + d.total, 0);
-  const diskCount = metrics.disks.length;
-
-  return (
-    <div 
-      className="nezha-card server-card-stable p-4 md:p-5 flex flex-col lg:flex-row items-start lg:items-center gap-4 lg:gap-6 hover:scale-[1.005] hover:border-white/20 transition-all cursor-pointer group relative overflow-hidden"
-      onClick={onClick}
-    >
-      {/* Provider Logo Background */}
-      {providerLogo && (
-        <div className="absolute -right-6 -bottom-6 w-28 h-28 opacity-[0.04] pointer-events-none group-hover:opacity-[0.08] transition-opacity">
-          <LogoImage 
-            src={providerLogo} 
-            alt="" 
-            className="w-full h-full object-contain transform rotate-[15deg]" 
-          />
-        </div>
-      )}
-
-      {/* Column 1: Identity with Icons */}
-      <div className="w-full lg:w-56 shrink-0 flex items-center gap-3 relative z-10">
-        {/* Main Icon: System Logo */}
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-500/5 border border-blue-500/30 group-hover:border-blue-500/50 flex items-center justify-center shrink-0 transition-colors overflow-hidden">
-          {distributionLogo ? (
-            <LogoImage src={distributionLogo} alt={metrics.os.name} className="w-7 h-7 object-contain" />
-          ) : OsIcon ? (
-            <OsIcon className="w-6 h-6 text-blue-400" />
-          ) : (
-            <svg className="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-            </svg>
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h3 className="font-bold text-white truncate text-sm group-hover:text-emerald-300 transition-colors">{config.name}</h3>
-            <span className={`w-2 h-2 rounded-full shrink-0 ${isConnected ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]' : 'bg-red-500'}`} />
-          </div>
-          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-            {config.location && flag && (
-              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20" title={`Location: ${config.location}`}>
-                <span className="text-xs">{flag}</span>
-                <span className="text-[10px] text-cyan-300 font-medium">{config.location}</span>
-              </div>
-            )}
-            {providerLogo ? (
-              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20" title={config.provider || ''}>
-                <LogoImage src={providerLogo} alt={config.provider || ''} className="w-3.5 h-3.5 object-contain" />
-              </div>
-            ) : ProviderIcon ? (
-              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20" title={config.provider}>
-                <ProviderIcon className="w-3.5 h-3.5 text-amber-400" />
-              </div>
-            ) : null}
-            {config.tag && (
-              <span className="px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 text-[10px] font-medium">
-                {config.tag}
-              </span>
-            )}
-            <span className="text-[10px] text-gray-500">{formatUptime(metrics.uptime)}</span>
+      <div className={`vps-card vps-card--${themeClass} animate-pulse cursor-pointer`} onClick={onClick}>
+        <div className="vps-card-header">
+          <div className="vps-card-identity">
+            <div className={`vps-card-avatar vps-card-avatar--${themeClass}`}>
+              <div className="w-6 h-6 skeleton-bg rounded" />
+            </div>
+            <div className="vps-card-info">
+              <div className="h-4 skeleton-bg rounded w-3/4 mb-2" />
+              <div className="h-3 skeleton-bg rounded w-1/2" />
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Column 2: Hardware Specs & Resources */}
-      <div className="flex-1 w-full relative z-10">
-        {/* Hardware Specs Row */}
-        <div className="flex flex-wrap gap-x-4 gap-y-1 mb-2 text-[10px]">
-          {/* CPU Info */}
-          <div className="flex items-center gap-1 text-gray-400" title={metrics.cpu.brand}>
-            <svg className="w-3 h-3 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-            </svg>
-            <span className="font-medium text-gray-300">{getShortCpuBrand(metrics.cpu.brand)}</span>
-            <span className="text-gray-500">{formatFreq(metrics.cpu.frequency)} × {metrics.cpu.cores}</span>
-          </div>
-          {/* Memory Info */}
-          <div className="flex items-center gap-1 text-gray-400">
-            <svg className="w-3 h-3 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-            </svg>
-            <span className="font-medium text-gray-300">{formatDiskSize(metrics.memory.total)}</span>
-          </div>
-          {/* Disk Info */}
-          <div className="flex items-center gap-1 text-gray-400">
-            <svg className="w-3 h-3 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
-            </svg>
-            {metrics.disks[0]?.disk_type && (
-              <span className="text-gray-500">{metrics.disks[0].disk_type}</span>
-            )}
-            <span className="font-medium text-gray-300">{formatDiskSize(totalDisk)}</span>
-            {diskCount > 1 && <span className="text-gray-500">×{diskCount}</span>}
-          </div>
-        </div>
-        {/* Resource Usage Bars */}
-        <div className="grid grid-cols-3 gap-3 lg:gap-6">
-          {[
-            { label: 'CPU', value: metrics.cpu.usage, thresholds: [50, 80] },
-            { label: 'RAM', value: metrics.memory.usage_percent, thresholds: [50, 80] },
-            { label: 'Disk', value: metrics.disks[0]?.usage_percent || 0, thresholds: [70, 90] },
-          ].map(({ label, value, thresholds }) => (
-            <div key={label} className="space-y-1">
-              <div className="flex justify-between text-[11px]">
-                <span className="text-gray-500">{label}</span>
-                <span className={`font-mono font-bold metric-value ${value > thresholds[1] ? 'text-red-400' : value > thresholds[0] ? 'text-yellow-400' : 'text-emerald-400'}`}>
-                  {value.toFixed(0)}%
-                </span>
-              </div>
-              <div className="h-1 w-full bg-gray-700/50 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full rounded-full transition-[width] duration-500 ease-out ${value > thresholds[1] ? 'bg-red-500' : value > thresholds[0] ? 'bg-yellow-500' : 'bg-emerald-500'}`} 
-                  style={{ width: `${Math.min(100, Math.max(0, value))}%` }} 
-                />
-              </div>
+        <div className="space-y-3 mt-4">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="vps-resource-row">
+              <div className="h-3 skeleton-bg rounded w-full" />
             </div>
           ))}
         </div>
       </div>
+    );
+  }
 
-      {/* Column 3: Network */}
-      <div className="w-full lg:w-40 flex flex-row lg:flex-col justify-between lg:justify-center items-end lg:items-end gap-1 shrink-0 border-t lg:border-t-0 lg:border-l border-white/5 pt-3 lg:pt-0 lg:pl-4">
-        <div className="text-right">
-          <div className="text-[10px] text-gray-600 uppercase tracking-wider">Up</div>
-          <div className="text-xs font-mono text-emerald-400 font-semibold speed-value">↑ {formatSpeed(speed.tx_sec)}</div>
+  const diskUsage = metrics.disks[0]?.usage_percent || 0;
+  const totalDisk = metrics.disks.reduce((acc, d) => acc + d.total, 0);
+  const memoryModules = metrics.memory.modules;
+  const memoryType = memoryModules?.[0]?.mem_type;
+  const memorySpeed = memoryModules?.[0]?.speed;
+  const memoryDetail = `${formatDiskSize(metrics.memory.total)}${memoryType ? ` · ${memoryType}` : ''}${memorySpeed ? `-${memorySpeed}MHz` : ''}`;
+  const diskDetail = `${metrics.disks[0]?.disk_type || 'Storage'} · ${formatDiskSize(totalDisk)} total`;
+  
+  const networkMbps = ((speed.rx_sec + speed.tx_sec) * 8) / 1_000_000;
+  const networkValue = Math.min(100, Math.round(networkMbps));
+  const networkSubtitle = `↑ ${formatSpeed(speed.tx_sec)} · ↓ ${formatSpeed(speed.rx_sec)}`;
+
+  const metricIcons: Record<string, ReactElement> = {
+    CPU: (
+      <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" className="w-3 h-3">
+        <path strokeWidth={1.6} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9z" />
+      </svg>
+    ),
+    RAM: (
+      <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" className="w-3 h-3">
+        <path strokeWidth={1.6} d="M3 7a2 2 0 012-2h14a2 2 0 012 2v9H3z" />
+        <path strokeWidth={1.6} d="M6 18v2m4-2v2m4-2v2m4-2v2M7 7v5m10-5v5" />
+      </svg>
+    ),
+    Disk: (
+      <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" className="w-3 h-3">
+        <path strokeWidth={1.6} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7c0 2.21-3.582 4-8 4S4 9.21 4 7z" />
+        <path strokeWidth={1.6} d="M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+      </svg>
+    ),
+    Network: (
+      <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" className="w-3 h-3">
+        <path strokeWidth={1.6} d="M5 12h14M12 5l7 7-7 7" />
+      </svg>
+    ),
+  };
+
+  const metricRows = [
+    { label: 'CPU', subtitle: `${getShortCpuBrand(metrics.cpu.brand)} · ${metrics.cpu.cores} cores`, value: metrics.cpu.usage, thresholds: [50, 80] as [number, number] },
+    { label: 'RAM', subtitle: memoryDetail, value: metrics.memory.usage_percent, thresholds: [50, 80] as [number, number] },
+    { label: 'Disk', subtitle: diskDetail, value: diskUsage, thresholds: [70, 90] as [number, number] },
+    { label: 'Network', subtitle: networkSubtitle, value: networkValue, thresholds: [40, 70] as [number, number] },
+  ];
+
+  // Tip badge mapping
+  const getTipBadgeClass = (tag?: string) => {
+    if (!tag) return null;
+    const tagLower = tag.toLowerCase();
+    if (tagLower.includes('cn3-opt') || tagLower.includes('三网优化')) return 'cn3-opt';
+    if (tagLower.includes('cn3-gia') || tagLower.includes('三网gia')) return 'cn3-gia';
+    if (tagLower.includes('big-disk') || tagLower.includes('大盘')) return 'big-disk';
+    if (tagLower.includes('perf') || tagLower.includes('性能')) return 'perf';
+    if (tagLower.includes('landing') || tagLower.includes('落地')) return 'landing';
+    if (tagLower.includes('dufu') || tagLower.includes('杜甫')) return 'dufu';
+    return null;
+  };
+
+  const getTipBadgeLabel = (tag?: string) => {
+    if (!tag) return null;
+    const tagLower = tag.toLowerCase();
+    if (tagLower.includes('cn3-opt') || tagLower.includes('三网优化')) return '三网优化';
+    if (tagLower.includes('cn3-gia') || tagLower.includes('三网gia')) return '三网 GIA';
+    if (tagLower.includes('big-disk') || tagLower.includes('大盘')) return '大盘鸡';
+    if (tagLower.includes('perf') || tagLower.includes('性能')) return '性能机';
+    if (tagLower.includes('landing') || tagLower.includes('落地')) return '落地机';
+    if (tagLower.includes('dufu') || tagLower.includes('杜甫')) return '杜甫';
+    return null;
+  };
+
+  // Tip badge: use config.tip_badge if set, otherwise infer from tag
+  const tipBadgeClass = config.tip_badge || getTipBadgeClass(config.tag);
+  const tipBadgeLabel = config.tip_badge 
+    ? (config.tip_badge === 'cn3-opt' ? '三网优化' :
+       config.tip_badge === 'cn3-gia' ? '三网 GIA' :
+       config.tip_badge === 'big-disk' ? '大盘鸡' :
+       config.tip_badge === 'perf' ? '性能机' :
+       config.tip_badge === 'landing' ? '落地机' :
+       config.tip_badge === 'dufu' ? '杜甫' : null)
+    : getTipBadgeLabel(config.tag);
+  const pingMetrics = metrics.ping;
+  const remainingValue = calculateRemainingValue(config.price, config.purchase_date);
+
+  return (
+    <div className={`vps-card vps-card--${themeClass} group cursor-pointer relative`} onClick={onClick}>
+      {/* Tip Badge */}
+      {tipBadgeClass && tipBadgeLabel && (
+        <div className={`vps-tip-badge ${tipBadgeClass}`}>{tipBadgeLabel}</div>
+      )}
+
+      {/* Header */}
+      <div className="vps-card-header">
+        <div className="vps-card-identity">
+          <div className={`vps-card-avatar vps-card-avatar--${themeClass}`}>
+            {distributionLogo ? (
+              <LogoImage src={distributionLogo} alt={metrics.os.name} className="w-6 h-6 object-contain" />
+            ) : OsIcon ? (
+              <OsIcon className="w-5 h-5 text-blue-500" />
+            ) : null}
+          </div>
+          <div className="vps-card-info">
+            <div className={`vps-card-title vps-card-title--${themeClass}`}>
+              {config.name}
+            </div>
+            <div className="vps-card-meta">
+              {flag && (
+                <span className={`vps-location vps-location--${themeClass}`}>
+                  <span className="text-base">{flag}</span>
+                  <span>{config.location}</span>
+                </span>
+              )}
+              {providerLogo && (
+                <span className={`vps-provider-logo vps-provider-logo--${themeClass}`}>
+                  <LogoImage src={providerLogo} alt={config.provider || ''} className="w-4 h-4 object-contain" />
+                </span>
+              )}
+            </div>
+          </div>
         </div>
-        <div className="text-right">
-          <div className="text-[10px] text-gray-600 uppercase tracking-wider">Down</div>
-          <div className="text-xs font-mono text-blue-400 font-semibold speed-value">↓ {formatSpeed(speed.rx_sec)}</div>
-        </div>
+        <span className={`vps-chip ${isConnected ? `vps-chip--running-${themeClass}` : `vps-chip--stopped-${themeClass}`}`}>
+          <span className={`vps-chip-dot ${isConnected ? 'vps-chip-dot--running' : 'vps-chip-dot--stopped'}`} />
+        </span>
       </div>
 
-      {/* Expand Indicator */}
-      <div className="hidden lg:flex items-center justify-center w-6 text-gray-600 group-hover:text-white group-hover:translate-x-1 transition-all">
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
+      {/* Resource Metrics */}
+      <div className="vps-resources">
+        {metricRows.map(({ label, subtitle, value, thresholds }) => {
+          const state = getResourceState(value, thresholds);
+          return (
+            <div key={label} className="vps-resource-row">
+              <div className={`vps-resource-icon vps-resource-icon--${themeClass} vps-resource-icon--${state}`}>
+                {metricIcons[label]}
+              </div>
+              <div className="vps-resource-content">
+                <div className="vps-resource-info">
+                  <div className="vps-resource-title-row">
+                    <span className={`vps-resource-label vps-resource-label--${themeClass}`}>{label.toUpperCase()}</span>
+                    <span className={`vps-resource-detail vps-resource-detail--${themeClass}`}>{subtitle}</span>
+                  </div>
+                  <span className={`vps-resource-percent vps-resource-percent--${state}-${themeClass}`}>
+                    {Math.round(value)}%
+                  </span>
+                </div>
+                <div className={`vps-resource-bar-track vps-resource-bar-track--${themeClass}`}>
+                  <div 
+                    className={`vps-resource-bar-fill vps-resource-bar-fill--${state}-${themeClass}`}
+                    style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Footer */}
+      <div className={`vps-card-footer vps-card-footer--${themeClass}`}>
+        {(config.price || config.purchase_date) && (
+          <div className="vps-footer-row-price">
+            {config.price && (
+              <div className={`vps-price vps-price--${themeClass}`}>
+                <span className="vps-price-amount">{config.price.amount}</span>
+                <span className="vps-price-period">/{config.price.period === 'month' ? '月' : '年'}</span>
+              </div>
+            )}
+            {remainingValue && (
+              <div className={`vps-footer-info-item vps-footer-info-item--${themeClass}`}>
+                <span className="vps-footer-info-label">剩余</span>
+                <span className="vps-footer-info-value">{remainingValue}</span>
+              </div>
+            )}
+            {config.purchase_date && (
+              <div className={`vps-footer-info-item vps-footer-info-item--${themeClass}`}>
+                <span className="vps-footer-info-label">购买</span>
+                <span className="vps-footer-info-value">{config.purchase_date}</span>
+              </div>
+            )}
+          </div>
+        )}
+        <div className="vps-footer-row-status">
+          <div className={`vps-uptime-item vps-uptime-item--${themeClass}`}>
+            <span className="vps-uptime-label">运行</span>
+            <span className="vps-uptime-value">{formatUptime(metrics.uptime)}</span>
+          </div>
+          {pingMetrics && pingMetrics.targets && pingMetrics.targets.length > 0 && (
+            <div className="vps-latency">
+              {pingMetrics.targets.slice(0, 3).map((target, idx) => (
+                <div key={idx} className={`vps-latency-item vps-latency-item--${themeClass}`}>
+                  <span className="vps-latency-label">{target.name}</span>
+                  <span className={`vps-latency-value vps-latency-value--${themeClass}`}>
+                    {target.latency_ms !== null ? `${target.latency_ms}ms` : 'N/A'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-// Grid Card Component for compact grid view
-function ServerGridCard({ server, onClick }: { server: ServerState; onClick: () => void }) {
+// VPS List Card Component
+function VpsListCard({ server, onClick, isDark }: { server: ServerState; onClick: () => void; isDark: boolean }) {
   const { metrics, speed, isConnected, config } = server;
+  const themeClass = isDark ? 'dark' : 'light';
   
   const OsIcon = metrics ? getOsIcon(metrics.os.name) : null;
   const providerLogo = config.provider && config.provider !== 'Local' ? getProviderLogo(config.provider) : null;
   const distributionLogo = metrics ? getDistributionLogo(metrics.os.name) : null;
   const flag = config.location ? FLAGS[config.location] : null;
 
-  // Format disk size for grid view
-  const formatDiskSizeGrid = (bytes: number) => {
-    const gb = bytes / (1024 * 1024 * 1024);
-    if (gb >= 1000) return `${(gb / 1024).toFixed(0)}T`;
-    return `${gb.toFixed(0)}G`;
-  };
-
-  // Get short CPU brand name for grid view
-  const getShortCpuBrandGrid = (brand: string) => {
-    return brand
-      .replace(/\(R\)|\(TM\)|CPU|Processor|@.*$/gi, '')
-      .replace(/Intel Core |AMD Ryzen |AMD EPYC |Intel Xeon /gi, '')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .slice(0, 16);
-  };
-
   if (!metrics) {
     return (
-      <div className="nezha-card p-4 animate-pulse cursor-pointer aspect-square flex flex-col" onClick={onClick}>
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
-            <div className="w-5 h-5 bg-white/10 rounded"></div>
-          </div>
-          <div className="h-4 skeleton-bg rounded flex-1"></div>
+      <div className={`vps-list-card vps-list-card--${themeClass} animate-pulse cursor-pointer`} onClick={onClick}>
+        <div className={`vps-card-avatar vps-card-avatar--${themeClass}`}>
+          <div className="w-6 h-6 skeleton-bg rounded" />
         </div>
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-gray-500 text-xs">Connecting...</div>
+        <div className="flex-1">
+          <div className="h-4 skeleton-bg rounded w-32 mb-2" />
+          <div className="h-3 skeleton-bg rounded w-24" />
         </div>
+        <div className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Connecting...</div>
       </div>
     );
   }
 
-  const cpuColor = metrics.cpu.usage > 80 ? 'text-red-500' : metrics.cpu.usage > 50 ? 'text-amber-500' : 'text-emerald-500';
-  const memColor = metrics.memory.usage_percent > 80 ? 'text-red-500' : metrics.memory.usage_percent > 50 ? 'text-amber-500' : 'text-emerald-500';
-  const diskUsage = metrics.disks[0]?.usage_percent || 0;
-  const diskColor = diskUsage > 90 ? 'text-red-500' : diskUsage > 70 ? 'text-amber-500' : 'text-emerald-500';
+  const totalDisk = metrics.disks.reduce((acc, d) => acc + d.total, 0);
 
-  const cpuStroke = metrics.cpu.usage > 80 ? 'stroke-red-500' : metrics.cpu.usage > 50 ? 'stroke-amber-500' : 'stroke-emerald-500';
-  const memStroke = metrics.memory.usage_percent > 80 ? 'stroke-red-500' : metrics.memory.usage_percent > 50 ? 'stroke-amber-500' : 'stroke-emerald-500';
-  const diskStroke = diskUsage > 90 ? 'stroke-red-500' : diskUsage > 70 ? 'stroke-amber-500' : 'stroke-emerald-500';
+  // Tip badge mapping
+  const getTipBadgeClass = (tag?: string) => {
+    if (!tag) return null;
+    const tagLower = tag.toLowerCase();
+    if (tagLower.includes('cn3-opt') || tagLower.includes('三网优化')) return 'cn3-opt';
+    if (tagLower.includes('cn3-gia') || tagLower.includes('三网gia')) return 'cn3-gia';
+    if (tagLower.includes('big-disk') || tagLower.includes('大盘')) return 'big-disk';
+    if (tagLower.includes('perf') || tagLower.includes('性能')) return 'perf';
+    if (tagLower.includes('landing') || tagLower.includes('落地')) return 'landing';
+    if (tagLower.includes('dufu') || tagLower.includes('杜甫')) return 'dufu';
+    return null;
+  };
+
+  const getTipBadgeLabel = (tag?: string) => {
+    if (!tag) return null;
+    const tagLower = tag.toLowerCase();
+    if (tagLower.includes('cn3-opt') || tagLower.includes('三网优化')) return '三网优化';
+    if (tagLower.includes('cn3-gia') || tagLower.includes('三网gia')) return '三网 GIA';
+    if (tagLower.includes('big-disk') || tagLower.includes('大盘')) return '大盘鸡';
+    if (tagLower.includes('perf') || tagLower.includes('性能')) return '性能机';
+    if (tagLower.includes('landing') || tagLower.includes('落地')) return '落地机';
+    if (tagLower.includes('dufu') || tagLower.includes('杜甫')) return '杜甫';
+    return null;
+  };
+
+  // Tip badge: use config.tip_badge if set, otherwise infer from tag
+  const tipBadgeClass = config.tip_badge || getTipBadgeClass(config.tag);
+  const tipBadgeLabel = config.tip_badge 
+    ? (config.tip_badge === 'cn3-opt' ? '三网优化' :
+       config.tip_badge === 'cn3-gia' ? '三网 GIA' :
+       config.tip_badge === 'big-disk' ? '大盘鸡' :
+       config.tip_badge === 'perf' ? '性能机' :
+       config.tip_badge === 'landing' ? '落地机' :
+       config.tip_badge === 'dufu' ? '杜甫' : null)
+    : getTipBadgeLabel(config.tag);
+  const pingMetrics = metrics.ping;
+  const remainingValue = calculateRemainingValue(config.price, config.purchase_date);
+  const resourceRows = [
+    { label: 'CPU', value: metrics.cpu.usage, thresholds: [50, 80] as [number, number] },
+    { label: 'RAM', value: metrics.memory.usage_percent, thresholds: [50, 80] as [number, number] },
+    { label: 'Disk', value: metrics.disks[0]?.usage_percent || 0, thresholds: [70, 90] as [number, number] },
+    { label: 'Network', value: Math.min(100, Math.round(((speed.rx_sec + speed.tx_sec) * 8) / 1_000_000)), thresholds: [40, 70] as [number, number] },
+  ];
 
   return (
     <div 
-      className="nezha-card server-grid-card-stable p-4 hover:scale-[1.02] transition-all cursor-pointer group flex flex-col relative overflow-hidden"
+      className={`vps-list-card vps-list-card--${themeClass} cursor-pointer group relative overflow-hidden`}
       onClick={onClick}
     >
-      {/* Provider Logo Background */}
-      {providerLogo && (
-        <div className="absolute -right-4 -bottom-4 w-20 h-20 opacity-[0.04] pointer-events-none group-hover:opacity-[0.08] transition-opacity">
-          <LogoImage 
-            src={providerLogo} 
-            alt="" 
-            className="w-full h-full object-contain transform rotate-[15deg]" 
-          />
-        </div>
+      {/* List Tip Badge */}
+      {tipBadgeClass && tipBadgeLabel && (
+        <div className={`vps-list-tip-badge ${tipBadgeClass}`}>{tipBadgeLabel}</div>
       )}
 
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-3 relative z-10">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-500/5 border border-blue-500/30 flex items-center justify-center shrink-0 overflow-hidden">
+      {/* Column 1: Identity */}
+      <div className="vps-list-identity">
+        <div className={`vps-card-avatar vps-card-avatar--${themeClass}`}>
           {distributionLogo ? (
-            <LogoImage src={distributionLogo} alt={metrics?.os.name || ''} className="w-5 h-5 object-contain" />
+            <LogoImage src={distributionLogo} alt={metrics.os.name} className="w-6 h-6 object-contain" />
           ) : OsIcon ? (
-            <OsIcon className="w-5 h-5 text-blue-400" />
-          ) : (
-            <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-            </svg>
-          )}
+            <OsIcon className="w-5 h-5 text-blue-500" />
+          ) : null}
         </div>
-        <h3 className="font-bold truncate text-sm flex-1 group-hover:text-emerald-500 transition-colors" style={{ color: 'var(--text-primary)' }}>
-          {config.name}
-        </h3>
-        <span className={`w-2 h-2 rounded-full shrink-0 ${isConnected ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]' : 'bg-red-500'}`} />
-      </div>
-
-      {/* Resource Rings */}
-      <div className="flex-1 flex items-center justify-center gap-3 my-2">
-        {/* CPU Ring */}
-        <div className="relative w-14 h-14">
-          <svg className="w-14 h-14 -rotate-90" viewBox="0 0 36 36">
-            <circle cx="18" cy="18" r="15" fill="none" strokeWidth="3" className="ring-track" />
-            <circle 
-              cx="18" cy="18" r="15" fill="none" strokeWidth="3" strokeLinecap="round"
-              className={cpuStroke}
-              style={{ transition: 'stroke-dasharray 0.5s ease-out' }}
-              strokeDasharray={`${Math.min(100, Math.max(0, metrics.cpu.usage)) * 0.94} 94`}
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className={`text-xs font-bold font-mono metric-value ${cpuColor}`}>{metrics.cpu.usage.toFixed(0)}%</span>
-            <span className="text-[8px]" style={{ color: 'var(--text-muted)' }}>CPU</span>
+        <div className="vps-list-info">
+          <div className={`vps-list-title vps-list-title--${themeClass}`}>
+            {config.name}
+            <span className={`vps-chip-dot ${isConnected ? 'vps-chip-dot--running' : 'vps-chip-dot--stopped'}`} />
           </div>
-        </div>
-
-        {/* Memory Ring */}
-        <div className="relative w-14 h-14">
-          <svg className="w-14 h-14 -rotate-90" viewBox="0 0 36 36">
-            <circle cx="18" cy="18" r="15" fill="none" strokeWidth="3" className="ring-track" />
-            <circle 
-              cx="18" cy="18" r="15" fill="none" strokeWidth="3" strokeLinecap="round"
-              className={memStroke}
-              style={{ transition: 'stroke-dasharray 0.5s ease-out' }}
-              strokeDasharray={`${Math.min(100, Math.max(0, metrics.memory.usage_percent)) * 0.94} 94`}
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className={`text-xs font-bold font-mono metric-value ${memColor}`}>{metrics.memory.usage_percent.toFixed(0)}%</span>
-            <span className="text-[8px]" style={{ color: 'var(--text-muted)' }}>RAM</span>
-          </div>
-        </div>
-
-        {/* Disk Ring */}
-        <div className="relative w-14 h-14">
-          <svg className="w-14 h-14 -rotate-90" viewBox="0 0 36 36">
-            <circle cx="18" cy="18" r="15" fill="none" strokeWidth="3" className="ring-track" />
-            <circle 
-              cx="18" cy="18" r="15" fill="none" strokeWidth="3" strokeLinecap="round"
-              className={diskStroke}
-              style={{ transition: 'stroke-dasharray 0.5s ease-out' }}
-              strokeDasharray={`${Math.min(100, Math.max(0, diskUsage)) * 0.94} 94`}
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className={`text-xs font-bold font-mono metric-value ${diskColor}`}>{diskUsage.toFixed(0)}%</span>
-            <span className="text-[8px]" style={{ color: 'var(--text-muted)' }}>Disk</span>
+          <div className="vps-list-meta">
+            {flag && (
+              <span className={`vps-location vps-location--${themeClass}`}>
+                <span className="text-xs">{flag}</span>
+                <span>{config.location}</span>
+              </span>
+            )}
+            {providerLogo && (
+              <span className={`vps-provider-logo vps-provider-logo--${themeClass}`}>
+                <LogoImage src={providerLogo} alt={config.provider || ''} className="w-4 h-4 object-contain" />
+              </span>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Hardware Info Row */}
-      <div className="flex flex-wrap gap-1 text-[9px] text-gray-400 pt-2 border-t border-white/5">
-        <div className="flex items-center gap-0.5" title={metrics.cpu.brand}>
-          <svg className="w-2.5 h-2.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-          </svg>
-          <span className="text-gray-300">{getShortCpuBrandGrid(metrics.cpu.brand)}</span>
-          <span className="text-gray-500">×{metrics.cpu.cores}</span>
+      {/* Column 2: Specs & Resources */}
+      <div className="vps-list-specs">
+        {/* Compact Specs */}
+        <div className="vps-list-specs-compact">
+          <div className="vps-list-spec-item">
+            <div className={`vps-list-spec-label vps-list-spec-label--${themeClass}`}>CPU</div>
+            <div className={`vps-list-spec-value vps-list-spec-value--${themeClass}`}>
+              {getShortCpuBrand(metrics.cpu.brand)} · {metrics.cpu.cores} cores
+            </div>
+          </div>
+          <div className="vps-list-spec-item">
+            <div className={`vps-list-spec-label vps-list-spec-label--${themeClass}`}>RAM</div>
+            <div className={`vps-list-spec-value vps-list-spec-value--${themeClass}`}>
+              {formatDiskSize(metrics.memory.total)}
+            </div>
+          </div>
+          <div className="vps-list-spec-item">
+            <div className={`vps-list-spec-label vps-list-spec-label--${themeClass}`}>Disk</div>
+            <div className={`vps-list-spec-value vps-list-spec-value--${themeClass}`}>
+              {formatDiskSize(totalDisk)}
+            </div>
+          </div>
+          <div className="vps-list-spec-item">
+            <div className={`vps-list-spec-label vps-list-spec-label--${themeClass}`}>Network</div>
+            <div className={`vps-list-spec-value vps-list-spec-value--${themeClass}`}>
+              ↑ {formatSpeed(speed.tx_sec)} · ↓ {formatSpeed(speed.rx_sec)}
+            </div>
+          </div>
         </div>
-        <span className="text-gray-600">|</span>
-        <div className="flex items-center gap-0.5">
-          <svg className="w-2.5 h-2.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-          </svg>
-          <span className="text-gray-300">{formatDiskSizeGrid(metrics.memory.total)}</span>
+
+        {/* Resources Grid */}
+        <div className="vps-list-resources">
+          {resourceRows.map(({ label, value, thresholds }) => {
+            const state = getResourceState(value, thresholds);
+            return (
+              <div key={label} className="vps-list-res-item">
+                <div className={`vps-list-res-header vps-list-res-header--${themeClass}`}>
+                  <span>{label}</span>
+                  <span className={`vps-resource-percent vps-resource-percent--${state}-${themeClass}`}>
+                    {Math.round(value)}%
+                  </span>
+                </div>
+                <div className={`vps-resource-bar-track vps-resource-bar-track--${themeClass}`}>
+                  <div 
+                    className={`vps-resource-bar-fill vps-resource-bar-fill--${state}-${themeClass}`}
+                    style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
-        <span className="text-gray-600">|</span>
-        <div className="flex items-center gap-0.5">
-          <svg className="w-2.5 h-2.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
-          </svg>
-          <span className="text-gray-300">{formatDiskSizeGrid(metrics.disks.reduce((acc, d) => acc + d.total, 0))}</span>
-        </div>
+
+        {/* Network Info */}
+        {pingMetrics && pingMetrics.targets && pingMetrics.targets.length > 0 && (
+          <div className={`vps-list-network-info vps-list-network-info--${themeClass}`}>
+            {pingMetrics.targets.slice(0, 2).map((target, idx) => (
+              <div key={idx} className="vps-list-net-item">
+                <div className={`vps-list-net-label vps-list-net-label--${themeClass}`}>{target.name}</div>
+                <div className={`vps-list-net-value vps-list-net-value--${themeClass}`}>
+                  {target.latency_ms !== null ? `${target.latency_ms}ms` : 'N/A'}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Footer Info */}
-      <div className="flex items-center justify-between pt-2 text-[10px] border-theme" style={{ borderTopWidth: '1px' }}>
-        <div className="flex items-center gap-1 flex-wrap">
-          {config.location && flag && (
-            <div className="flex items-center gap-0.5 px-1 py-0.5 rounded bg-cyan-500/10 text-cyan-400 text-[9px]">
-              <span>{flag}</span>
-              <span>{config.location}</span>
+      {/* Column 3: Footer */}
+      <div className={`vps-list-footer vps-list-footer--${themeClass}`}>
+        {(config.price || config.purchase_date) && (
+          <div className="vps-footer-row-price">
+            {config.price && (
+              <div className={`vps-price vps-price--${themeClass}`}>
+                <span className="vps-price-amount">{config.price.amount}</span>
+                <span className="vps-price-period">/{config.price.period === 'month' ? '月' : '年'}</span>
+              </div>
+            )}
+            {remainingValue && (
+              <div className={`vps-footer-info-item vps-footer-info-item--${themeClass}`}>
+                <span className="vps-footer-info-label">剩余</span>
+                <span className="vps-footer-info-value">{remainingValue}</span>
+              </div>
+            )}
+            {config.purchase_date && (
+              <div className={`vps-footer-info-item vps-footer-info-item--${themeClass}`}>
+                <span className="vps-footer-info-label">购买</span>
+                <span className="vps-footer-info-value">{config.purchase_date}</span>
+              </div>
+            )}
+          </div>
+        )}
+        <div className="vps-footer-row-status">
+          <div className={`vps-uptime-item vps-uptime-item--${themeClass}`}>
+            <span className="vps-uptime-label">运行</span>
+            <span className="vps-uptime-value">{formatUptime(metrics.uptime)}</span>
+          </div>
+          {pingMetrics && pingMetrics.targets && pingMetrics.targets.length > 0 && (
+            <div className="vps-latency">
+              {pingMetrics.targets.slice(0, 3).map((target, idx) => (
+                <div key={idx} className={`vps-latency-item vps-latency-item--${themeClass}`}>
+                  <span className="vps-latency-label">{target.name}</span>
+                  <span className={`vps-latency-value vps-latency-value--${themeClass}`}>
+                    {target.latency_ms !== null ? `${target.latency_ms}ms` : 'N/A'}
+                  </span>
+                </div>
+              ))}
             </div>
           )}
-          {providerLogo && (
-            <LogoImage src={providerLogo} alt={config.provider || ''} className="w-3 h-3 object-contain" />
-          )}
-          {config.tag && (
-            <span className="px-1 py-0.5 rounded bg-purple-500/10 text-purple-400 text-[9px]">
-              {config.tag}
-            </span>
-          )}
-          <span style={{ color: 'var(--text-muted)' }}>{formatUptime(metrics.uptime)}</span>
-        </div>
-        <div className="flex gap-2 font-mono">
-          <span className="text-emerald-600 speed-value text-[10px]">↑{formatSpeed(speed.tx_sec)}</span>
-          <span className="text-blue-600 speed-value text-[10px]">↓{formatSpeed(speed.rx_sec)}</span>
         </div>
       </div>
     </div>
   );
 }
 
-// Loading skeleton for server cards
-function ServerCardSkeleton() {
+// Loading skeletons
+function VpsListCardSkeleton({ isDark }: { isDark: boolean }) {
+  const themeClass = isDark ? 'dark' : 'light';
   return (
-    <div className="nezha-card p-4 md:p-5 flex flex-col lg:flex-row items-start lg:items-center gap-4 lg:gap-6 animate-pulse">
+    <div className={`vps-card vps-card--${themeClass} p-4 md:p-5 flex flex-col lg:flex-row items-start lg:items-center gap-4 lg:gap-6 animate-pulse`}>
       <div className="w-full lg:w-56 shrink-0 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10" />
+        <div className={`vps-card-avatar vps-card-avatar--${themeClass}`} />
         <div className="flex-1">
-          <div className="h-4 bg-white/10 rounded w-32 mb-2" />
-          <div className="h-3 bg-white/5 rounded w-24" />
+          <div className="h-4 skeleton-bg rounded w-32 mb-2" />
+          <div className="h-3 skeleton-bg rounded w-24" />
         </div>
       </div>
       <div className="flex-1 w-full grid grid-cols-3 gap-3 lg:gap-6">
         {[1, 2, 3].map(i => (
           <div key={i} className="space-y-1">
-            <div className="h-3 bg-white/5 rounded w-12" />
-            <div className="h-1 bg-gray-700/50 rounded-full" />
+            <div className="h-3 skeleton-bg rounded w-12" />
+            <div className={`vps-resource-bar-track vps-resource-bar-track--${themeClass}`} />
           </div>
         ))}
       </div>
       <div className="w-full lg:w-40 flex flex-row lg:flex-col justify-between lg:justify-center items-end lg:items-end gap-1 shrink-0">
-        <div className="h-4 bg-white/5 rounded w-16" />
-        <div className="h-4 bg-white/5 rounded w-16" />
+        <div className="h-4 skeleton-bg rounded w-16" />
+        <div className="h-4 skeleton-bg rounded w-16" />
       </div>
     </div>
   );
 }
 
-function ServerGridCardSkeleton() {
+function VpsGridCardSkeleton({ isDark }: { isDark: boolean }) {
+  const themeClass = isDark ? 'dark' : 'light';
   return (
-    <div className="nezha-card p-4 animate-pulse aspect-square flex flex-col">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10" />
-        <div className="h-4 bg-white/10 rounded flex-1" />
+    <div className={`vps-card vps-card--${themeClass} animate-pulse`}>
+      <div className="vps-card-header">
+        <div className="vps-card-identity">
+          <div className={`vps-card-avatar vps-card-avatar--${themeClass}`} />
+          <div className="vps-card-info space-y-2">
+            <div className="h-4 skeleton-bg rounded w-3/4" />
+            <div className="h-3 skeleton-bg rounded w-1/2" />
+          </div>
+        </div>
       </div>
-      <div className="flex-1 flex items-center justify-center gap-3">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="w-14 h-14 rounded-full bg-white/5" />
+      <div className="space-y-3 mt-4">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="vps-resource-row">
+            <div className="flex justify-between mb-1">
+              <div className="h-3 skeleton-bg rounded w-16" />
+              <div className="h-3 skeleton-bg rounded w-10" />
+            </div>
+            <div className={`vps-resource-bar-track vps-resource-bar-track--${themeClass}`} />
+          </div>
         ))}
       </div>
-      <div className="flex justify-between pt-2 border-t border-white/5">
-        <div className="h-3 bg-white/5 rounded w-12" />
-        <div className="h-3 bg-white/5 rounded w-16" />
+      <div className={`vps-divider vps-divider--${themeClass}`} />
+      <div className="flex justify-between">
+        <div className="h-3 skeleton-bg rounded w-24" />
+        <div className="h-3 skeleton-bg rounded w-20" />
       </div>
     </div>
   );
@@ -522,8 +682,10 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { servers, siteSettings, isInitialLoad } = useServerManager();
   const { theme, toggleTheme } = useTheme();
+  const isDark = theme === 'dark';
+  const themeClass = isDark ? 'dark' : 'light';
+  
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    // Persist view mode preference
     return (localStorage.getItem('vstats-view-mode') as ViewMode) || 'grid';
   });
 
@@ -537,147 +699,166 @@ export default function Dashboard() {
   const totalBandwidthRx = servers.reduce((acc, s) => acc + s.speed.rx_sec, 0);
   const totalBandwidthTx = servers.reduce((acc, s) => acc + s.speed.tx_sec, 0);
 
-  // Show loading skeleton during initial load
   const showSkeleton = isInitialLoad && servers.length === 0;
 
   return (
-    <div className="min-h-screen p-4 md:p-6 lg:p-10 max-w-6xl mx-auto flex flex-col gap-6">
-      {/* Header */}
-      <header className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-              <span className="text-emerald-500">⚡</span> {siteSettings.site_name || 'vStats Dashboard'}
-            </h1>
-            <p className="text-gray-500 text-xs mt-0.5 font-mono">{siteSettings.site_description || 'Real-time Server Monitoring'}</p>
-          </div>
-          <SocialLinks links={siteSettings.social_links} className="hidden sm:flex" />
-        </div>
-        <div className="flex items-center gap-3">
-          {/* View Mode Toggle */}
-          <button
-            onClick={toggleViewMode}
-            className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-gray-400 hover:text-white transition-all"
-            title={`Switch to ${viewMode === 'list' ? 'grid' : 'list'} view`}
-          >
-            {viewMode === 'list' ? (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-              </svg>
-            ) : (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            )}
-          </button>
-          {/* Theme Toggle */}
-          <button
-            onClick={toggleTheme}
-            className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-gray-400 hover:text-white transition-all"
-            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-          >
-            {theme === 'dark' ? (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-            ) : (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-              </svg>
-            )}
-          </button>
-          <button
-            onClick={() => navigate('/settings')}
-            className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-gray-400 hover:text-white transition-all"
-            title="Settings"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </button>
-        </div>
-      </header>
-
-      {/* Overview Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="nezha-card p-3 md:p-4 bg-gradient-to-br from-emerald-500/10 to-transparent border-emerald-500/20">
-          <div className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider mb-0.5">Online</div>
-          <div className="text-xl md:text-2xl font-bold text-white">{onlineCount}</div>
-        </div>
-        <div className="nezha-card p-3 md:p-4 bg-gradient-to-br from-red-500/10 to-transparent border-red-500/20">
-          <div className="text-[10px] text-red-400 font-bold uppercase tracking-wider mb-0.5">Offline</div>
-          <div className="text-xl md:text-2xl font-bold text-white">{servers.length - onlineCount}</div>
-        </div>
-        <div className="nezha-card p-3 md:p-4 bg-gradient-to-br from-blue-500/10 to-transparent border-blue-500/20">
-          <div className="text-[10px] text-blue-400 font-bold uppercase tracking-wider mb-0.5">↓ Download</div>
-          <div className="text-lg md:text-xl font-bold text-white font-mono">{formatSpeed(totalBandwidthRx)}</div>
-        </div>
-        <div className="nezha-card p-3 md:p-4 bg-gradient-to-br from-emerald-500/10 to-transparent border-emerald-500/20">
-          <div className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider mb-0.5">↑ Upload</div>
-          <div className="text-lg md:text-xl font-bold text-white font-mono">{formatSpeed(totalBandwidthTx)}</div>
-        </div>
-      </div>
-
-      {/* Server List */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between px-1 text-[10px] font-bold text-gray-600 uppercase tracking-wider">
-          <span>Server Details</span>
-          <span className="font-mono text-gray-700">{new Date().toLocaleTimeString()}</span>
-        </div>
-        
-        {showSkeleton ? (
-          // Loading Skeleton
-          viewMode === 'list' ? (
-            <div className="flex flex-col gap-3">
-              {[1, 2, 3].map(i => <ServerCardSkeleton key={i} />)}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {[1, 2, 3, 4].map(i => <ServerGridCardSkeleton key={i} />)}
-            </div>
-          )
-        ) : viewMode === 'list' ? (
-          // List View with smooth transitions
-          <div className="flex flex-col gap-3">
-            {servers.map((server, index) => (
-              <div 
-                key={server.config.id}
-                className="animate-fadeIn"
-                style={{ animationDelay: `${index * 30}ms` }}
-              >
-                <ServerCard 
-                  server={server} 
-                  onClick={() => navigate(`/server/${server.config.id}`)}
-                />
-              </div>
-            ))}
-          </div>
+    <div className={`vps-page vps-page--${themeClass}`}>
+      {/* Background Blobs */}
+      <div className="vps-page-blobs">
+        {isDark ? (
+          <>
+            <div className="vps-blobs-dark-1" />
+            <div className="vps-blobs-dark-2" />
+            <div className="vps-blobs-dark-3" />
+          </>
         ) : (
-          // Grid View with smooth transitions
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {servers.map((server, index) => (
-              <div 
-                key={server.config.id}
-                className="animate-fadeIn"
-                style={{ animationDelay: `${index * 30}ms` }}
-              >
-                <ServerGridCard 
-                  server={server} 
-                  onClick={() => navigate(`/server/${server.config.id}`)}
-                />
-              </div>
-            ))}
-          </div>
+          <>
+            <div className="vps-blobs-light-1" />
+            <div className="vps-blobs-light-2" />
+            <div className="vps-blobs-light-3" />
+          </>
         )}
       </div>
 
-      {/* Footer */}
-      <footer className="text-center mt-auto pt-6 pb-2">
-        <p className="text-gray-600 text-[10px] font-mono">
-          vStats Monitor v0.3.0
-        </p>
-      </footer>
+      <div className="vps-page-inner flex flex-col gap-6">
+        {/* Header */}
+        <header className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div>
+              <h1 className={`text-xl md:text-2xl font-bold tracking-tight flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <span className="text-emerald-500">⚡</span> {siteSettings.site_name || 'vStats Dashboard'}
+              </h1>
+              <p className={`text-xs mt-0.5 font-mono ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                {siteSettings.site_description || 'Real-time Server Monitoring'}
+              </p>
+            </div>
+            <SocialLinks links={siteSettings.social_links} className="hidden sm:flex" isDark={isDark} />
+          </div>
+          <div className="flex items-center gap-3">
+            {/* View Mode Toggle */}
+            <button
+              onClick={toggleViewMode}
+              className={`vps-btn ${isDark ? 'vps-btn-outline-dark' : 'vps-btn-outline-light'} p-2.5`}
+              title={`Switch to ${viewMode === 'list' ? 'grid' : 'list'} view`}
+            >
+              {viewMode === 'list' ? (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
+            </button>
+            {/* Theme Toggle */}
+            <button
+              onClick={toggleTheme}
+              className={`vps-btn ${isDark ? 'vps-btn-outline-dark' : 'vps-btn-outline-light'} p-2.5`}
+              title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+            >
+              {isDark ? (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+              )}
+            </button>
+            <button
+              onClick={() => navigate('/settings')}
+              className={`vps-btn ${isDark ? 'vps-btn-outline-dark' : 'vps-btn-outline-light'} p-2.5`}
+              title="Settings"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        {/* Overview Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className={`vps-overview-card vps-overview-card--online-${themeClass}`}>
+            <div className="vps-overview-label vps-overview-label--online">Online</div>
+            <div className={`vps-overview-value vps-overview-value--${themeClass}`}>{onlineCount}</div>
+          </div>
+          <div className={`vps-overview-card vps-overview-card--offline-${themeClass}`}>
+            <div className="vps-overview-label vps-overview-label--offline">Offline</div>
+            <div className={`vps-overview-value vps-overview-value--${themeClass}`}>{servers.length - onlineCount}</div>
+          </div>
+          <div className={`vps-overview-card vps-overview-card--download-${themeClass}`}>
+            <div className="vps-overview-label vps-overview-label--download">↓ Download</div>
+            <div className={`vps-overview-value vps-overview-value--${themeClass} text-lg md:text-xl font-mono`}>{formatSpeed(totalBandwidthRx)}</div>
+          </div>
+          <div className={`vps-overview-card vps-overview-card--upload-${themeClass}`}>
+            <div className="vps-overview-label vps-overview-label--upload">↑ Upload</div>
+            <div className={`vps-overview-value vps-overview-value--${themeClass} text-lg md:text-xl font-mono`}>{formatSpeed(totalBandwidthTx)}</div>
+          </div>
+        </div>
+
+        {/* Server List */}
+        <div className="flex flex-col gap-3">
+          <div className={`flex items-center justify-between px-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
+            <span>Server Details</span>
+            <span className={`font-mono ${isDark ? 'text-gray-700' : 'text-gray-400'}`}>{new Date().toLocaleTimeString()}</span>
+          </div>
+          
+          {showSkeleton ? (
+            viewMode === 'list' ? (
+              <div className="flex flex-col gap-3">
+                {[1, 2, 3].map(i => <VpsListCardSkeleton key={i} isDark={isDark} />)}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3, 4].map(i => <VpsGridCardSkeleton key={i} isDark={isDark} />)}
+              </div>
+            )
+          ) : viewMode === 'list' ? (
+            <div className="vps-list-view">
+              {servers.map((server, index) => (
+                <div 
+                  key={server.config.id}
+                  className="animate-fadeIn"
+                  style={{ animationDelay: `${index * 30}ms` }}
+                >
+                  <VpsListCard 
+                    server={server} 
+                    onClick={() => navigate(`/server/${server.config.id}`)}
+                    isDark={isDark}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {servers.map((server, index) => (
+                <div 
+                  key={server.config.id}
+                  className="animate-fadeIn"
+                  style={{ animationDelay: `${index * 30}ms` }}
+                >
+                  <VpsGridCard 
+                    server={server} 
+                    onClick={() => navigate(`/server/${server.config.id}`)}
+                    isDark={isDark}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <footer className="text-center mt-auto pt-6 pb-2">
+          <p className={`text-[10px] font-mono ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
+            vStats Monitor v0.3.0
+          </p>
+        </footer>
+      </div>
     </div>
   );
 }

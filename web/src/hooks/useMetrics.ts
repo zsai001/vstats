@@ -14,6 +14,14 @@ export interface ServerConfig {
   provider?: string;
   tag?: string;
   version?: string;
+  // Extended metadata
+  price?: {
+    amount: string;
+    period: 'month' | 'year';
+  };
+  purchase_date?: string; // ISO date string (YYYY-MM-DD)
+  remaining_value?: string; // Currency string
+  tip_badge?: string; // Override tip badge type (cn3-opt, cn3-gia, big-disk, perf, landing, dufu)
 }
 
 export interface ServerState {

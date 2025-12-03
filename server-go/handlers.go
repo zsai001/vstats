@@ -548,10 +548,10 @@ type UpgradeServerResponse struct {
 func UpgradeServer(c *gin.Context) {
 	// Execute upgrade command
 	cmd := exec.Command("bash", "-c", "curl -fsSL https://vstats.zsoft.cc/install.sh | sudo bash -s -- --upgrade")
-	
+
 	output, err := cmd.CombinedOutput()
 	outputStr := string(output)
-	
+
 	if err != nil {
 		c.JSON(http.StatusOK, UpgradeServerResponse{
 			Success: false,
@@ -603,4 +603,3 @@ func fetchLatestGitHubVersion(owner, repo string) (*string, error) {
 
 	return &tagName, nil
 }
-

@@ -55,6 +55,14 @@ interface RemoteServer {
   version?: string;
   token?: string;
   ip?: string;
+  // Extended metadata
+  price?: {
+    amount: string;
+    period: 'month' | 'year';
+  };
+  purchase_date?: string;
+  remaining_value?: string;
+  tip_badge?: string;
 }
 
 interface PingTargetConfig {
@@ -121,7 +129,16 @@ export default function Settings() {
   
   // Edit server
   const [editingServer, setEditingServer] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', location: '', provider: '', tag: '' });
+  const [editForm, setEditForm] = useState({ 
+    name: '', 
+    location: '', 
+    provider: '', 
+    tag: '',
+    price_amount: '',
+    price_period: 'month' as 'month' | 'year',
+    purchase_date: '',
+    tip_badge: ''
+  });
   const [editLoading, setEditLoading] = useState(false);
   const [editSuccess, setEditSuccess] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
@@ -499,7 +516,11 @@ Invoke-WebRequest -Uri "${baseUrl}/agent.ps1" -OutFile "agent.ps1"
       name: server.name,
       location: server.location,
       provider: server.provider,
-      tag: server.tag || ''
+      tag: server.tag || '',
+      price_amount: server.price?.amount || '',
+      price_period: server.price?.period || 'month',
+      purchase_date: server.purchase_date || '',
+      tip_badge: server.tip_badge || ''
     });
   };
   
@@ -518,12 +539,28 @@ Invoke-WebRequest -Uri "${baseUrl}/agent.ps1" -OutFile "agent.ps1"
     
     try {
       // 发送所有字段，空字符串表示清空该字段（除了name）
-      const updateData: Record<string, string> = {
+      const updateData: Record<string, any> = {
         name: editForm.name.trim(),
         location: editForm.location.trim(),
         provider: editForm.provider.trim(),
         tag: editForm.tag.trim(),
       };
+      
+      // Add price if provided
+      if (editForm.price_amount.trim()) {
+        updateData.price = {
+          amount: editForm.price_amount.trim(),
+          period: editForm.price_period
+        };
+      }
+      
+      // Add other optional fields
+      if (editForm.purchase_date.trim()) {
+        updateData.purchase_date = editForm.purchase_date.trim();
+      }
+      if (editForm.tip_badge.trim()) {
+        updateData.tip_badge = editForm.tip_badge.trim();
+      }
       
       const res = await fetch(`/api/servers/${editingServer}`, {
         method: 'PUT',
@@ -540,7 +577,16 @@ Invoke-WebRequest -Uri "${baseUrl}/agent.ps1" -OutFile "agent.ps1"
         setEditSuccess(true);
         setTimeout(() => {
           setEditingServer(null);
-          setEditForm({ name: '', location: '', provider: '', tag: '' });
+          setEditForm({ 
+            name: '', 
+            location: '', 
+            provider: '', 
+            tag: '',
+            price_amount: '',
+            price_period: 'month',
+            purchase_date: '',
+            tip_badge: ''
+          });
           setEditSuccess(false);
         }, 1500);
       } else {
@@ -1283,12 +1329,75 @@ Invoke-WebRequest -Uri "${baseUrl}/agent.ps1" -OutFile "agent.ps1"
                             placeholder="e.g., AWS, Vultr"
                           />
                         </div>
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">Tip Badge</label>
+                          <select
+                            value={editForm.tip_badge}
+                            onChange={(e) => setEditForm({ ...editForm, tip_badge: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-blue-500/50"
+                          >
+                            <option value="">Auto (from tag)</option>
+                            <option value="cn3-opt">三网优化</option>
+                            <option value="cn3-gia">三网 GIA</option>
+                            <option value="big-disk">大盘鸡</option>
+                            <option value="perf">性能机</option>
+                            <option value="landing">落地机</option>
+                            <option value="dufu">杜甫</option>
+                          </select>
+                        </div>
+                      </div>
+                      
+                      {/* Extended Metadata Section */}
+                      <div className="pt-3 border-t border-white/5 mb-3">
+                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-3">Extended Metadata</div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Price Amount</label>
+                            <input
+                              type="text"
+                              value={editForm.price_amount}
+                              onChange={(e) => setEditForm({ ...editForm, price_amount: e.target.value })}
+                              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-blue-500/50"
+                              placeholder="e.g., $89.99"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Price Period</label>
+                            <select
+                              value={editForm.price_period}
+                              onChange={(e) => setEditForm({ ...editForm, price_period: e.target.value as 'month' | 'year' })}
+                              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-blue-500/50"
+                            >
+                              <option value="month">Monthly</option>
+                              <option value="year">Yearly</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Purchase Date</label>
+                            <input
+                              type="date"
+                              value={editForm.purchase_date}
+                              onChange={(e) => setEditForm({ ...editForm, purchase_date: e.target.value })}
+                              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-blue-500/50"
+                            />
+                            <p className="text-xs text-gray-600 mt-1">Remaining value will be calculated automatically</p>
+                          </div>
+                        </div>
                       </div>
                       <div className="flex justify-end gap-2">
                         <button
                           onClick={() => {
                             setEditingServer(null);
-                            setEditForm({ name: '', location: '', provider: '', tag: '' });
+                            setEditForm({ 
+                              name: '', 
+                              location: '', 
+                              provider: '', 
+                              tag: '',
+                              price_amount: '',
+                              price_period: 'month',
+                              purchase_date: '',
+                              tip_badge: ''
+                            });
                           }}
                           className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 text-sm transition-colors"
                         >
