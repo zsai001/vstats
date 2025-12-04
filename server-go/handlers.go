@@ -34,8 +34,28 @@ func (s *AppState) Login(c *gin.Context) {
 	s.ConfigMu.RUnlock()
 
 	if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(req.Password)); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid password"})
-		return
+		// If password verification fails, try reloading config from disk
+		// This handles the case where password was reset while server is running
+		if newConfig, _ := LoadConfig(); newConfig != nil {
+			s.ConfigMu.Lock()
+			oldHash := s.Config.AdminPasswordHash
+			s.Config.AdminPasswordHash = newConfig.AdminPasswordHash
+			s.ConfigMu.Unlock()
+			
+			// Try again with reloaded password hash
+			if err := bcrypt.CompareHashAndPassword([]byte(newConfig.AdminPasswordHash), []byte(req.Password)); err != nil {
+				// Still failed, restore old hash and return error
+				s.ConfigMu.Lock()
+				s.Config.AdminPasswordHash = oldHash
+				s.ConfigMu.Unlock()
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid password"})
+				return
+			}
+			// Success after reload, continue with login
+		} else {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid password"})
+			return
+		}
 	}
 
 	expiresAt := time.Now().Add(7 * 24 * time.Hour)

@@ -35,6 +35,8 @@ func main() {
 			fmt.Println("╠════════════════════════════════════════════════════════════════╣")
 			fmt.Printf("║  New admin password: %-40s ║\n", password)
 			fmt.Printf("║  Config file: %-47s ║\n", GetConfigPath())
+			fmt.Println("╠════════════════════════════════════════════════════════════════╣")
+			fmt.Println("║  ⚠️  If server is running, restart it to use new password     ║")
 			fmt.Println("╚════════════════════════════════════════════════════════════════╝\n")
 			return
 		}
@@ -116,7 +118,7 @@ func main() {
 	r.GET("/api/version", GetServerVersion)
 	r.GET("/version", GetServerVersion)
 	r.GET("/api/version/check", CheckLatestVersion)
-	// agent.sh is served as static file from web directory
+	r.GET("/agent.sh", state.GetAgentScript)
 	r.GET("/ws", state.HandleDashboardWS)
 	r.GET("/ws/agent", state.HandleAgentWS)
 
@@ -146,24 +148,16 @@ func main() {
 		r.Static("/logos", webDir+"/logos") // Serve logo files
 		r.StaticFile("/favicon.ico", webDir+"/favicon.ico")
 		r.StaticFile("/vite.svg", webDir+"/vite.svg")
-		// Serve agent.sh script from web directory if it exists
-		agentScriptPath := webDir + "/agent.sh"
-		if _, err := os.Stat(agentScriptPath); err == nil {
-			r.StaticFile("/agent.sh", agentScriptPath)
-		} else {
-			// Fallback to handler if static file doesn't exist
-			r.GET("/agent.sh", state.GetAgentScript)
-		}
 		r.GET("/", func(c *gin.Context) {
 			c.File(webDir + "/index.html")
 		})
 		r.NoRoute(func(c *gin.Context) {
 			// For SPA, serve index.html for all non-API routes
-			if !strings.HasPrefix(c.Request.URL.Path, "/api") && 
-			   !strings.HasPrefix(c.Request.URL.Path, "/ws") &&
-			   !strings.HasPrefix(c.Request.URL.Path, "/agent.sh") &&
-			   !strings.HasPrefix(c.Request.URL.Path, "/logos") &&
-			   !strings.HasPrefix(c.Request.URL.Path, "/assets") {
+			if !strings.HasPrefix(c.Request.URL.Path, "/api") &&
+				!strings.HasPrefix(c.Request.URL.Path, "/ws") &&
+				!strings.HasPrefix(c.Request.URL.Path, "/agent.sh") &&
+				!strings.HasPrefix(c.Request.URL.Path, "/logos") &&
+				!strings.HasPrefix(c.Request.URL.Path, "/assets") {
 				c.File(webDir + "/index.html")
 			} else {
 				c.Status(404)

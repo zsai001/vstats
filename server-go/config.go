@@ -216,7 +216,17 @@ func ResetAdminPassword() string {
 	}
 
 	password := config.ResetPassword()
+	
+	// Ensure JWT secret exists before saving
+	if config.JWTSecret == "" {
+		config.JWTSecret = GenerateRandomString(64)
+	}
+	
 	SaveConfig(config)
+	
+	// Re-initialize JWT secret in case server is running
+	InitJWTSecret(config.JWTSecret)
+	
 	return password
 }
 
