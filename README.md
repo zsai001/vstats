@@ -2,11 +2,11 @@
 
 [![GitHub Release](https://img.shields.io/github/v/release/zsai001/vstats?style=flat-square)](https://github.com/zsai001/vstats/releases)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
-![Rust](https://img.shields.io/badge/Rust-000000?style=flat-square&logo=rust&logoColor=white)
+![Go](https://img.shields.io/badge/Go-00ADD8?style=flat-square&logo=go&logoColor=white)
 ![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat-square&logo=typescript&logoColor=white)
 
-极简美观的服务器探针监控系统。Rust 驱动，毫秒级延迟，一键部署。
+极简美观的服务器探针监控系统。Go 驱动，毫秒级延迟，一键部署。
 
 ## 💝 赞助
 
@@ -141,8 +141,8 @@ curl -fsSL https://vstats.zsoft.cc/agent.sh | sudo bash -s -- --uninstall
 │  └─────────────┘  └─────────────┘  └─────────────┘          │
 │                          │                                  │
 │              ┌───────────┴───────────┐                      │
-│              │    Rust Backend       │                      │
-│              │   (Axum + Tokio)      │                      │
+│              │    Go Backend         │                      │
+│              │   (Gin + Gorilla)     │                      │
 │              └───────────────────────┘                      │
 └─────────────────────────────────────────────────────────────┘
                            │
@@ -158,8 +158,8 @@ curl -fsSL https://vstats.zsoft.cc/agent.sh | sudo bash -s -- --uninstall
 ### 启动后端服务
 
 ```bash
-cd server
-cargo run --release
+cd server-go
+go run main.go
 ```
 
 服务器将在 `http://localhost:3001` 启动。
@@ -178,20 +178,19 @@ npm run dev
 
 ```
 vstats/
-├── server/                 # Rust 后端 (Dashboard)
-│   ├── src/
-│   │   ├── main.rs        # 主程序
-│   │   ├── handlers.rs    # API 处理
-│   │   ├── websocket.rs   # WebSocket 处理
-│   │   └── ...
-│   └── Cargo.toml
-├── agent/                  # Rust 探针 (Agent)
-│   ├── src/
-│   │   ├── main.rs        # 主程序
-│   │   ├── metrics.rs     # 指标采集
-│   │   ├── websocket.rs   # WebSocket 客户端
-│   │   └── config.rs      # 配置管理
-│   └── Cargo.toml
+├── server-go/              # Go 后端 (Dashboard)
+│   ├── main.go            # 主程序
+│   ├── handlers.go        # API 处理
+│   ├── websocket.go       # WebSocket 处理
+│   ├── config.go          # 配置管理
+│   ├── db.go              # 数据库操作
+│   └── go.mod             # Go 模块定义
+├── agent-go/              # Go 探针 (Agent)
+│   ├── main.go            # 主程序
+│   ├── metrics.go         # 指标采集
+│   ├── websocket.go       # WebSocket 客户端
+│   ├── config.go          # 配置管理
+│   └── go.mod             # Go 模块定义
 ├── web/                    # React 前端
 │   ├── src/
 │   │   ├── pages/         # 页面组件
@@ -297,13 +296,13 @@ Get-EventLog -LogName Application -Source vstats-agent -Newest 50
 
 ## 🔧 技术栈
 
-### 后端 (Rust)
-- **Axum** - 高性能 Web 框架
-- **Tokio** - 异步运行时
-- **sysinfo** - 系统信息采集
-- **WebSocket** - 实时数据推送
-- **JWT** - 认证授权
+### 后端 (Go)
+- **Gin** - 高性能 Web 框架
+- **Gorilla WebSocket** - WebSocket 支持
+- **gopsutil** - 系统信息采集
+- **JWT-Go** - JWT 认证授权
 - **bcrypt** - 密码加密
+- **SQLite** - 数据存储
 
 ### 前端 (React)
 - **Vite** - 快速构建工具
