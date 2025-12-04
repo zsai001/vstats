@@ -399,10 +399,8 @@ export default function Settings() {
   --token "${token}" \\
   --name "$(hostname)"`;
     
-    // Windows PowerShell command
-    const windowsCommand = `# Download and run installer (Run as Administrator)
-Invoke-WebRequest -Uri "${baseUrl}/agent.ps1" -OutFile "agent.ps1"
-.\\agent.ps1 -Server "${baseUrl}" -Token "${token}" -Name $env:COMPUTERNAME`;
+    // Windows PowerShell command (auto-handles execution policy and admin rights)
+    const windowsCommand = `irm ${baseUrl}/agent.ps1 -OutFile agent.ps1; .\\agent.ps1 -Server "${baseUrl}" -Token "${token}"`;
     
     setInstallCommand(linuxCommand);
     setWindowsInstallCommand(windowsCommand);
@@ -1000,7 +998,7 @@ Invoke-WebRequest -Uri "${baseUrl}/agent.ps1" -OutFile "agent.ps1"
             
             {installPlatform === 'windows' && (
               <p className="mt-3 text-xs text-gray-500">
-                💡 Run PowerShell as Administrator before executing the command.
+                💡 The script will automatically handle execution policy and request administrator privileges if needed.
               </p>
             )}
           </div>

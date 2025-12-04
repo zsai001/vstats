@@ -395,6 +395,19 @@ function HistoryChart({ serverId }: { serverId: string }) {
                   const sampleRate = Math.max(1, Math.floor(target.data.length / 60));
                   const sampledPingData = target.data.filter((_, i) => i % sampleRate === 0);
                   
+                  // Calculate time labels for X axis (5 labels)
+                  const getPingTimeLabels = () => {
+                    if (sampledPingData.length < 2) return [];
+                    const labels: { index: number; label: string }[] = [];
+                    const step = Math.floor((sampledPingData.length - 1) / 4);
+                    for (let i = 0; i <= 4; i++) {
+                      const idx = Math.min(i * step, sampledPingData.length - 1);
+                      labels.push({ index: idx, label: formatTime(sampledPingData[idx].timestamp) });
+                    }
+                    return labels;
+                  };
+                  const pingTimeLabels = getPingTimeLabels();
+                  
                   const colorClasses: Record<string, { bg: string; text: string; border: string }> = {
                     rose: { bg: 'bg-rose-500', text: 'text-rose-400', border: 'border-rose-500/20' },
                     cyan: { bg: 'bg-cyan-500', text: 'text-cyan-400', border: 'border-cyan-500/20' },
@@ -419,19 +432,27 @@ function HistoryChart({ serverId }: { serverId: string }) {
                           <span className="text-gray-500">max: <span className="text-amber-400 font-mono">{max.toFixed(1)}ms</span></span>
                         </div>
                       </div>
-                      <div className="h-16 flex items-end gap-px bg-white/[0.02] rounded-lg p-2 overflow-hidden">
-                        {sampledPingData.map((point, i) => {
-                          const value = point.latency_ms ?? 0;
-                          const maxVal = Math.max(...values, 1);
-                          return (
-                            <div
-                              key={i}
-                              className={`flex-1 min-w-[2px] ${c.bg} rounded-t transition-all hover:opacity-80 cursor-pointer ${point.status !== 'ok' ? 'opacity-30' : ''}`}
-                              style={{ height: `${Math.max((value / maxVal) * 100, 1)}%` }}
-                              title={`${new Date(point.timestamp).toLocaleTimeString()}: ${value.toFixed(1)} ms (${point.status})`}
-                            />
-                          );
-                        })}
+                      <div className="relative">
+                        <div className="h-16 flex items-end gap-px bg-white/[0.02] rounded-lg p-2 overflow-hidden">
+                          {sampledPingData.map((point, i) => {
+                            const value = point.latency_ms ?? 0;
+                            const maxVal = Math.max(...values, 1);
+                            return (
+                              <div
+                                key={i}
+                                className={`flex-1 min-w-[2px] ${c.bg} rounded-t transition-all hover:opacity-80 cursor-pointer ${point.status !== 'ok' ? 'opacity-30' : ''}`}
+                                style={{ height: `${Math.max((value / maxVal) * 100, 1)}%` }}
+                                title={`${formatTime(point.timestamp)}: ${value.toFixed(1)} ms (${point.status})`}
+                              />
+                            );
+                          })}
+                        </div>
+                        {/* X Axis Labels */}
+                        <div className="flex justify-between text-[9px] text-gray-600 font-mono mt-1 px-1">
+                          {pingTimeLabels.map((t, i) => (
+                            <span key={i} className="whitespace-nowrap">{t.label}</span>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   );
@@ -609,7 +630,7 @@ export default function ServerDetail() {
 
   const OsIcon = getOsIcon(metrics.os.name);
   const ProviderIcon = config.provider ? getProviderIcon(config.provider) : null;
-  const providerLogo = config.provider && config.provider !== 'Local' ? getProviderLogo(config.provider) : null;
+  const providerLogo = config.provider ? getProviderLogo(config.provider) : null;
   const distributionLogo = getDistributionLogo(metrics.os.name);
   const flag = FLAGS[config.location || ''] || '🌍';
 

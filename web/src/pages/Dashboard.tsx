@@ -197,7 +197,7 @@ function VpsGridCard({ server, onClick, isDark }: { server: ServerState; onClick
   
   const OsIcon = metrics ? getOsIcon(metrics.os.name) : null;
   const distributionLogo = metrics ? getDistributionLogo(metrics.os.name) : null;
-  const providerLogo = config.provider && config.provider !== 'Local' ? getProviderLogo(config.provider) : null;
+  const providerLogo = config.provider ? getProviderLogo(config.provider) : null;
   const flag = config.location ? FLAGS[config.location] : null;
 
   if (!metrics) {
@@ -432,7 +432,7 @@ function VpsListCard({ server, onClick, isDark }: { server: ServerState; onClick
   const themeClass = isDark ? 'dark' : 'light';
   
   const OsIcon = metrics ? getOsIcon(metrics.os.name) : null;
-  const providerLogo = config.provider && config.provider !== 'Local' ? getProviderLogo(config.provider) : null;
+  const providerLogo = config.provider ? getProviderLogo(config.provider) : null;
   const distributionLogo = metrics ? getDistributionLogo(metrics.os.name) : null;
   const flag = config.location ? FLAGS[config.location] : null;
 

@@ -103,17 +103,7 @@ curl -fsSL https://vstats.zsoft.cc/agent.sh | sudo bash -s -- \
   --provider "Vultr"
 ```
 
-#### Windows (PowerShell 管理员模式)
-
-```powershell
-# 下载安装脚本
-Invoke-WebRequest -Uri "https://vstats.zsoft.cc/agent.ps1" -OutFile "agent.ps1"
-
-# 运行安装
-.\agent.ps1 -Server "http://YOUR_DASHBOARD_IP:3001" -Token "your-jwt-token" -Name $env:COMPUTERNAME
-```
-
-或一行命令安装：
+#### Windows (PowerShell)
 
 ```powershell
 irm https://vstats.zsoft.cc/agent.ps1 -OutFile agent.ps1; .\agent.ps1 -Server "http://YOUR_DASHBOARD_IP:3001" -Token "your-jwt-token"
@@ -131,11 +121,10 @@ curl -fsSL https://vstats.zsoft.cc/install.sh | sudo bash -s -- --upgrade
 curl -fsSL https://vstats.zsoft.cc/agent.sh | sudo bash -s -- --upgrade
 ```
 
-#### Windows (PowerShell 管理员模式)
+#### Windows (PowerShell)
 
 ```powershell
-# 升级探针
-.\agent.ps1 -Upgrade
+irm https://vstats.zsoft.cc/agent-upgrade.ps1 | iex
 ```
 
 ### 卸载
@@ -150,11 +139,10 @@ curl -fsSL https://vstats.zsoft.cc/install.sh | sudo bash -s -- --uninstall
 curl -fsSL https://vstats.zsoft.cc/agent.sh | sudo bash -s -- --uninstall
 ```
 
-#### Windows (PowerShell 管理员模式)
+#### Windows (PowerShell)
 
 ```powershell
-# 卸载探针
-.\agent.ps1 -Uninstall
+irm https://vstats.zsoft.cc/agent-uninstall.ps1 | iex
 ```
 
 ## 🏗️ 架构

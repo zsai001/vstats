@@ -61,7 +61,7 @@ function normalizeName(name: string): string {
  * 获取厂商logo路径（同步版本，如果索引未加载则返回null）
  */
 export function getProviderLogo(providerName: string): string | null {
-  if (!providerName || providerName === 'Local' || providerName === 'Unknown') {
+  if (!providerName || providerName === 'Unknown') {
     return null;
   }
 

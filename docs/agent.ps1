@@ -1,4 +1,3 @@
-#Requires -RunAsAdministrator
 <#
 .SYNOPSIS
     vStats Agent Installer for Windows
@@ -25,17 +24,20 @@
     # Install agent
     .\agent.ps1 -Server "http://dashboard:3001" -Token "your-token" -Name "Windows-Server-1"
     
-    # Or via web download:
-    irm https://vstats.zsoft.cc/agent.ps1 | iex
-    Install-VStatsAgent -Server "http://dashboard:3001" -Token "your-token"
+    # Or one-line web install:
+    . {irm https://vstats.zsoft.cc/agent.ps1}; Install-VStatsAgent -Server "http://dashboard:3001" -Token "your-token"
     
 .EXAMPLE
     # Upgrade agent
     .\agent.ps1 -Upgrade
+    # Or one-line web upgrade:
+    . {irm https://vstats.zsoft.cc/agent.ps1}; Update-VStatsAgent
     
 .EXAMPLE
     # Uninstall agent
     .\agent.ps1 -Uninstall
+    # Or one-line web uninstall:
+    . {irm https://vstats.zsoft.cc/agent.ps1}; Uninstall-VStatsAgent
 #>
 
 param(
@@ -46,6 +48,85 @@ param(
     [switch]$Upgrade,
     [switch]$Help
 )
+
+# Helper function to build script arguments
+function Build-ScriptArguments {
+    $scriptArgs = @()
+    if ($Server) { $scriptArgs += "-Server"; $scriptArgs += $Server }
+    if ($Token) { $scriptArgs += "-Token"; $scriptArgs += $Token }
+    if ($Name -and $Name -ne $env:COMPUTERNAME) { $scriptArgs += "-Name"; $scriptArgs += $Name }
+    if ($Uninstall) { $scriptArgs += "-Uninstall" }
+    if ($Upgrade) { $scriptArgs += "-Upgrade" }
+    if ($Help) { $scriptArgs += "-Help" }
+    return $scriptArgs
+}
+
+# Check if running as administrator
+function Test-Administrator {
+    $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $principal = New-Object Security.Principal.WindowsPrincipal($currentUser)
+    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+# Auto-handle execution policy and admin rights
+$scriptPath = $MyInvocation.MyCommand.Path
+$isWebInstall = -not $scriptPath
+
+if (-not $isWebInstall) {
+    # Check if we need to restart with admin rights
+    if (-not (Test-Administrator)) {
+        Write-Host ""
+        Write-Host "⚠️  Administrator privileges required" -ForegroundColor Yellow
+        Write-Host "Requesting administrator access..." -ForegroundColor Cyan
+        Write-Host ""
+        
+        $scriptArgs = Build-ScriptArguments
+        # Build argument list properly escaping values
+        $argList = @("-ExecutionPolicy", "Bypass", "-NoProfile", "-File", $scriptPath)
+        $argList += $scriptArgs
+        
+        # Restart with admin rights and bypass execution policy
+        Start-Process powershell.exe -Verb RunAs -ArgumentList $argList -Wait
+        exit $LASTEXITCODE
+    }
+    
+    # Check execution policy if not already bypassed
+    if (-not $env:VSTATS_BYPASS_SET) {
+        try {
+            $policy = Get-ExecutionPolicy -Scope Process -ErrorAction SilentlyContinue
+            if ($policy -eq 'Restricted' -or $null -eq $policy) {
+                Write-Host ""
+                Write-Host "⚠️  Execution policy is Restricted" -ForegroundColor Yellow
+                Write-Host "Restarting with Bypass execution policy..." -ForegroundColor Cyan
+                Write-Host ""
+                
+                $scriptArgs = Build-ScriptArguments
+                
+                # Set flag to prevent infinite loop
+                $env:VSTATS_BYPASS_SET = "1"
+                
+                # Restart with bypass
+                & powershell.exe -ExecutionPolicy Bypass -File $scriptPath @scriptArgs
+                exit $LASTEXITCODE
+            }
+        } catch {
+            # If we can't check policy, continue anyway
+        }
+        $env:VSTATS_BYPASS_SET = "1"
+    }
+} else {
+    # For web installs, we can't auto-restart, but we can check admin
+    if (-not (Test-Administrator)) {
+        Write-Host ""
+        Write-Host "⚠️  Administrator privileges required" -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "Please run PowerShell as Administrator, then run:" -ForegroundColor Cyan
+        Write-Host "  . {irm https://vstats.zsoft.cc/agent.ps1}; Install-VStatsAgent -Server ... -Token ..." -ForegroundColor White
+        Write-Host ""
+        exit 1
+    }
+    $env:VSTATS_BYPASS_SET = "1"
+}
 
 # Configuration
 $INSTALL_DIR = "$env:ProgramData\vstats-agent"
@@ -91,7 +172,7 @@ Options:
   -Help            Show this help
 
 Examples:
-  # Install
+  # Install (if execution policy blocks, use: powershell -ExecutionPolicy Bypass -File agent.ps1 ...)
   .\agent.ps1 -Server "http://dashboard:3001" -Token "your-token" -Name "Windows-Server"
   
   # Upgrade
@@ -101,8 +182,12 @@ Examples:
   .\agent.ps1 -Uninstall
 
 Web Install (PowerShell):
+  # One-line install (bypasses execution policy)
+  . {irm https://vstats.zsoft.cc/agent.ps1}; Install-VStatsAgent -Server "http://dashboard:3001" -Token "your-token"
+  
+  # Or download and run with bypass
   irm https://vstats.zsoft.cc/agent.ps1 -OutFile agent.ps1
-  .\agent.ps1 -Server "http://dashboard:3001" -Token "your-token"
+  powershell -ExecutionPolicy Bypass -File agent.ps1 -Server "http://dashboard:3001" -Token "your-token"
 "@
 }
 
@@ -317,6 +402,38 @@ function Install-VStatsAgent {
     Show-Complete -ServerUrl $Server -ServerName $Name
 }
 
+# Exported function for web upgrade
+function Update-VStatsAgent {
+    # Check admin rights for web install
+    if (-not (Test-Administrator)) {
+        Write-Host ""
+        Write-Host "⚠️  Administrator privileges required" -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "Please run PowerShell as Administrator, then run:" -ForegroundColor Cyan
+        Write-Host "  . {irm https://vstats.zsoft.cc/agent.ps1}; Update-VStatsAgent" -ForegroundColor White
+        Write-Host ""
+        exit 1
+    }
+    Show-Banner
+    Upgrade-Agent
+}
+
+# Exported function for web uninstall
+function Uninstall-VStatsAgent {
+    # Check admin rights for web install
+    if (-not (Test-Administrator)) {
+        Write-Host ""
+        Write-Host "⚠️  Administrator privileges required" -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "Please run PowerShell as Administrator, then run:" -ForegroundColor Cyan
+        Write-Host "  . {irm https://vstats.zsoft.cc/agent.ps1}; Uninstall-VStatsAgent" -ForegroundColor White
+        Write-Host ""
+        exit 1
+    }
+    Show-Banner
+    Uninstall-Agent
+}
+
 # Main
 function Main {
     Show-Banner
@@ -340,6 +457,13 @@ function Main {
     Register-Agent -ServerUrl $Server -AuthToken $Token -ServerName $Name
     Install-Service
     Show-Complete -ServerUrl $Server -ServerName $Name
+}
+
+# Auto-execute for pipeline installs (irm ... | iex)
+# When executed via pipeline without parameters, just load functions
+if ($MyInvocation.InvocationName -eq '.' -or ($MyInvocation.InvocationName -eq '' -and -not $PSBoundParameters.Count)) {
+    # If no action specified, just load functions (don't execute Main)
+    return
 }
 
 # Run if script is executed directly (not dot-sourced)
