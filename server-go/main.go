@@ -116,8 +116,7 @@ func main() {
 	r.GET("/api/version", GetServerVersion)
 	r.GET("/version", GetServerVersion)
 	r.GET("/api/version/check", CheckLatestVersion)
-	// agent.sh is now served as static file, but keep handler as fallback
-	r.GET("/agent.sh", state.GetAgentScript)
+	// agent.sh is served as static file from web directory
 	r.GET("/ws", state.HandleDashboardWS)
 	r.GET("/ws/agent", state.HandleAgentWS)
 
@@ -147,8 +146,14 @@ func main() {
 		r.Static("/logos", webDir+"/logos") // Serve logo files
 		r.StaticFile("/favicon.ico", webDir+"/favicon.ico")
 		r.StaticFile("/vite.svg", webDir+"/vite.svg")
-		// Serve agent.sh script from web directory
-		r.StaticFile("/agent.sh", webDir+"/agent.sh")
+		// Serve agent.sh script from web directory if it exists
+		agentScriptPath := webDir + "/agent.sh"
+		if _, err := os.Stat(agentScriptPath); err == nil {
+			r.StaticFile("/agent.sh", agentScriptPath)
+		} else {
+			// Fallback to handler if static file doesn't exist
+			r.GET("/agent.sh", state.GetAgentScript)
+		}
 		r.GET("/", func(c *gin.Context) {
 			c.File(webDir + "/index.html")
 		})
