@@ -51,8 +51,10 @@ FROM alpine:latest
 WORKDIR /app
 
 # Install ca-certificates for HTTPS and tzdata for timezone support
-# Note: Using separate RUN commands to avoid QEMU emulation issues with triggers
-RUN apk update && apk add --no-cache ca-certificates tzdata
+# Using --no-scripts to avoid QEMU emulation issues with apk triggers during cross-compilation
+RUN apk update && \
+    apk add --no-cache --no-scripts ca-certificates tzdata && \
+    update-ca-certificates 2>/dev/null || true
 
 # Create non-root user
 RUN addgroup -g 1000 vstats && \
