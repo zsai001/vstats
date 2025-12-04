@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"os/exec"
 	"time"
 
@@ -405,52 +406,36 @@ func (s *AppState) GetAllMetrics(c *gin.Context) {
 // Installation Script Handler
 // ============================================================================
 
-const AgentScript = `#!/bin/bash
-# vStats Agent Installation Script
-set -e
-
-echo "Installing vStats Agent..."
-
-# Parse arguments
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --server) SERVER="$2"; shift 2 ;;
-        --token) TOKEN="$2"; shift 2 ;;
-        --name) NAME="$2"; shift 2 ;;
-        *) shift ;;
-    esac
-done
-
-# Validate required arguments
-if [ -z "$SERVER" ] || [ -z "$TOKEN" ]; then
-    echo "Usage: $0 --server <server_url> --token <admin_token> [--name <server_name>]"
-    exit 1
-fi
-
-NAME="${NAME:-$(hostname)}"
-
-# Register with server
-echo "Registering with server..."
-RESPONSE=$(curl -s -X POST "${SERVER}/api/agent/register" \
-    -H "Authorization: Bearer ${TOKEN}" \
-    -H "Content-Type: application/json" \
-    -d "{\"name\": \"${NAME}\", \"location\": \"\", \"provider\": \"\"}")
-
-SERVER_ID=$(echo "$RESPONSE" | grep -o '"id":"[^"]*"' | cut -d'"' -f4)
-AGENT_TOKEN=$(echo "$RESPONSE" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
-
-if [ -z "$SERVER_ID" ] || [ -z "$AGENT_TOKEN" ]; then
-    echo "Failed to register agent: $RESPONSE"
-    exit 1
-fi
-
-echo "Agent registered successfully!"
-echo "Server ID: $SERVER_ID"
-`
-
 func (s *AppState) GetAgentScript(c *gin.Context) {
-	c.Header("Content-Type", "text/plain; charset=utf-8")
-	c.String(http.StatusOK, AgentScript)
+	// Try to read from web directory first (production)
+	webDir := getWebDir()
+	if webDir != "" {
+		scriptPath := webDir + "/agent.sh"
+		if data, err := os.ReadFile(scriptPath); err == nil {
+			c.Header("Content-Type", "text/plain; charset=utf-8")
+			c.String(http.StatusOK, string(data))
+			return
+		}
+	}
+	
+	// Fallback: try relative paths (development)
+	paths := []string{
+		"./web/dist/agent.sh",
+		"./web/public/agent.sh",
+		"../web/dist/agent.sh",
+		"../web/public/agent.sh",
+	}
+	
+	for _, path := range paths {
+		if data, err := os.ReadFile(path); err == nil {
+			c.Header("Content-Type", "text/plain; charset=utf-8")
+			c.String(http.StatusOK, string(data))
+			return
+		}
+	}
+	
+	// Last resort: return error
+	c.JSON(http.StatusNotFound, gin.H{"error": "Agent script not found"})
 }
 
 func (s *AppState) GetInstallCommand(c *gin.Context) {
