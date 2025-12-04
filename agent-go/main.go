@@ -177,6 +177,20 @@ func handleRegister() {
 
 func handleInstall() {
 	configPath := DefaultConfigPath()
+
+	// Check for --config flag
+	for i, arg := range os.Args {
+		if arg == "--config" && i+1 < len(os.Args) {
+			configPath = os.Args[i+1]
+			break
+		}
+	}
+
+	// Verify config file exists
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		log.Fatalf("Config file not found: %s", configPath)
+	}
+
 	exe, _ := os.Executable()
 
 	if runtime.GOOS == "linux" {
@@ -250,9 +264,27 @@ WantedBy=multi-user.target
 	log.Printf("Service file created at %s", servicePath)
 
 	// Reload systemd
-	exec.Command("systemctl", "daemon-reload").Run()
-	exec.Command("systemctl", "enable", "vstats-agent").Run()
-	exec.Command("systemctl", "start", "vstats-agent").Run()
+	if err := exec.Command("systemctl", "daemon-reload").Run(); err != nil {
+		log.Fatalf("Failed to reload systemd: %v", err)
+	}
+
+	// Enable service
+	if err := exec.Command("systemctl", "enable", "vstats-agent").Run(); err != nil {
+		log.Fatalf("Failed to enable service: %v", err)
+	}
+
+	// Start service
+	if err := exec.Command("systemctl", "start", "vstats-agent").Run(); err != nil {
+		log.Fatalf("Failed to start service: %v", err)
+	}
+
+	// Verify service is running
+	time.Sleep(1 * time.Second)
+	if err := exec.Command("systemctl", "is-active", "--quiet", "vstats-agent").Run(); err != nil {
+		log.Printf("Warning: Service may not be running. Check status with: systemctl status vstats-agent")
+		log.Printf("Check logs with: journalctl -u vstats-agent -n 50")
+		os.Exit(1)
+	}
 
 	fmt.Println()
 	fmt.Println("✅ Service installed and started!")
@@ -404,4 +436,3 @@ func uninstallFreeBSDService() {
 	os.Remove("/usr/local/etc/rc.d/vstats-agent")
 	fmt.Println("✅ Service uninstalled successfully!")
 }
-

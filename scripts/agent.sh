@@ -170,18 +170,51 @@ download_binary() {
             if curl -L --fail --silent --show-error "$DOWNLOAD_URL" -o /tmp/vstats-agent 2>&1; then
                 if [ -s /tmp/vstats-agent ]; then
                     chmod +x /tmp/vstats-agent
+                    # Verify it's actually executable
+                    if [ ! -x /tmp/vstats-agent ]; then
+                        warn "Downloaded file is not executable, fixing permissions..."
+                        chmod +x /tmp/vstats-agent
+                    fi
                     mv /tmp/vstats-agent "$INSTALL_DIR/vstats-agent"
-                    success "Binary installed to $INSTALL_DIR/vstats-agent"
-                    return 0
+                    # Verify final binary exists and is executable
+                    if [ -f "$INSTALL_DIR/vstats-agent" ] && [ -x "$INSTALL_DIR/vstats-agent" ]; then
+                        success "Binary installed to $INSTALL_DIR/vstats-agent"
+                        # Test that binary works
+                        if "$INSTALL_DIR/vstats-agent" version &>/dev/null; then
+                            success "Binary verified and working"
+                        else
+                            warn "Binary exists but version check failed"
+                        fi
+                        return 0
+                    else
+                        error "Binary installation verification failed"
+                    fi
+                else
+                    warn "Downloaded file is empty"
                 fi
             fi
         elif command -v wget &> /dev/null; then
             if wget -q "$DOWNLOAD_URL" -O /tmp/vstats-agent 2>&1; then
                 if [ -s /tmp/vstats-agent ]; then
                     chmod +x /tmp/vstats-agent
+                    if [ ! -x /tmp/vstats-agent ]; then
+                        warn "Downloaded file is not executable, fixing permissions..."
+                        chmod +x /tmp/vstats-agent
+                    fi
                     mv /tmp/vstats-agent "$INSTALL_DIR/vstats-agent"
-                    success "Binary installed to $INSTALL_DIR/vstats-agent"
-                    return 0
+                    if [ -f "$INSTALL_DIR/vstats-agent" ] && [ -x "$INSTALL_DIR/vstats-agent" ]; then
+                        success "Binary installed to $INSTALL_DIR/vstats-agent"
+                        if "$INSTALL_DIR/vstats-agent" version &>/dev/null; then
+                            success "Binary verified and working"
+                        else
+                            warn "Binary exists but version check failed"
+                        fi
+                        return 0
+                    else
+                        error "Binary installation verification failed"
+                    fi
+                else
+                    warn "Downloaded file is empty"
                 fi
             fi
         else
@@ -209,17 +242,31 @@ register_agent() {
         error "Dashboard URL and admin token required. Use --server and --token flags."
     fi
     
-    info "Registering with dashboard..."
+    # Verify binary exists before registration
+    if [ ! -f "$INSTALL_DIR/vstats-agent" ]; then
+        error "Agent binary not found at $INSTALL_DIR/vstats-agent. Download may have failed."
+    fi
     
-    # Use the Rust agent to register
-    "$INSTALL_DIR/vstats-agent" register \
+    if [ ! -x "$INSTALL_DIR/vstats-agent" ]; then
+        chmod +x "$INSTALL_DIR/vstats-agent"
+    fi
+    
+    info "Registering with dashboard..."
+    info "  Server: $DASHBOARD_URL"
+    info "  Name: $SERVER_NAME"
+    
+    # Use the agent to register
+    if ! "$INSTALL_DIR/vstats-agent" register \
         --server "$DASHBOARD_URL" \
         --token "$AUTH_TOKEN" \
         --name "$SERVER_NAME" \
-        --config "$CONFIG_DIR/vstats-agent.json"
+        --config "$CONFIG_DIR/vstats-agent.json" 2>&1; then
+        error "Registration failed. Check the error message above."
+    fi
     
-    if [ $? -ne 0 ]; then
-        error "Registration failed"
+    # Verify config was created
+    if [ ! -f "$CONFIG_DIR/vstats-agent.json" ]; then
+        error "Registration succeeded but config file was not created"
     fi
     
     success "Registered successfully!"
@@ -229,9 +276,26 @@ register_agent() {
 install_service() {
     info "Installing systemd service..."
     
-    "$INSTALL_DIR/vstats-agent" install --config "$CONFIG_DIR/vstats-agent.json"
+    # Verify binary exists
+    if [ ! -f "$INSTALL_DIR/vstats-agent" ]; then
+        error "Agent binary not found at $INSTALL_DIR/vstats-agent"
+    fi
     
-    if [ $? -ne 0 ]; then
+    # Verify binary is executable
+    if [ ! -x "$INSTALL_DIR/vstats-agent" ]; then
+        warn "Binary is not executable, fixing permissions..."
+        chmod +x "$INSTALL_DIR/vstats-agent"
+    fi
+    
+    # Verify config exists
+    if [ ! -f "$CONFIG_DIR/vstats-agent.json" ]; then
+        error "Config file not found at $CONFIG_DIR/vstats-agent.json"
+    fi
+    
+    # Try using the agent's install command
+    if "$INSTALL_DIR/vstats-agent" install --config "$CONFIG_DIR/vstats-agent.json" 2>&1; then
+        info "Service installed using agent command"
+    else
         # Fallback: create service manually
         warn "Auto-install failed, creating service manually..."
         
@@ -253,12 +317,31 @@ Environment=RUST_LOG=info
 WantedBy=multi-user.target
 EOF
 
-        systemctl daemon-reload
-        systemctl enable $SERVICE_NAME
-        systemctl start $SERVICE_NAME
+        if [ $? -ne 0 ]; then
+            error "Failed to create service file"
+        fi
+        
+        info "Reloading systemd daemon..."
+        systemctl daemon-reload || error "Failed to reload systemd"
+        
+        info "Enabling service..."
+        systemctl enable $SERVICE_NAME || error "Failed to enable service"
+        
+        info "Starting service..."
+        systemctl start $SERVICE_NAME || error "Failed to start service"
     fi
     
-    success "Service installed and started"
+    # Wait a moment for service to start
+    sleep 2
+    
+    # Verify service is running
+    if systemctl is-active --quiet $SERVICE_NAME; then
+        success "Service installed and started successfully"
+    else
+        warn "Service installed but not running. Checking status..."
+        systemctl status $SERVICE_NAME --no-pager -l || true
+        error "Service failed to start. Check logs with: journalctl -u $SERVICE_NAME -n 50"
+    fi
 }
 
 # Print completion message
