@@ -342,9 +342,18 @@ jobs:
       - name: Prepare pages content
         run: |
           # Only deploy docs directory for GitHub Pages (documentation site)
+          # Clear any existing content first
+          rm -rf pages
           mkdir -p pages
+          
           if [ -d "docs" ]; then
+            echo "Copying docs directory to pages..."
             cp -r docs/* pages/ || true
+            echo "Contents of pages directory:"
+            ls -la pages/ || true
+            echo "Checking for web content (should not exist):"
+            ls -la pages/assets 2>/dev/null && echo "ERROR: web assets found!" || echo "OK: No web assets"
+            ls -la pages/index.html 2>/dev/null && echo "Found index.html" || echo "No index.html"
           else
             echo "Warning: docs directory not found"
           fi
