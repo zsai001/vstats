@@ -6,7 +6,7 @@
     <title>vStats - 轻量级服务器监控系统</title>
     <meta name="description" content="极简美观的服务器探针监控系统，一键部署，实时监控">
     <meta name="keywords" content="server monitor, vps, probe, 服务器监控, 探针">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%232563EB'/%3E%3Cpath d='M30 65V45M50 65V30M70 65V55' stroke='white' stroke-width='8' stroke-linecap='round'/%3E%3C/svg%3E">
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,17 +15,21 @@
     
     <style>
         :root {
-            --bg-primary: #0a0a0f;
-            --bg-secondary: #12121a;
-            --bg-card: #16161f;
-            --border: #2a2a3a;
-            --text-primary: #f0f0f5;
-            --text-secondary: #8888a0;
-            --accent: #00d4aa;
-            --accent-glow: rgba(0, 212, 170, 0.3);
+            --bg-primary: #f5f7fb;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --bg-glass: rgba(255, 255, 255, 0.85);
+            --border: #e1e5ef;
+            --border-hover: #cfd7eb;
+            --text-primary: #101828;
+            --text-secondary: #5f6c86;
+            --accent: #2563eb;
+            --accent-glow: rgba(37, 99, 235, 0.2);
             --accent-alt: #7c3aed;
+            --gradient-primary: linear-gradient(135deg, #2563eb, #7c3aed);
             --danger: #ef4444;
             --warning: #f59e0b;
+            --success: #10b981;
         }
 
         * {
@@ -36,14 +40,16 @@
 
         html {
             scroll-behavior: smooth;
+            scroll-padding-top: 100px;
         }
 
         body {
-            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
-            line-height: 1.6;
+            line-height: 1.7;
             overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
         }
 
         code, pre {
@@ -59,8 +65,8 @@
             height: 100%;
             z-index: -1;
             background: 
-                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0, 212, 170, 0.15), transparent),
-                radial-gradient(ellipse 60% 40% at 80% 60%, rgba(124, 58, 237, 0.1), transparent);
+                radial-gradient(circle at 15% 50%, rgba(124, 58, 237, 0.25), transparent 30%),
+                radial-gradient(circle at 85% 30%, rgba(37, 99, 235, 0.2), transparent 30%);
         }
 
         .grid-pattern {
@@ -71,9 +77,11 @@
             height: 100%;
             z-index: -1;
             background-image: 
-                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+                linear-gradient(rgba(15, 23, 42, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(15, 23, 42, 0.05) 1px, transparent 1px);
             background-size: 60px 60px;
+            mask-image: radial-gradient(ellipse at center, black 35%, transparent 75%);
+            -webkit-mask-image: radial-gradient(ellipse at center, black 35%, transparent 75%);
         }
 
         /* Navigation */
@@ -83,15 +91,18 @@
             left: 0;
             right: 0;
             z-index: 100;
-            padding: 1rem 2rem;
-            background: rgba(10, 10, 15, 0.8);
+            padding: 1rem 0;
+            background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--border);
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
         }
 
         .nav-container {
             max-width: 1200px;
             margin: 0 auto;
+            padding: 0 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -104,23 +115,24 @@
             text-decoration: none;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.8rem;
         }
 
         .logo-icon {
-            width: 32px;
-            height: 32px;
-            background: linear-gradient(135deg, var(--accent), var(--accent-alt));
-            border-radius: 8px;
+            width: 40px;
+            height: 40px;
+            background: var(--gradient-primary);
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1rem;
+            color: white;
+            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.25);
         }
 
         .nav-links {
             display: flex;
-            gap: 2rem;
+            gap: 2.5rem;
             align-items: center;
         }
 
@@ -128,7 +140,8 @@
             color: var(--text-secondary);
             text-decoration: none;
             font-weight: 500;
-            transition: color 0.2s;
+            font-size: 0.95rem;
+            transition: all 0.2s;
         }
 
         .nav-links a:hover {
@@ -136,28 +149,31 @@
         }
 
         .btn {
-            padding: 0.6rem 1.2rem;
-            border-radius: 8px;
-            font-weight: 500;
+            padding: 0.6rem 1.4rem;
+            border-radius: 10px;
+            font-weight: 600;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 0.5rem;
-            transition: all 0.2s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
             border: none;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
+            position: relative;
+            overflow: hidden;
         }
 
         .btn-primary {
-            background: var(--accent);
-            color: var(--bg-primary);
+            background: var(--gradient-primary);
+            color: #fff;
+            box-shadow: 0 15px 25px rgba(37, 99, 235, 0.25);
         }
 
         .btn-primary:hover {
-            background: #00e8bb;
-            box-shadow: 0 0 30px var(--accent-glow);
             transform: translateY(-2px);
+            box-shadow: 0 20px 30px rgba(37, 99, 235, 0.3);
         }
 
         .btn-secondary {
@@ -167,8 +183,9 @@
         }
 
         .btn-secondary:hover {
-            background: var(--bg-secondary);
-            border-color: var(--text-secondary);
+            background: rgba(37, 99, 235, 0.08);
+            border-color: var(--accent);
+            transform: translateY(-2px);
         }
 
         /* Hero Section */
@@ -180,20 +197,22 @@
             align-items: center;
             padding: 8rem 2rem 4rem;
             text-align: center;
+            position: relative;
         }
 
         .hero-badge {
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: var(--bg-card);
+            gap: 0.6rem;
+            padding: 0.35rem 1rem;
+            background: rgba(255, 255, 255, 0.9);
             border: 1px solid var(--border);
-            border-radius: 100px;
+            border-radius: 999px;
             font-size: 0.85rem;
             color: var(--text-secondary);
-            margin-bottom: 2rem;
-            animation: fadeInUp 0.6s ease-out;
+            margin-bottom: 2.5rem;
+            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
         }
 
         .hero-badge .dot {
@@ -201,119 +220,126 @@
             height: 8px;
             background: var(--accent);
             border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent);
             animation: pulse 2s infinite;
         }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
         .hero h1 {
-            font-size: clamp(2.5rem, 8vw, 5rem);
+            font-size: clamp(3.2rem, 9vw, 5.5rem);
             font-weight: 700;
             line-height: 1.1;
-            margin-bottom: 1.5rem;
-            background: linear-gradient(135deg, var(--text-primary), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: fadeInUp 0.6s ease-out 0.1s both;
+            margin-bottom: 1.25rem;
+            letter-spacing: -0.02em;
+            color: #0f172a;
+            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
         }
 
         .hero p {
             font-size: 1.25rem;
             color: var(--text-secondary);
-            max-width: 600px;
+            max-width: 620px;
             margin-bottom: 3rem;
-            animation: fadeInUp 0.6s ease-out 0.2s both;
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+            font-weight: 400;
         }
 
         .hero-buttons {
             display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
+            gap: 1.5rem;
             justify-content: center;
-            animation: fadeInUp 0.6s ease-out 0.3s both;
+            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
         }
 
         .hero-buttons .btn {
-            padding: 0.8rem 1.8rem;
-            font-size: 1rem;
+            padding: 1rem 2.5rem;
+            font-size: 1.1rem;
         }
 
         /* Install Command */
         .install-section {
-            padding: 6rem 2rem;
-            background: var(--bg-secondary);
+            padding: 8rem 2rem;
+            background: linear-gradient(180deg, #f8fbff 0%, #eef2ff 100%);
             border-top: 1px solid var(--border);
             border-bottom: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .install-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, rgba(124, 58, 237, 0.08) 0%, transparent 50%);
+            pointer-events: none;
         }
 
         .container {
-            max-width: 1000px;
+            max-width: 1100px;
             margin: 0 auto;
         }
 
         .section-title {
             text-align: center;
-            margin-bottom: 3rem;
+            margin-bottom: 4rem;
         }
 
         .section-title h2 {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
+            font-size: 2.4rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(120deg, #0f172a, #2563eb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .section-title p {
             color: var(--text-secondary);
+            font-size: 1.1rem;
         }
 
         .install-box {
-            background: var(--bg-primary);
+            background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 16px;
+            border-radius: 20px;
             overflow: hidden;
+            box-shadow: 0 30px 60px rgba(15, 23, 42, 0.08);
         }
 
         .install-tabs {
             display: flex;
             border-bottom: 1px solid var(--border);
+            background: #f4f6fb;
+            padding: 0.6rem;
+            gap: 0.6rem;
         }
 
         .install-tab {
             flex: 1;
-            padding: 1rem;
+            padding: 0.8rem;
             background: transparent;
             border: none;
+            border-radius: 8px;
             color: var(--text-secondary);
             font-size: 0.9rem;
             cursor: pointer;
             transition: all 0.2s;
             font-family: inherit;
+            font-weight: 500;
         }
 
         .install-tab:hover {
             color: var(--text-primary);
-            background: var(--bg-card);
+            background: rgba(37, 99, 235, 0.08);
         }
 
         .install-tab.active {
-            color: var(--accent);
-            background: var(--bg-card);
-            border-bottom: 2px solid var(--accent);
-            margin-bottom: -1px;
+            color: var(--text-primary);
+            background: #ffffff;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
         }
 
         .install-content {
@@ -326,11 +352,17 @@
 
         .install-panel.active {
             display: block;
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .code-block {
             position: relative;
-            background: var(--bg-card);
+            background: #0f172a;
             border-radius: 0;
         }
 
@@ -338,20 +370,39 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.8rem 1rem;
-            background: rgba(0, 0, 0, 0.3);
-            border-bottom: 1px solid var(--border);
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            background: #0b1220;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        .code-header span {
-            color: var(--text-secondary);
+        .window-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .window-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .window-dot.red { background: #ff5f56; }
+        .window-dot.yellow { background: #ffbd2e; }
+        .window-dot.green { background: #27c93f; }
+
+        .code-header > span {
+            color: #cbd5f5;
             font-size: 0.8rem;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
         }
 
         .copy-btn {
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text-secondary);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #e2e8f0;
             padding: 0.4rem 0.8rem;
             border-radius: 6px;
             font-size: 0.75rem;
@@ -362,107 +413,246 @@
 
         .copy-btn:hover {
             background: var(--accent);
-            color: var(--bg-primary);
-            border-color: var(--accent);
+            color: #fff;
+            border-color: transparent;
+            box-shadow: 0 0 15px var(--accent-glow);
         }
 
         .copy-btn.copied {
-            background: var(--accent);
-            color: var(--bg-primary);
-            border-color: var(--accent);
+            background: #10b981;
+            color: white;
+            border-color: transparent;
         }
 
         .code-block pre {
-            padding: 1.5rem;
+            padding: 2rem;
             overflow-x: auto;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             line-height: 1.8;
+            color: #e2e8f0;
         }
 
         .code-block code {
-            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
         }
 
         .code-block .comment {
-            color: var(--text-secondary);
+            color: #6366f1;
+            font-style: italic;
         }
 
         .code-block .command {
-            color: var(--accent);
+            color: #2dd4bf;
         }
 
         /* Features */
         .features {
-            padding: 6rem 2rem;
+            padding: 8rem 2rem;
         }
 
         .feature-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
+            gap: 2rem;
         }
 
         .feature-card {
             background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 2rem;
-            transition: all 0.3s;
+            border-radius: 20px;
+            padding: 2.5rem;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 25px 45px rgba(15, 23, 42, 0.08);
+        }
+        
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(500px circle at var(--mouse-x, 0) var(--mouse-y, 0), rgba(37, 99, 235, 0.08), transparent 55%);
+            opacity: 0;
+            transition: opacity 0.4s;
+            pointer-events: none;
         }
 
         .feature-card:hover {
-            border-color: var(--accent);
-            transform: translateY(-4px);
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            border-color: var(--border-hover);
+            transform: translateY(-5px);
+            box-shadow: 0 30px 60px rgba(15, 23, 42, 0.12);
+        }
+        
+        .feature-card:hover::before {
+            opacity: 1;
         }
 
         .feature-icon {
-            width: 48px;
-            height: 48px;
-            background: linear-gradient(135deg, var(--accent), var(--accent-alt));
-            border-radius: 12px;
+            width: 56px;
+            height: 56px;
+            background: rgba(37, 99, 235, 0.08);
+            border-radius: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(37, 99, 235, 0.15);
+            transition: all 0.4s;
+            color: var(--accent);
+        }
+        
+        .feature-card:hover .feature-icon {
+            background: var(--gradient-primary);
+            border-color: transparent;
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 0 30px var(--accent-glow);
+            color: white;
         }
 
         .feature-card h3 {
-            font-size: 1.1rem;
-            margin-bottom: 0.5rem;
+            font-size: 1.25rem;
+            margin-bottom: 0.8rem;
+            font-weight: 600;
         }
 
         .feature-card p {
             color: var(--text-secondary);
-            font-size: 0.9rem;
+            font-size: 1rem;
+            line-height: 1.7;
         }
 
         /* Architecture */
         .architecture {
-            padding: 6rem 2rem;
-            background: var(--bg-secondary);
+            padding: 8rem 2rem;
+            background: #eef4ff;
             border-top: 1px solid var(--border);
+            position: relative;
         }
 
-        .arch-diagram {
-            background: var(--bg-primary);
+        .arch-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .arch-box {
+            background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 2rem;
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
             text-align: center;
+            position: relative;
+            min-width: 200px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: all 0.3s;
         }
 
-        .arch-diagram pre {
+        .arch-box:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .arch-box h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .arch-box p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .arch-box.dashboard {
+            border-top: 3px solid var(--accent);
+            width: 100%;
+            padding: 2rem;
+        }
+
+        .arch-components {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .arch-comp {
+            background: rgba(255,255,255,0.05);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .arch-agents {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            width: 100%;
+            flex-wrap: wrap;
+        }
+
+        .arch-box.agent {
+            border-top: 3px solid var(--accent-alt);
+            flex: 1;
+        }
+
+        .arch-flow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            height: 60px;
+            position: relative;
+        }
+
+        .flow-line {
+            width: 2px;
+            height: 100%;
+            background: linear-gradient(to bottom, var(--accent), var(--accent-alt));
+            position: relative;
+        }
+        
+        .flow-line::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: -3px;
+            width: 8px;
+            height: 8px;
+            border-bottom: 2px solid var(--accent-alt);
+            border-right: 2px solid var(--accent-alt);
+            transform: rotate(45deg);
+        }
+
+        .flow-label {
+            background: var(--bg-primary);
+            padding: 0.3rem 0.8rem;
+            border-radius: 100px;
             font-size: 0.75rem;
-            line-height: 1.4;
-            overflow-x: auto;
-            color: var(--accent);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            left: 50%;
+            white-space: nowrap;
         }
 
         /* Docs Section */
         .docs {
             padding: 6rem 2rem;
+            background: #fdfefe;
         }
 
         .docs-grid {
@@ -482,40 +672,62 @@
             display: flex;
             align-items: flex-start;
             gap: 1rem;
+            box-shadow: 0 15px 30px rgba(15, 23, 42, 0.08);
         }
 
         .doc-card:hover {
             border-color: var(--accent);
-            background: var(--bg-secondary);
+            background: #f4f8ff;
         }
 
         .doc-icon {
-            font-size: 2rem;
+            width: 48px;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent);
+            transition: all 0.3s;
+            border: 1px solid var(--border);
+        }
+        
+        .doc-card:hover .doc-icon {
+            background: var(--gradient-primary);
+            color: white;
+            border-color: transparent;
+            transform: scale(1.1);
+            box-shadow: 0 0 20px var(--accent-glow);
         }
 
         .doc-content h3 {
             font-size: 1rem;
             margin-bottom: 0.3rem;
+            color: var(--text-primary);
+            font-weight: 600;
         }
 
         .doc-content p {
             color: var(--text-secondary);
-            font-size: 0.85rem;
+            font-size: 0.9rem;
+            line-height: 1.6;
         }
 
         /* API Reference */
         .api-ref {
             padding: 6rem 2rem;
-            background: var(--bg-secondary);
+            background: #f1f5ff;
             border-top: 1px solid var(--border);
         }
 
         .api-table {
             width: 100%;
-            background: var(--bg-card);
+            background: #ffffff;
             border: 1px solid var(--border);
             border-radius: 16px;
             overflow: hidden;
+            box-shadow: 0 25px 45px rgba(15, 23, 42, 0.08);
         }
 
         .api-table table {
@@ -531,9 +743,9 @@
         }
 
         .api-table th {
-            background: rgba(0, 0, 0, 0.3);
+            background: #f8fafc;
             color: var(--text-secondary);
-            font-weight: 500;
+            font-weight: 600;
             font-size: 0.8rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -544,7 +756,7 @@
         }
 
         .api-table code {
-            background: var(--bg-primary);
+            background: #eef2ff;
             padding: 0.2rem 0.5rem;
             border-radius: 4px;
             font-size: 0.85rem;
@@ -569,6 +781,7 @@
             padding: 4rem 2rem 2rem;
             border-top: 1px solid var(--border);
             text-align: center;
+            background: #ffffff;
         }
 
         .footer-links {
@@ -642,8 +855,8 @@
             align-items: center;
             gap: 0.3rem;
             padding: 0.3rem 0.6rem;
-            background: var(--accent);
-            color: var(--bg-primary);
+            background: #e0e7ff;
+            color: var(--accent);
             border-radius: 4px;
             font-size: 0.75rem;
             font-weight: 600;
@@ -656,10 +869,16 @@
             justify-content: center;
             margin-top: 4rem;
             flex-wrap: wrap;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2rem 3rem;
+            box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
         }
 
         .stat {
             text-align: center;
+            min-width: 140px;
         }
 
         .stat-value {
@@ -681,7 +900,9 @@
     <nav>
         <div class="nav-container">
             <a href="#" class="logo">
-                <div class="logo-icon">📊</div>
+                <div class="logo-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+                </div>
                 vStats
             </a>
             <div class="nav-links">
@@ -704,7 +925,7 @@
             <span id="latest-version" class="version-badge">v1.0.0</span>
         </div>
         <h1>vStats</h1>
-        <p>极简美观的服务器探针监控系统。<br>Rust 驱动，毫秒级延迟，一键部署。</p>
+        <p>极简美观的服务器探针监控系统。<br>Go 驱动，毫秒级延迟，一键部署。</p>
         <div class="hero-buttons">
             <a href="#install" class="btn btn-primary">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -733,19 +954,24 @@
     <section class="install-section" id="install">
         <div class="container">
             <div class="section-title">
-                <h2>⚡ 一键安装</h2>
+                <h2>一键安装</h2>
                 <p>选择你的安装方式，30秒完成部署</p>
             </div>
             <div class="install-box">
                 <div class="install-tabs">
-                    <button class="install-tab active" onclick="showTab('dashboard')">📊 主控端 (Dashboard)</button>
-                    <button class="install-tab" onclick="showTab('agent')">🔌 探针 (Agent)</button>
-                    <button class="install-tab" onclick="showTab('docker')">🐳 Docker</button>
+                    <button class="install-tab active" onclick="showTab('dashboard')">主控端 (Dashboard)</button>
+                    <button class="install-tab" onclick="showTab('agent')">探针 (Agent)</button>
+                    <button class="install-tab" onclick="showTab('docker')">Docker</button>
                 </div>
                 <div class="install-content">
                     <div id="dashboard-panel" class="install-panel active">
                         <div class="code-block">
                             <div class="code-header">
+                                <div class="window-controls">
+                                    <span class="window-dot red"></span>
+                                    <span class="window-dot yellow"></span>
+                                    <span class="window-dot green"></span>
+                                </div>
                                 <span>bash</span>
                                 <button class="copy-btn" onclick="copyCode('dashboard-code')">复制</button>
                             </div>
@@ -759,6 +985,11 @@
                     <div id="agent-panel" class="install-panel">
                         <div class="code-block">
                             <div class="code-header">
+                                <div class="window-controls">
+                                    <span class="window-dot red"></span>
+                                    <span class="window-dot yellow"></span>
+                                    <span class="window-dot green"></span>
+                                </div>
                                 <span>bash</span>
                                 <button class="copy-btn" onclick="copyCode('agent-code')">复制</button>
                             </div>
@@ -774,6 +1005,11 @@
                     <div id="docker-panel" class="install-panel">
                         <div class="code-block">
                             <div class="code-header">
+                                <div class="window-controls">
+                                    <span class="window-dot red"></span>
+                                    <span class="window-dot yellow"></span>
+                                    <span class="window-dot green"></span>
+                                </div>
                                 <span>bash</span>
                                 <button class="copy-btn" onclick="copyCode('docker-code')">复制</button>
                             </div>
@@ -793,47 +1029,63 @@
     <section class="features" id="features">
         <div class="container">
             <div class="section-title">
-                <h2>✨ 核心功能</h2>
+                <h2>核心功能</h2>
                 <p>专注于简洁与高效</p>
             </div>
             <div class="feature-grid">
                 <div class="feature-card">
-                    <div class="feature-icon">⚡</div>
+                    <div class="feature-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+                    </div>
                     <h3>实时监控</h3>
                     <p>WebSocket 实时推送，1秒刷新频率，毫秒级延迟感知</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">🖥️</div>
+                    <div class="feature-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+                    </div>
                     <h3>多服务器</h3>
                     <p>支持同时监控多台服务器，统一管理界面</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">💻</div>
+                    <div class="feature-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+                    </div>
                     <h3>CPU 监控</h3>
                     <p>总体使用率、每核心负载，频率信息可视化</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">🧠</div>
+                    <div class="feature-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"></path><path d="M2 12l5 5"></path><path d="M22 12l-5-5"></path><path d="M22 17h-10"></path><path d="M2 7h10"></path></svg>
+                    </div>
                     <h3>内存监控</h3>
                     <p>RAM 和 Swap 使用情况，实时内存压力</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">💾</div>
+                    <div class="feature-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                    </div>
                     <h3>磁盘监控</h3>
                     <p>挂载点使用率，IO 读写统计</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">🌐</div>
+                    <div class="feature-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                    </div>
                     <h3>网络监控</h3>
                     <p>实时上传/下载速度，流量统计</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">🎨</div>
+                    <div class="feature-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.74 5.87a2.5 2.5 0 0 0 3.5 0l0 0a2.5 2.5 0 0 0 0-3.5l-5.55-5.77a.9.9 0 0 0-1.38 0L8.8 5.06a2.5 2.5 0 0 0 0 3.5l0 0a2.5 2.5 0 0 0 3.5 0z"></path><path d="M12 2.69l-5.74 5.87a2.5 2.5 0 0 0-3.5 0l0 0a2.5 2.5 0 0 0 0 3.5l5.55 5.77a.9.9 0 0 0 1.38 0L15.2 11.94a2.5 2.5 0 0 0 0-3.5l0 0a2.5 2.5 0 0 0-3.5 0z"></path></svg>
+                    </div>
                     <h3>现代 UI</h3>
                     <p>玻璃拟态设计，流畅动画，暗色主题</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">🔐</div>
+                    <div class="feature-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    </div>
                     <h3>安全认证</h3>
                     <p>JWT 认证保护，bcrypt 密码加密</p>
                 </div>
@@ -844,30 +1096,40 @@
     <section class="architecture">
         <div class="container">
             <div class="section-title">
-                <h2>🏗️ 架构</h2>
-                <p>简洁高效的主控-探针架构</p>
+                <h2>系统架构</h2>
+                <p>简洁高效的主控-探针设计</p>
             </div>
-            <div class="arch-diagram">
-                <pre>
-┌─────────────────────────────────────────────────────────────┐
-│                    Dashboard (主控端)                        │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │   Web UI    │  │  REST API   │  │  WebSocket  │         │
-│  └─────────────┘  └─────────────┘  └─────────────┘         │
-│                          │                                   │
-│              ┌───────────┴───────────┐                      │
-│              │    Rust Backend       │                      │
-│              │   (Axum + Tokio)      │                      │
-│              └───────────────────────┘                      │
-└─────────────────────────────────────────────────────────────┘
-                           │
-           ┌───────────────┼───────────────┐
-           ▼               ▼               ▼
-    ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-    │   Agent 1   │ │   Agent 2   │ │   Agent N   │
-    │  (被控端)   │ │  (被控端)   │ │  (被控端)   │
-    └─────────────┘ └─────────────┘ └─────────────┘
-                </pre>
+            <div class="arch-container">
+                <div class="arch-box dashboard">
+                    <h3>Dashboard (主控端)</h3>
+                    <p>Go Backend (Gin + WebSocket)</p>
+                    <div class="arch-components">
+                        <div class="arch-comp">Web UI</div>
+                        <div class="arch-comp">REST API</div>
+                        <div class="arch-comp">WebSocket Hub</div>
+                        <div class="arch-comp">SQLite/MySQL</div>
+                    </div>
+                </div>
+                
+                <div class="arch-flow">
+                    <div class="flow-line"></div>
+                    <div class="flow-label">WebSocket / HTTP (JSON)</div>
+                </div>
+
+                <div class="arch-agents">
+                    <div class="arch-box agent">
+                        <h3>Agent 1</h3>
+                        <p>Linux / Windows</p>
+                    </div>
+                    <div class="arch-box agent">
+                        <h3>Agent 2</h3>
+                        <p>macOS / Docker</p>
+                    </div>
+                    <div class="arch-box agent">
+                        <h3>Agent N</h3>
+                        <p>Edge Devices</p>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -875,26 +1137,32 @@
     <section class="docs" id="docs">
         <div class="container">
             <div class="section-title">
-                <h2>📚 文档</h2>
+                <h2>文档</h2>
                 <p>快速上手指南</p>
             </div>
             <div class="docs-grid">
                 <a href="https://github.com/zsai001/vstats#readme" target="_blank" class="doc-card">
-                    <div class="doc-icon">🚀</div>
+                    <div class="doc-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"></path><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"></path></svg>
+                    </div>
                     <div class="doc-content">
                         <h3>快速开始</h3>
                         <p>从零开始安装和配置 vStats</p>
                     </div>
                 </a>
                 <a href="https://github.com/zsai001/vstats/releases" target="_blank" class="doc-card">
-                    <div class="doc-icon">📦</div>
+                    <div class="doc-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                    </div>
                     <div class="doc-content">
                         <h3>版本发布</h3>
                         <p>查看所有版本和更新日志</p>
                     </div>
                 </a>
                 <a href="https://github.com/zsai001/vstats/issues" target="_blank" class="doc-card">
-                    <div class="doc-icon">💬</div>
+                    <div class="doc-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                    </div>
                     <div class="doc-content">
                         <h3>问题反馈</h3>
                         <p>报告 Bug 或提交功能请求</p>
@@ -907,7 +1175,7 @@
     <section class="api-ref" id="api">
         <div class="container">
             <div class="section-title">
-                <h2>🔌 API 接口</h2>
+                <h2>API 接口</h2>
                 <p>RESTful API 文档</p>
             </div>
             <div class="api-table">
@@ -977,7 +1245,7 @@
             <a href="https://github.com/zsai001/vstats#readme" target="_blank">Documentation</a>
         </div>
         <p class="footer-copy">
-            MIT License © 2024 vStats · Made with ❤️ and Rust
+            MIT License © 2024 vStats · Built with Go
         </p>
     </footer>
 
