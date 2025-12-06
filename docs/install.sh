@@ -444,25 +444,27 @@ upgrade() {
         fi
     fi
     
+    # Download files FIRST before stopping service
+    # This ensures files are ready before we stop
+    info "Downloading new version..."
+    download_binary
+    download_web
+    echo "$LATEST_VERSION" > "$INSTALL_DIR/version"
+    
+    # Now restart the service
     if [ "$OS" = "darwin" ]; then
         PLIST_FILE="$HOME/Library/LaunchAgents/com.vstats.server.plist"
         launchctl unload "$PLIST_FILE" 2>/dev/null || true
-    else
-        systemctl stop $SERVICE_NAME 2>/dev/null || true
-    fi
-    
-    download_binary
-    download_web
-    
-    echo "$LATEST_VERSION" > "$INSTALL_DIR/version"
-    
-    if [ "$OS" = "darwin" ]; then
         launchctl load "$PLIST_FILE" 2>/dev/null || true
     else
-        systemctl start $SERVICE_NAME
+        # Use systemd-run to spawn restart in a separate transient unit
+        # This ensures the restart survives even if parent process is killed
+        # --no-block returns immediately without waiting
+        systemd-run --no-block systemctl restart $SERVICE_NAME
     fi
     
     success "Upgraded to $LATEST_VERSION"
+    info "Service is restarting..."
     exit 0
 }
 
