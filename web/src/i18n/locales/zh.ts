@@ -43,6 +43,7 @@ export default {
     darkMode: '深色',
     settings: '设置',
     groupBy: '分组:',
+    groupByTag: '按标签分组',
     online: '在线',
     offline: '离线',
     download: '下载',

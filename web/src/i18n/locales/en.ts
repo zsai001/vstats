@@ -43,6 +43,7 @@ export default {
     darkMode: 'dark',
     settings: 'Settings',
     groupBy: 'Group by:',
+    groupByTag: 'Group by Tag',
     online: 'Online',
     offline: 'Offline',
     download: 'Download',

@@ -932,7 +932,7 @@ export default function Dashboard() {
   const [serverVersion, setServerVersion] = useState<string>('');
   const [onlineUsers, setOnlineUsers] = useState<number>(0);
   
-  // Selected dimension for grouping (null = no grouping)
+  // Selected dimension for grouping (null = no grouping, 'tag' = group by tag)
   const [selectedDimensionId, setSelectedDimensionId] = useState<string | null>(() => {
     return localStorage.getItem('vstats-group-dimension') || null;
   });
@@ -991,8 +991,9 @@ export default function Dashboard() {
 
   const showSkeleton = isInitialLoad && servers.length === 0;
 
-  // Get the selected dimension
-  const selectedDimension = enabledDimensions.find(d => d.id === selectedDimensionId) || null;
+  // Get the selected dimension (or 'tag' for tag grouping)
+  const isGroupingByTag = selectedDimensionId === 'tag';
+  const selectedDimension = isGroupingByTag ? null : enabledDimensions.find(d => d.id === selectedDimensionId) || null;
   
   // Handle dimension selection
   const handleDimensionSelect = (dimId: string | null) => {
@@ -1004,20 +1005,38 @@ export default function Dashboard() {
     }
   };
   
-  // Organize servers by selected dimension
+  // Organize servers by selected dimension or tag
   const serversByOption = new Map<string | null, typeof servers>();
-  const sortedOptions: GroupOption[] = selectedDimension 
-    ? [...selectedDimension.options].sort((a, b) => a.sort_order - b.sort_order)
-    : [];
   
-  // Initialize options
-  for (const option of sortedOptions) {
-    serversByOption.set(option.id, []);
-  }
-  serversByOption.set(null, []); // Ungrouped/Unassigned
-  
-  // Distribute servers to options based on selected dimension
-  if (selectedDimension) {
+  if (isGroupingByTag) {
+    // Group by tag
+    const tagMap = new Map<string, typeof servers>();
+    
+    for (const server of servers) {
+      const tag = server.config.tag || '';
+      const tagKey = tag.trim() || t('dashboard.untagged');
+      if (!tagMap.has(tagKey)) {
+        tagMap.set(tagKey, []);
+      }
+      tagMap.get(tagKey)!.push(server);
+    }
+    
+    // Convert tag map to serversByOption
+    const sortedTags = Array.from(tagMap.keys()).sort();
+    for (const tag of sortedTags) {
+      serversByOption.set(tag, tagMap.get(tag)!);
+    }
+  } else if (selectedDimension) {
+    // Group by dimension
+    const sortedOptions: GroupOption[] = [...selectedDimension.options].sort((a, b) => a.sort_order - b.sort_order);
+    
+    // Initialize options
+    for (const option of sortedOptions) {
+      serversByOption.set(option.id, []);
+    }
+    serversByOption.set(null, []); // Ungrouped/Unassigned
+    
+    // Distribute servers to options based on selected dimension
     for (const server of servers) {
       const optionId = server.config.group_values?.[selectedDimension.id] || null;
       if (serversByOption.has(optionId)) {
@@ -1028,13 +1047,23 @@ export default function Dashboard() {
       }
     }
   } else {
-    // No dimension selected, all servers go to ungrouped
+    // No grouping, all servers go to ungrouped
     serversByOption.set(null, [...servers]);
   }
   
-  // Check if we have any options with servers
-  const hasGroupedServers = selectedDimension && sortedOptions.some(o => (serversByOption.get(o.id)?.length || 0) > 0);
+  // Check if we have any grouped servers
+  const hasGroupedServers = (isGroupingByTag || selectedDimension) && Array.from(serversByOption.keys()).some(key => key !== null && (serversByOption.get(key)?.length || 0) > 0);
   const ungroupedServers = serversByOption.get(null) || [];
+  
+  // Get sorted options for display (for dimension grouping)
+  const sortedOptions: GroupOption[] = selectedDimension 
+    ? [...selectedDimension.options].sort((a, b) => a.sort_order - b.sort_order)
+    : [];
+  
+  // Get sorted tags for display (for tag grouping)
+  const sortedTags = isGroupingByTag 
+    ? Array.from(serversByOption.keys()).filter(key => key !== null).sort() as string[]
+    : [];
 
   return (
     <div className={`vps-page vps-page--${themeClass}`}>
@@ -1149,7 +1178,7 @@ export default function Dashboard() {
         </div>
 
         {/* Dimension Selector */}
-        {enabledDimensions.length > 0 && (
+        {(enabledDimensions.length > 0 || servers.some(s => s.config.tag)) && (
           <div className="flex items-center gap-2 flex-wrap">
             <span className={`text-xs font-medium ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{t('dashboard.groupBy')}</span>
             <button
@@ -1166,6 +1195,23 @@ export default function Dashboard() {
             >
               {t('common.all')}
             </button>
+            {/* Tag grouping option */}
+            {servers.some(s => s.config.tag) && (
+              <button
+                onClick={() => handleDimensionSelect('tag')}
+                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                  selectedDimensionId === 'tag'
+                    ? isDark 
+                      ? 'bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/30'
+                      : 'bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/30'
+                    : isDark
+                      ? 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                }`}
+              >
+                {t('dashboard.groupByTag') || '按标签分组'}
+              </button>
+            )}
             {enabledDimensions.map(dim => (
               <button
                 key={dim.id}
@@ -1226,25 +1272,99 @@ export default function Dashboard() {
                 {[1, 2, 3, 4].map(i => <VpsGridCardSkeleton key={i} isDark={isDark} />)}
               </div>
             )
-          ) : hasGroupedServers && selectedDimension ? (
-            // Display servers grouped by dimension options
+          ) : hasGroupedServers ? (
+            // Display servers grouped by dimension options or tags
             <div className="space-y-6">
-              {sortedOptions.map((option) => {
-                const optionServers = serversByOption.get(option.id) || [];
-                if (optionServers.length === 0) return null;
-                
-                return (
-                  <div key={option.id}>
-                    {/* Option Header */}
-                    <div className={`flex items-center gap-2 mb-3 px-1`}>
-                      <div className={`w-1.5 h-1.5 rounded-full ${isDark ? 'bg-orange-400' : 'bg-orange-500'}`} />
-                      <span className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-                        {option.name}
-                      </span>
-                      <span className={`text-xs ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
-                        ({optionServers.length})
-                      </span>
+              {isGroupingByTag ? (
+                // Group by tag
+                sortedTags.map((tag) => {
+                  const tagServers = serversByOption.get(tag) || [];
+                  if (tagServers.length === 0) return null;
+                  
+                  return (
+                    <div key={tag}>
+                      {/* Tag Header */}
+                      <div className={`flex items-center gap-2 mb-3 px-1`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${isDark ? 'bg-orange-400' : 'bg-orange-500'}`} />
+                        <span className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                          {tag}
+                        </span>
+                        <span className={`text-xs ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
+                          ({tagServers.length})
+                        </span>
+                      </div>
+                      
+                      {/* Tag Servers */}
+                      {viewMode === 'compact' ? (
+                        <div className="vps-compact-view">
+                          {tagServers.map((server, index) => (
+                            <div 
+                              key={server.config.id}
+                              className="animate-fadeIn"
+                              style={{ animationDelay: `${index * 20}ms` }}
+                            >
+                              <VpsCompactCard 
+                                server={server} 
+                                onClick={() => navigate(`/server/${server.config.id}`)}
+                                themeId={themeClass}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      ) : viewMode === 'list' ? (
+                        <div className="vps-list-view">
+                          {tagServers.map((server, index) => (
+                            <div 
+                              key={server.config.id}
+                              className="animate-fadeIn"
+                              style={{ animationDelay: `${index * 30}ms` }}
+                            >
+                              <VpsListCard 
+                                server={server} 
+                                onClick={() => navigate(`/server/${server.config.id}`)}
+                                isDark={isDark}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                          {tagServers.map((server, index) => (
+                            <div 
+                              key={server.config.id}
+                              className="animate-fadeIn"
+                              style={{ animationDelay: `${index * 30}ms` }}
+                            >
+                              <VpsGridCard 
+                                server={server} 
+                                onClick={() => navigate(`/server/${server.config.id}`)}
+                                isDark={isDark}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
+                  );
+                })
+              ) : (
+                // Group by dimension
+                sortedOptions.map((option) => {
+                  const optionServers = serversByOption.get(option.id) || [];
+                  if (optionServers.length === 0) return null;
+                  
+                  return (
+                    <div key={option.id}>
+                      {/* Option Header */}
+                      <div className={`flex items-center gap-2 mb-3 px-1`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${isDark ? 'bg-orange-400' : 'bg-orange-500'}`} />
+                        <span className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                          {option.name}
+                        </span>
+                        <span className={`text-xs ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
+                          ({optionServers.length})
+                        </span>
+                      </div>
                     
                     {/* Option Servers */}
                     {viewMode === 'compact' ? (
