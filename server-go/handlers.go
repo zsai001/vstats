@@ -1628,25 +1628,29 @@ func UpgradeServer(c *gin.Context) {
 		upgradeCmd = "curl -fsSL https://vstats.zsoft.cc/install.sh | sudo bash -s -- --upgrade --force"
 	}
 	
-	// Execute upgrade command
-	cmd := exec.Command("bash", "-c", upgradeCmd)
-
-	output, err := cmd.CombinedOutput()
-	outputStr := string(output)
-
+	// Use nohup and setsid to run in a completely detached process
+	// that survives the server shutdown during upgrade:
+	// - setsid creates a new session (detaches from parent process group)
+	// - nohup ignores SIGHUP signal
+	// - Redirect output to log file for debugging
+	logFile := "/tmp/vstats-upgrade.log"
+	detachedCmd := fmt.Sprintf("nohup setsid bash -c '%s' > %s 2>&1 &", upgradeCmd, logFile)
+	
+	// Execute the detached command - use Start() not Run() so we don't wait
+	cmd := exec.Command("bash", "-c", detachedCmd)
+	err := cmd.Start()
+	
 	if err != nil {
 		c.JSON(http.StatusOK, UpgradeServerResponse{
 			Success: false,
-			Message: fmt.Sprintf("Upgrade failed: %v", err),
-			Output:  outputStr,
+			Message: fmt.Sprintf("Failed to start upgrade: %v", err),
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, UpgradeServerResponse{
 		Success: true,
-		Message: "Upgrade command executed successfully",
-		Output:  outputStr,
+		Message: "Upgrade started in background. The server will restart shortly. Check /tmp/vstats-upgrade.log for details.",
 	})
 }
 
