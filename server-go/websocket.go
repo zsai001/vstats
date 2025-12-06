@@ -184,6 +184,22 @@ func (s *AppState) HandleAgentWS(c *gin.Context) {
 
 	// Create channel for sending commands
 	sendChan := make(chan []byte, 16)
+	done := make(chan struct{})
+
+	// Goroutine to send commands to agent
+	go func() {
+		for {
+			select {
+			case msg := <-sendChan:
+				if err := conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+					log.Printf("Failed to send message to agent: %v", err)
+					return
+				}
+			case <-done:
+				return
+			}
+		}
+	}()
 
 	// Handle incoming messages
 	for {
@@ -294,6 +310,7 @@ func (s *AppState) HandleAgentWS(c *gin.Context) {
 	}
 
 	// Cleanup on disconnect
+	close(done) // Stop the send goroutine
 	if authenticatedServerID != "" {
 		log.Printf("Agent %s disconnected", authenticatedServerID)
 		s.AgentConnsMu.Lock()
