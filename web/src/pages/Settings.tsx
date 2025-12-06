@@ -889,8 +889,12 @@ export default function Settings() {
     }
   };
 
-  const upgradeServer = async () => {
-    if (!confirm('Are you sure you want to upgrade the server? This will restart the service.')) {
+  const upgradeServer = async (force: boolean = false) => {
+    const message = force 
+      ? 'Are you sure you want to force reinstall the server? This will restart the service.'
+      : 'Are you sure you want to upgrade the server? This will restart the service.';
+    
+    if (!confirm(message)) {
       return;
     }
 
@@ -902,14 +906,18 @@ export default function Settings() {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        }
+        },
+        body: JSON.stringify({ force })
       });
       
       if (res.ok) {
         const data = await res.json();
         
         if (data.success) {
-          showToast('Upgrade command executed successfully! The server will restart.', 'success');
+          const successMsg = force 
+            ? 'Force reinstall executed successfully! The server will restart.'
+            : 'Upgrade command executed successfully! The server will restart.';
+          showToast(successMsg, 'success');
           // Refresh version after a delay
           setTimeout(() => {
             fetchServerVersion();
@@ -2429,17 +2437,31 @@ export default function Settings() {
                   <div className="text-sm text-gray-400">Latest Version</div>
                   <div className="text-lg font-mono text-white">{latestVersion}</div>
                 </div>
-                {updateAvailable && (
+                {updateAvailable ? (
                   <div className="flex items-center gap-2">
                     <span className="px-3 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 text-xs font-medium">
                       Update Available
                     </span>
                     <button
-                      onClick={upgradeServer}
+                      onClick={() => upgradeServer(false)}
                       disabled={upgrading}
                       className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {upgrading ? 'Upgrading...' : 'Execute Upgrade'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1 rounded-lg bg-gray-500/10 text-gray-400 text-xs font-medium">
+                      Up to Date
+                    </span>
+                    <button
+                      onClick={() => upgradeServer(true)}
+                      disabled={upgrading}
+                      className="px-4 py-2 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Force reinstall the same version"
+                    >
+                      {upgrading ? 'Reinstalling...' : 'Force Reinstall'}
                     </button>
                   </div>
                 )}

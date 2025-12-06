@@ -71,6 +71,7 @@ export default {
     },
     madeWith: 'Hecho con',
     by: 'por',
+    onlineUsers: 'en línea',
     days: 'Días',
   },
 

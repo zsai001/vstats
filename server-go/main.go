@@ -78,7 +78,7 @@ func main() {
 				Metrics *CompactMetrics
 			}),
 		},
-		DashboardClients: make(map[*websocket.Conn]bool),
+		DashboardClients: make(map[*websocket.Conn]*DashboardClient),
 		DB:               db,
 	}
 
@@ -114,6 +114,7 @@ func main() {
 	r.GET("/health", HealthCheck)
 	r.GET("/api/metrics", state.GetMetrics)
 	r.GET("/api/metrics/all", state.GetAllMetrics)
+	r.GET("/api/online-users", state.GetOnlineUsers)
 	r.GET("/api/history/:server_id", func(c *gin.Context) {
 		state.GetHistory(c, db)
 	})

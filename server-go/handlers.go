@@ -1566,6 +1566,19 @@ func HealthCheck(c *gin.Context) {
 }
 
 // ============================================================================
+// Online Users Handler
+// ============================================================================
+
+type OnlineUsersResponse struct {
+	Count int `json:"count"`
+}
+
+func (s *AppState) GetOnlineUsers(c *gin.Context) {
+	count := s.GetOnlineUsersCount()
+	c.JSON(http.StatusOK, OnlineUsersResponse{Count: count})
+}
+
+// ============================================================================
 // Version Check Handlers
 // ============================================================================
 
@@ -1595,6 +1608,10 @@ func CheckLatestVersion(c *gin.Context) {
 // Server Upgrade Handler
 // ============================================================================
 
+type UpgradeServerRequest struct {
+	Force bool `json:"force"`
+}
+
 type UpgradeServerResponse struct {
 	Success bool   `json:"success"`
 	Message string `json:"message"`
@@ -1602,8 +1619,17 @@ type UpgradeServerResponse struct {
 }
 
 func UpgradeServer(c *gin.Context) {
+	var req UpgradeServerRequest
+	c.ShouldBindJSON(&req)
+	
+	// Build upgrade command with optional --force flag
+	upgradeCmd := "curl -fsSL https://vstats.zsoft.cc/install.sh | sudo bash -s -- --upgrade"
+	if req.Force {
+		upgradeCmd = "curl -fsSL https://vstats.zsoft.cc/install.sh | sudo bash -s -- --upgrade --force"
+	}
+	
 	// Execute upgrade command
-	cmd := exec.Command("bash", "-c", "curl -fsSL https://vstats.zsoft.cc/install.sh | sudo bash -s -- --upgrade")
+	cmd := exec.Command("bash", "-c", upgradeCmd)
 
 	output, err := cmd.CombinedOutput()
 	outputStr := string(output)

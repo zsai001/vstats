@@ -412,6 +412,17 @@ uninstall() {
 
 # Upgrade function
 upgrade() {
+    local force_upgrade=false
+    
+    # Check for --force flag
+    for arg in "$@"; do
+        case "$arg" in
+            --force|-f)
+                force_upgrade=true
+                ;;
+        esac
+    done
+    
     info "Upgrading vStats..."
     
     detect_system
@@ -421,10 +432,16 @@ upgrade() {
     if [ -f "$INSTALL_DIR/version" ]; then
         CURRENT_VERSION=$(cat "$INSTALL_DIR/version")
         if [ "$CURRENT_VERSION" = "$LATEST_VERSION" ]; then
-            success "Already running latest version: $LATEST_VERSION"
-            exit 0
+            if [ "$force_upgrade" = true ]; then
+                warn "Force reinstalling version: $LATEST_VERSION"
+            else
+                success "Already running latest version: $LATEST_VERSION"
+                info "Use --force to reinstall the same version"
+                exit 0
+            fi
+        else
+            info "Upgrading from $CURRENT_VERSION to $LATEST_VERSION"
         fi
-        info "Upgrading from $CURRENT_VERSION to $LATEST_VERSION"
     fi
     
     if [ "$OS" = "darwin" ]; then
@@ -473,7 +490,8 @@ main() {
         upgrade|--upgrade)
             detect_system
             check_root
-            upgrade
+            shift  # Remove first argument
+            upgrade "$@"
             ;;
         version|--version|-v)
             show_version

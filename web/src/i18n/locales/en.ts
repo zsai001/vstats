@@ -74,6 +74,7 @@ export default {
     // Footer
     madeWith: 'Made with',
     by: 'by',
+    onlineUsers: 'online',
     // Days
     days: 'Days',
   },

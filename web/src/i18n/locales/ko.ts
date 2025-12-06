@@ -71,6 +71,7 @@ export default {
     },
     madeWith: 'Made with',
     by: 'by',
+    onlineUsers: '명 온라인',
     days: '일',
   },
 

@@ -71,6 +71,7 @@ export default {
     },
     madeWith: 'Made with',
     by: 'by',
+    onlineUsers: '人がオンライン',
     days: '日',
   },
 

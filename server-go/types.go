@@ -450,6 +450,12 @@ type AgentConnection struct {
 	SendChan chan []byte
 }
 
+// DashboardClient represents a connected dashboard client with its IP
+type DashboardClient struct {
+	Conn *websocket.Conn
+	IP   string
+}
+
 type AppState struct {
 	Config           *AppConfig
 	ConfigMu         sync.RWMutex
@@ -460,8 +466,22 @@ type AppState struct {
 	AgentConnsMu     sync.RWMutex
 	LastSent         *LastSentState
 	LastSentMu       sync.RWMutex
-	DashboardClients map[*websocket.Conn]bool
+	DashboardClients map[*websocket.Conn]*DashboardClient
 	DashboardMu      sync.RWMutex
 	DB               *sql.DB
+}
+
+// GetOnlineUsersCount returns the number of unique IPs connected to the dashboard
+func (s *AppState) GetOnlineUsersCount() int {
+	s.DashboardMu.RLock()
+	defer s.DashboardMu.RUnlock()
+
+	uniqueIPs := make(map[string]bool)
+	for _, client := range s.DashboardClients {
+		if client != nil && client.IP != "" {
+			uniqueIPs[client.IP] = true
+		}
+	}
+	return len(uniqueIPs)
 }
 

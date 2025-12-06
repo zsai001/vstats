@@ -28,9 +28,15 @@ func (s *AppState) HandleDashboardWS(c *gin.Context) {
 	}
 	defer conn.Close()
 
-	// Register client
+	// Get client IP
+	clientIP := c.ClientIP()
+
+	// Register client with IP
 	s.DashboardMu.Lock()
-	s.DashboardClients[conn] = true
+	s.DashboardClients[conn] = &DashboardClient{
+		Conn: conn,
+		IP:   clientIP,
+	}
 	s.DashboardMu.Unlock()
 
 	// Unregister on exit
@@ -151,10 +157,12 @@ func (s *AppState) BroadcastMetrics(msg string) {
 	s.DashboardMu.RLock()
 	defer s.DashboardMu.RUnlock()
 
-	for conn := range s.DashboardClients {
-		if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
-			delete(s.DashboardClients, conn)
-			conn.Close()
+	for conn, client := range s.DashboardClients {
+		if client != nil && client.Conn != nil {
+			if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
+				delete(s.DashboardClients, conn)
+				conn.Close()
+			}
 		}
 	}
 }

@@ -71,6 +71,7 @@ export default {
     },
     madeWith: 'Сделано с',
     by: 'от',
+    onlineUsers: 'онлайн',
     days: 'дн.',
   },
 

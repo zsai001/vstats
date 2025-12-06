@@ -935,6 +935,7 @@ export default function Dashboard() {
     return (localStorage.getItem('vstats-view-mode') as ViewMode) || 'grid';
   });
   const [serverVersion, setServerVersion] = useState<string>('');
+  const [onlineUsers, setOnlineUsers] = useState<number>(0);
   
   // Selected dimension for grouping (null = no grouping)
   const [selectedDimensionId, setSelectedDimensionId] = useState<string | null>(() => {
@@ -957,6 +958,28 @@ export default function Dashboard() {
       }
     };
     fetchServerVersion();
+  }, []);
+
+  // Fetch online users count
+  useEffect(() => {
+    const fetchOnlineUsers = async () => {
+      try {
+        const res = await fetch('/api/online-users');
+        if (res.ok) {
+          const data = await res.json();
+          setOnlineUsers(data.count || 0);
+        }
+      } catch (e) {
+        console.error('Failed to fetch online users', e);
+      }
+    };
+    
+    // Fetch initially
+    fetchOnlineUsers();
+    
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchOnlineUsers, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const toggleViewMode = () => {
@@ -1401,6 +1424,15 @@ export default function Dashboard() {
           <p className={`text-[10px] font-mono ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
             vStats Monitor {serverVersion && `v${serverVersion}`}
             {serverVersion && ' · '}
+            {onlineUsers > 0 && (
+              <>
+                <span className={`inline-flex items-center gap-1 ${isDark ? 'text-emerald-500' : 'text-emerald-600'}`}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  {onlineUsers} {t('dashboard.onlineUsers')}
+                </span>
+                {' · '}
+              </>
+            )}
             {t('dashboard.madeWith')} <span className="text-red-500">❤️</span> {t('dashboard.by')}{' '}
             <a 
               href="https://vstats.zsoft.cc" 
