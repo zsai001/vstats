@@ -1,4 +1,4 @@
-name: Deploy Docs Site to Linux Server
+name: Deploy VStats Cloud (Docker Compose)
 
 on:
   push:
@@ -8,13 +8,27 @@ on:
       - 'docs-site/**'
       - '.github/workflows/deploy-docs-site.yml'
   workflow_dispatch:
+    inputs:
+      deploy_type:
+        description: '部署类型'
+        required: true
+        default: 'frontend'
+        type: choice
+        options:
+          - frontend      # 仅更新前端
+          - full          # 完整部署（包含配置更新）
+          - restart       # 重启服务
 
 env:
   NODE_VERSION: '20'
+  DEPLOY_DIR: '/opt/vstats-cloud'
 
 jobs:
-  build-and-deploy:
+  build:
+    name: Build Frontend
     runs-on: ubuntu-latest
+    # 跳过 restart 类型的部署
+    if: github.event.inputs.deploy_type != 'restart'
     
     steps:
       - name: Checkout code
@@ -28,32 +42,79 @@ jobs:
           cache-dependency-path: docs-site/package-lock.json
 
       - name: Install dependencies
-        run: |
-          cd docs-site
-          npm ci
+        working-directory: docs-site
+        run: npm ci
 
-      - name: Build docs-site
-        run: |
-          cd docs-site
-          npm run build
+      - name: Build frontend
+        working-directory: docs-site
+        run: npm run build
 
-      - name: Create deployment archive
-        run: |
-          cd docs-site
-          tar -czf ../docs-site-dist.tar.gz dist/
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: docs-site/dist/
+          retention-days: 7
 
-      - name: Deploy to Linux Server via SSH
+  deploy:
+    name: Deploy to Server
+    runs-on: ubuntu-latest
+    needs: [build]
+    # 如果是 restart，跳过 build job，直接执行
+    if: always() && (needs.build.result == 'success' || github.event.inputs.deploy_type == 'restart')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download frontend artifact
+        if: github.event.inputs.deploy_type != 'restart'
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: docs-site/dist/
+
+      - name: Prepare deployment package
+        if: github.event.inputs.deploy_type != 'restart'
+        run: |
+          cd docs-site/deploy
+          
+          # 创建部署包目录
+          mkdir -p package/dist
+          mkdir -p package/db
+          mkdir -p package/nginx/conf.d
+          mkdir -p package/scripts
+          
+          # 复制前端构建产物
+          cp -r ../dist/* package/dist/
+          
+          # 复制配置文件
+          cp docker-compose.yml package/
+          cp db/schema.sql package/db/
+          cp nginx/nginx.conf package/nginx/
+          cp nginx/conf.d/default.conf package/nginx/conf.d/
+          cp scripts/*.sh package/scripts/ 2>/dev/null || true
+          
+          # 创建部署归档
+          cd package
+          tar -czf ../../vstats-deploy.tar.gz .
+          
+          echo "Deployment package created"
+          ls -la ../../vstats-deploy.tar.gz
+
+      - name: Copy deployment package to server
+        if: github.event.inputs.deploy_type != 'restart'
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_PORT || 22 }}
-          source: "docs-site-dist.tar.gz"
+          source: "docs-site/vstats-deploy.tar.gz"
           target: "/tmp"
-          strip_components: 0
+          strip_components: 1
 
-      - name: Extract and deploy on server
+      - name: Deploy with Docker Compose
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -61,71 +122,103 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_PORT || 22 }}
           script: |
-            # Set deployment directory (adjust as needed)
-            DEPLOY_DIR="${{ secrets.DEPLOY_DIR || '/var/www/vstats-docs' }}"
-            BACKUP_DIR="${DEPLOY_DIR}.backup.$(date +%Y%m%d_%H%M%S)"
+            set -e
             
-            # Create deployment directory if it doesn't exist
+            DEPLOY_DIR="${{ env.DEPLOY_DIR }}"
+            DEPLOY_TYPE="${{ github.event.inputs.deploy_type || 'frontend' }}"
+            
+            echo "======================================"
+            echo "VStats Cloud Deployment"
+            echo "Deploy Type: $DEPLOY_TYPE"
+            echo "Deploy Dir: $DEPLOY_DIR"
+            echo "======================================"
+            
+            # 确保部署目录存在
             sudo mkdir -p "$DEPLOY_DIR"
+            cd "$DEPLOY_DIR"
             
-            # Backup existing deployment if it exists
-            if [ -d "$DEPLOY_DIR/dist" ]; then
-              echo "Backing up existing deployment..."
-              sudo cp -r "$DEPLOY_DIR" "$BACKUP_DIR"
-            fi
-            
-            # Extract new deployment
-            echo "Extracting new deployment..."
-            cd /tmp
-            tar -xzf docs-site-dist.tar.gz
-            
-            # Copy files to deployment directory
-            echo "Copying files to deployment directory..."
-            sudo cp -r dist/* "$DEPLOY_DIR/"
-            
-            # Set proper permissions
-            echo "Setting permissions..."
-            sudo chown -R ${{ secrets.DEPLOY_USER }}:${{ secrets.DEPLOY_USER }} "$DEPLOY_DIR"
-            sudo chmod -R 755 "$DEPLOY_DIR"
-            
-            # Restart web server (adjust based on your setup: nginx, apache, etc.)
-            if command -v systemctl > /dev/null; then
-              # If using systemd service
-              if systemctl is-active --quiet vstats-docs; then
-                echo "Restarting vstats-docs service..."
-                sudo systemctl restart vstats-docs || true
+            # 根据部署类型执行不同操作
+            if [ "$DEPLOY_TYPE" = "restart" ]; then
+              echo ">> Restarting services..."
+              sudo docker compose restart
+              echo ">> Services restarted"
+            else
+              echo ">> Extracting deployment package..."
+              
+              # 备份当前配置
+              if [ -f docker-compose.yml ]; then
+                BACKUP_DIR="/tmp/vstats-backup-$(date +%Y%m%d_%H%M%S)"
+                mkdir -p "$BACKUP_DIR"
+                cp docker-compose.yml "$BACKUP_DIR/" 2>/dev/null || true
+                cp -r nginx "$BACKUP_DIR/" 2>/dev/null || true
+                echo ">> Backup created at $BACKUP_DIR"
               fi
               
-              # If using nginx
-              if systemctl is-active --quiet nginx; then
-                echo "Reloading nginx..."
-                sudo systemctl reload nginx || true
+              # 解压新部署包
+              sudo tar -xzf /tmp/vstats-deploy.tar.gz -C "$DEPLOY_DIR"
+              rm -f /tmp/vstats-deploy.tar.gz
+              
+              # 设置权限
+              sudo chmod +x scripts/*.sh 2>/dev/null || true
+              
+              if [ "$DEPLOY_TYPE" = "full" ]; then
+                echo ">> Full deployment: updating all services..."
+                
+                # 拉取最新镜像并重建
+                sudo docker compose pull
+                sudo docker compose up -d --force-recreate
+              else
+                echo ">> Frontend deployment: updating nginx..."
+                
+                # 仅重启 nginx 以加载新前端
+                if sudo docker compose ps nginx | grep -q "running"; then
+                  sudo docker compose restart nginx
+                else
+                  # 如果 nginx 没有运行，启动所有服务
+                  sudo docker compose up -d
+                fi
               fi
               
-              # If using apache
-              if systemctl is-active --quiet apache2; then
-                echo "Reloading apache2..."
-                sudo systemctl reload apache2 || true
+              echo ">> Deployment completed"
+            fi
+            
+            # 显示服务状态
+            echo ""
+            echo "======================================"
+            echo "Service Status:"
+            echo "======================================"
+            sudo docker compose ps
+            
+            # 健康检查
+            echo ""
+            echo "======================================"
+            echo "Health Check:"
+            echo "======================================"
+            sleep 5
+            
+            # 检查各服务健康状态
+            for service in nginx api postgres redis; do
+              if sudo docker compose ps $service 2>/dev/null | grep -q "running\|Up"; then
+                echo "✅ $service: running"
+              else
+                echo "⚠️  $service: not running (may be optional)"
               fi
-            fi
-            
-            # Cleanup
-            echo "Cleaning up..."
-            rm -f /tmp/docs-site-dist.tar.gz
-            rm -rf /tmp/dist
-            
-            echo "Deployment completed successfully!"
-            echo "Deployment directory: $DEPLOY_DIR"
-            if [ -d "$BACKUP_DIR" ]; then
-              echo "Backup saved at: $BACKUP_DIR"
-            fi
+            done
 
       - name: Deployment Summary
         run: |
-          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Build completed successfully" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Files deployed to server" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Web server reloaded" >> $GITHUB_STEP_SUMMARY
+          echo "## VStats Cloud Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Deployment Host:** \`${{ secrets.DEPLOY_HOST }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Deployment Directory:** \`${{ secrets.DEPLOY_DIR || '/var/www/vstats-docs' }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Deploy Type | \`${{ github.event.inputs.deploy_type || 'frontend' }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Deploy Host | \`${{ secrets.DEPLOY_HOST }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Deploy Dir | \`${{ env.DEPLOY_DIR }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Triggered By | \`${{ github.actor }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Services" >> $GITHUB_STEP_SUMMARY
+          echo "- nginx (frontend + reverse proxy)" >> $GITHUB_STEP_SUMMARY
+          echo "- api (backend server)" >> $GITHUB_STEP_SUMMARY
+          echo "- postgres (database)" >> $GITHUB_STEP_SUMMARY
+          echo "- redis (cache)" >> $GITHUB_STEP_SUMMARY

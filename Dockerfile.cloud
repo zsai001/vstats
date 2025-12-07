@@ -1,0 +1,47 @@
+# ===========================================
+# VStats Cloud - Multi-stage Build
+# ===========================================
+
+# Stage 1: Build Go binary
+FROM golang:1.22-alpine AS builder
+
+RUN apk add --no-cache git ca-certificates tzdata
+
+WORKDIR /build
+
+# Copy go mod files
+COPY server-go/go.mod server-go/go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY server-go/ ./
+
+# Build the cloud binary
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-w -s -X main.Version=$(date +%Y%m%d)" \
+    -o vstats-cloud \
+    ./cmd/cloud
+
+# Stage 2: Runtime image
+FROM alpine:3.19
+
+RUN apk add --no-cache ca-certificates tzdata wget
+
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /build/vstats-cloud .
+
+# Create non-root user
+RUN adduser -D -u 1000 vstats && \
+    chown -R vstats:vstats /app
+
+USER vstats
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD wget -q --spider http://localhost:3001/health || exit 1
+
+EXPOSE 3001
+
+ENTRYPOINT ["./vstats-cloud"]

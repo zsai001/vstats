@@ -83,6 +83,19 @@ jobs:
             os: freebsd
             arch: arm64
             output: vstats-server-freebsd-arm64
+          # Cloud builds (Linux only for Docker)
+          - cmd: cloud
+            binary: vstats-cloud
+            version_var: main.Version
+            os: linux
+            arch: amd64
+            output: vstats-cloud-linux-amd64
+          - cmd: cloud
+            binary: vstats-cloud
+            version_var: main.Version
+            os: linux
+            arch: arm64
+            output: vstats-cloud-linux-arm64
           # Agent builds
           - cmd: agent
             binary: vstats-agent
@@ -390,6 +403,98 @@ jobs:
         with:
           context: docker-context-agent
           file: docker-context-agent/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
+
+  # ============================================================================
+  # Build and Push Cloud Docker Image (using pre-built artifacts)
+  # ============================================================================
+  build-cloud-docker:
+    needs: [build]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Download cloud binaries (amd64)
+        uses: actions/download-artifact@v4
+        with:
+          name: vstats-cloud-linux-amd64
+          path: docker-context-cloud
+
+      - name: Download cloud binaries (arm64)
+        uses: actions/download-artifact@v4
+        with:
+          name: vstats-cloud-linux-arm64
+          path: docker-context-cloud
+
+      - name: Prepare Docker context
+        run: |
+          cd docker-context-cloud
+          ls -la
+          chmod +x vstats-cloud-linux-amd64 vstats-cloud-linux-arm64
+          cp ../Dockerfile.cloud.prebuilt ./Dockerfile
+          echo "Docker context prepared:"
+          find . -type f | head -20
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+            VERSION="${VERSION#refs/tags/}"
+          else
+            VERSION="latest"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            zsai001/vstats-cloud
+            ghcr.io/${{ github.repository_owner }}/vstats-cloud
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Cloud Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: docker-context-cloud
+          file: docker-context-cloud/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

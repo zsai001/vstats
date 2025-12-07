@@ -1,0 +1,193 @@
+// Cloud API Service
+// 后端 API 基础 URL
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
+
+// 存储 token
+let authToken: string | null = null;
+
+export function setToken(token: string | null) {
+  authToken = token;
+  if (token) {
+    localStorage.setItem('vstats_token', token);
+  } else {
+    localStorage.removeItem('vstats_token');
+  }
+}
+
+export function getToken(): string | null {
+  if (!authToken) {
+    authToken = localStorage.getItem('vstats_token');
+  }
+  return authToken;
+}
+
+// 通用请求方法
+async function request<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const token = getToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>),
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(error.error || `HTTP ${response.status}`);
+  }
+
+  return response.json();
+}
+
+// ============================================================================
+// Types
+// ============================================================================
+
+export interface User {
+  id: string;
+  username: string;
+  email?: string;
+  avatar_url?: string;
+  plan: string;
+  server_limit: number;
+  status: string;
+  created_at: string;
+}
+
+export interface Server {
+  id: string;
+  name: string;
+  hostname?: string;
+  ip_address?: string;
+  agent_key: string;
+  agent_version?: string;
+  os_type?: string;
+  os_version?: string;
+  status: 'online' | 'offline' | 'warning' | 'error';
+  last_seen_at?: string;
+  metrics?: ServerMetrics;
+  created_at: string;
+}
+
+export interface ServerMetrics {
+  cpu_usage?: number;
+  memory_used?: number;
+  memory_total?: number;
+  disk_used?: number;
+  disk_total?: number;
+  network_rx_bytes?: number;
+  network_tx_bytes?: number;
+}
+
+export interface OAuthProviders {
+  providers: Record<string, boolean>;
+}
+
+// ============================================================================
+// Auth API
+// ============================================================================
+
+export async function getOAuthProviders(): Promise<OAuthProviders> {
+  return request('/auth/providers');
+}
+
+export async function startOAuth(provider: 'github' | 'google'): Promise<{ url: string }> {
+  const redirectUri = encodeURIComponent(window.location.origin + '/cloud');
+  return request(`/auth/oauth/${provider}?redirect_uri=${redirectUri}`);
+}
+
+export async function verifyToken(): Promise<{ valid: boolean; user_id: string; username: string; plan: string }> {
+  return request('/auth/verify');
+}
+
+export async function getCurrentUser(): Promise<{ user: User; server_count: number; server_limit: number }> {
+  return request('/auth/me');
+}
+
+export async function logout(): Promise<void> {
+  await request('/auth/logout', { method: 'POST' });
+  setToken(null);
+}
+
+// ============================================================================
+// Server API
+// ============================================================================
+
+export async function listServers(): Promise<Server[]> {
+  return request('/servers');
+}
+
+export async function createServer(name: string): Promise<Server> {
+  return request('/servers', {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function getServer(id: string): Promise<Server> {
+  return request(`/servers/${id}`);
+}
+
+export async function updateServer(id: string, data: { name?: string }): Promise<Server> {
+  return request(`/servers/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteServer(id: string): Promise<void> {
+  await request(`/servers/${id}`, { method: 'DELETE' });
+}
+
+export async function regenerateAgentKey(id: string): Promise<{ agent_key: string }> {
+  return request(`/servers/${id}/regenerate-key`, { method: 'POST' });
+}
+
+export async function getInstallCommand(id: string): Promise<{ command: string; agent_key: string }> {
+  return request(`/servers/${id}/install-command`);
+}
+
+export async function getServerMetrics(id: string): Promise<{ metrics: ServerMetrics | null }> {
+  return request(`/servers/${id}/metrics`);
+}
+
+export async function getServerHistory(id: string, range: '1h' | '24h' | '7d' | '30d' = '1h'): Promise<{ data: ServerMetrics[] }> {
+  return request(`/servers/${id}/history?range=${range}`);
+}
+
+// ============================================================================
+// WebSocket
+// ============================================================================
+
+export function connectDashboardWS(onMessage: (data: any) => void): WebSocket | null {
+  const token = getToken();
+  if (!token) return null;
+
+  const wsBase = API_BASE.replace(/^http/, 'ws').replace('/api', '');
+  const ws = new WebSocket(`${wsBase}/api/ws?token=${token}`);
+
+  ws.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      onMessage(data);
+    } catch (e) {
+      console.error('WebSocket message parse error:', e);
+    }
+  };
+
+  ws.onerror = (error) => {
+    console.error('WebSocket error:', error);
+  };
+
+  return ws;
+}

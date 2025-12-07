@@ -1,92 +1,147 @@
 # VStats Cloud 部署指南
 
-本目录包含 VStats Cloud 服务的部署配置文件。
+本目录包含 VStats Cloud 服务的完整部署配置，使用 Docker Compose 一键部署所有服务。
+
+## 架构概览
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                       Cloudflare                            │
+│                    (DNS + CDN + SSL)                        │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Docker Compose                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ Nginx (Port 80/443)                                  │   │
+│  │  - 静态文件服务 (前端)                                │   │
+│  │  - 反向代理 API                                      │   │
+│  │  - WebSocket 代理                                    │   │
+│  └──────────────────────┬──────────────────────────────┘   │
+│                         │                                   │
+│                         ▼                                   │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ API Server (Port 3001)                              │   │
+│  │  - REST API                                          │   │
+│  │  - WebSocket                                         │   │
+│  │  - OAuth 认证                                        │   │
+│  └──────────────────────┬──────────────────────────────┘   │
+│                         │                                   │
+│           ┌─────────────┴─────────────┐                    │
+│           ▼                           ▼                    │
+│  ┌─────────────────┐      ┌─────────────────┐              │
+│  │ PostgreSQL      │      │ Redis           │              │
+│  │ (数据持久化)     │      │ (缓存/会话)     │              │
+│  └─────────────────┘      └─────────────────┘              │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ## 目录结构
 
 ```
 deploy/
-├── docker-compose.yml    # Docker Compose 配置 (PostgreSQL + Redis)
+├── docker-compose.yml    # Docker Compose 主配置
 ├── db/
 │   └── schema.sql        # 数据库初始化 Schema
-├── nginx.conf            # Nginx 配置示例
+├── nginx/
+│   ├── nginx.conf        # Nginx 主配置
+│   └── conf.d/
+│       └── default.conf  # 站点配置
+├── ssl/                  # SSL 证书目录 (需手动创建)
+│   ├── cert.pem          # 证书文件
+│   └── key.pem           # 私钥文件
+├── dist/                 # 前端构建产物 (由 CI/CD 自动部署)
+├── scripts/
+│   ├── deploy.sh         # 部署管理脚本
+│   ├── generate-ssl.sh   # SSL 证书生成脚本
+│   ├── backup.sh         # 数据库备份脚本
+│   └── restore.sh        # 数据库恢复脚本
 ├── env.example           # 环境变量示例
 └── README.md             # 本文件
 ```
 
 ## 快速开始
 
-### 1. 准备环境变量
+### 1. 初始化配置
 
 ```bash
-# 复制环境变量示例文件
-cp env.example .env
+cd deploy
 
-# 编辑配置（必须修改密码！）
+# 运行初始化脚本 (创建 .env, SSL 证书等)
+./scripts/deploy.sh setup
+```
+
+### 2. 配置环境变量
+
+```bash
+# 编辑配置文件
 vim .env
 ```
 
-**重要：** 请务必修改以下配置：
+**必须修改的配置：**
 - `POSTGRES_PASSWORD` - PostgreSQL 密码
 - `REDIS_PASSWORD` - Redis 密码
 - `SESSION_SECRET` - Session 密钥
 - `JWT_SECRET` - JWT 密钥
-- OAuth 相关配置
+- OAuth 相关配置 (GitHub/Google)
 
-### 2. 启动数据库服务
+### 3. 配置 SSL 证书
+
+**方式一：使用 Cloudflare Origin Certificate (推荐)**
+
+1. 登录 Cloudflare Dashboard
+2. 进入 SSL/TLS > Origin Server
+3. Create Certificate
+4. 保存证书到 `ssl/cert.pem`
+5. 保存私钥到 `ssl/key.pem`
+
+**方式二：使用自签名证书 (仅开发环境)**
 
 ```bash
-# 启动 PostgreSQL 和 Redis
-docker compose up -d
+./scripts/generate-ssl.sh vstats.example.com
+```
 
-# 查看服务状态
-docker compose ps
+### 4. 启动服务
+
+```bash
+# 启动所有服务
+./scripts/deploy.sh start
+
+# 查看状态
+./scripts/deploy.sh status
 
 # 查看日志
-docker compose logs -f
+./scripts/deploy.sh logs
 ```
 
-### 3. 验证服务
+## GitHub Actions 自动部署
 
-```bash
-# 测试 PostgreSQL 连接
-docker exec -it vstats-postgres psql -U vstats -d vstats_cloud -c "SELECT 1;"
+代码推送到 `main` 分支后，GitHub Actions 会自动：
 
-# 测试 Redis 连接
-docker exec -it vstats-redis redis-cli -a your_redis_password ping
-```
+1. 构建前端
+2. 打包部署文件
+3. 上传到服务器
+4. 使用 Docker Compose 部署
 
-### 4. 配置 Nginx
+### 部署类型
 
-```bash
-# 复制 Nginx 配置
-sudo cp nginx.conf /etc/nginx/sites-available/vstats-cloud
+在 GitHub Actions 中可以手动触发不同类型的部署：
 
-# 修改域名和证书路径
-sudo vim /etc/nginx/sites-available/vstats-cloud
+| 类型 | 说明 |
+|------|------|
+| `frontend` | 仅更新前端静态文件 (默认) |
+| `full` | 完整部署，更新所有服务和配置 |
+| `restart` | 仅重启服务 |
 
-# 创建软链接
-sudo ln -s /etc/nginx/sites-available/vstats-cloud /etc/nginx/sites-enabled/
+### 必需的 GitHub Secrets
 
-# 测试配置
-sudo nginx -t
-
-# 重载 Nginx
-sudo systemctl reload nginx
-```
-
-### 5. 配置 SSL 证书 (Let's Encrypt)
-
-```bash
-# 安装 certbot
-sudo apt install certbot python3-certbot-nginx
-
-# 获取证书
-sudo certbot --nginx -d vstats.example.com
-
-# 自动续期 (已自动配置)
-sudo certbot renew --dry-run
-```
+| Secret | 说明 |
+|--------|------|
+| `DEPLOY_HOST` | 服务器 IP 或域名 |
+| `DEPLOY_USER` | SSH 用户名 |
+| `DEPLOY_SSH_KEY` | SSH 私钥 |
+| `DEPLOY_PORT` | SSH 端口 (可选，默认 22) |
 
 ## 数据库 Schema
 
@@ -142,7 +197,31 @@ vstats:ws:connections           # WebSocket 连接数
 
 ## 运维命令
 
-### Docker Compose
+### 使用部署脚本 (推荐)
+
+```bash
+# 启动服务
+./scripts/deploy.sh start
+
+# 停止服务
+./scripts/deploy.sh stop
+
+# 重启服务
+./scripts/deploy.sh restart
+
+# 查看状态
+./scripts/deploy.sh status
+
+# 查看日志
+./scripts/deploy.sh logs
+./scripts/deploy.sh logs nginx
+./scripts/deploy.sh logs api
+
+# 更新服务
+./scripts/deploy.sh update
+```
+
+### Docker Compose (直接使用)
 
 ```bash
 # 启动服务
@@ -155,10 +234,14 @@ docker compose down
 docker compose restart
 
 # 查看日志
+docker compose logs -f nginx
+docker compose logs -f api
 docker compose logs -f postgres
 docker compose logs -f redis
 
 # 进入容器
+docker exec -it vstats-nginx sh
+docker exec -it vstats-api sh
 docker exec -it vstats-postgres bash
 docker exec -it vstats-redis sh
 ```
@@ -170,10 +253,10 @@ docker exec -it vstats-redis sh
 docker exec -it vstats-postgres psql -U vstats -d vstats_cloud
 
 # 备份数据库
-docker exec vstats-postgres pg_dump -U vstats vstats_cloud > backup.sql
+./scripts/backup.sh
 
 # 恢复数据库
-docker exec -i vstats-postgres psql -U vstats vstats_cloud < backup.sql
+./scripts/restore.sh backup_file.sql
 
 # 清理过期会话
 docker exec -it vstats-postgres psql -U vstats -d vstats_cloud -c "SELECT cleanup_expired_sessions();"

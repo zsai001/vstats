@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Cloud, Shield, Zap, Globe, Server, LogOut } from 'lucide-react';
+import { Cloud, Shield, Zap, Globe, Server, LogOut, Plus, Trash2, Copy, Check, RefreshCw, Terminal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import * as api from '../api/cloud';
 
 // GitHub Icon SVG
 const GitHubIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
@@ -20,109 +21,151 @@ const GoogleIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
   </svg>
 );
 
-// User interface
 interface CloudUser {
   id: string;
   username: string;
   email?: string;
-  avatar?: string;
-  provider: 'github' | 'google';
-  plan: 'free' | 'pro';
+  avatar_url?: string;
+  plan: string;
   serverCount: number;
   serverLimit: number;
 }
 
-// Check if running in development mode (localhost)
-const isDev = typeof window !== 'undefined' && (
-  window.location.hostname === 'localhost' || 
-  window.location.hostname === '127.0.0.1'
-);
-
 export default function CloudPage() {
   const { t } = useTranslation();
   const [user, setUser] = useState<CloudUser | null>(null);
+  const [servers, setServers] = useState<api.Server[]>([]);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // UI State
+  const [showAddServer, setShowAddServer] = useState(false);
+  const [newServerName, setNewServerName] = useState('');
+  const [addingServer, setAddingServer] = useState(false);
+  const [selectedServer, setSelectedServer] = useState<api.Server | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  // Check for OAuth callback and stored session
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const provider = params.get('provider');
-    const username = params.get('user');
-
-    if (provider && username) {
-      // OAuth callback - store user info
-      const newUser: CloudUser = {
-        id: btoa(username),
-        username: username,
-        email: provider === 'google' ? username : undefined,
-        provider: provider as 'github' | 'google',
-        plan: 'free',
-        serverCount: 0,
-        serverLimit: 5,
-      };
-      
-      localStorage.setItem('vstats_cloud_user', JSON.stringify(newUser));
-      setUser(newUser);
-      
-      // Clean URL
-      window.history.replaceState({}, '', '/cloud');
-    } else {
-      // Check for existing session
-      const storedUser = localStorage.getItem('vstats_cloud_user');
-      if (storedUser) {
-        try {
-          setUser(JSON.parse(storedUser));
-        } catch (e) {
-          localStorage.removeItem('vstats_cloud_user');
-        }
+  // Load user and servers
+  const loadUserData = useCallback(async () => {
+    try {
+      const token = api.getToken();
+      if (!token) {
+        setIsLoading(false);
+        return;
       }
+
+      // Verify token and get user
+      const userData = await api.getCurrentUser();
+      setUser({
+        id: userData.user.id,
+        username: userData.user.username,
+        email: userData.user.email,
+        avatar_url: userData.user.avatar_url,
+        plan: userData.user.plan,
+        serverCount: userData.server_count,
+        serverLimit: userData.server_limit,
+      });
+
+      // Load servers
+      const serverList = await api.listServers();
+      setServers(serverList);
+    } catch (err) {
+      console.error('Failed to load user data:', err);
+      api.setToken(null);
+      setUser(null);
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   }, []);
 
-  const handleOAuthLogin = (provider: 'github' | 'google') => {
-    setOauthLoading(provider);
-    
-    // In development mode, simulate OAuth login
-    if (isDev) {
-      setTimeout(() => {
-        const mockUsername = provider === 'github' ? 'dev-user' : 'dev@example.com';
-        const newUser: CloudUser = {
-          id: btoa(mockUsername),
-          username: mockUsername,
-          email: provider === 'google' ? mockUsername : undefined,
-          provider: provider,
-          plan: 'free',
-          serverCount: 0,
-          serverLimit: 5,
-        };
-        
-        localStorage.setItem('vstats_cloud_user', JSON.stringify(newUser));
-        setUser(newUser);
-        setOauthLoading(null);
-      }, 1000);
+  // Handle OAuth callback
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const errorMsg = params.get('error');
+
+    if (errorMsg) {
+      setError(decodeURIComponent(errorMsg));
+      window.history.replaceState({}, '', '/cloud');
+      setIsLoading(false);
       return;
     }
+
+    if (token) {
+      api.setToken(token);
+      window.history.replaceState({}, '', '/cloud');
+    }
+
+    loadUserData();
+  }, [loadUserData]);
+
+  // OAuth login
+  const handleOAuthLogin = async (provider: 'github' | 'google') => {
+    setOauthLoading(provider);
+    setError(null);
     
-    // Production: use OAuth proxy
-    const state = btoa(JSON.stringify({
-      redirect_uri: window.location.origin + '/cloud',
-      timestamp: Date.now()
-    })).replace(/[+/=]/g, (m) => ({ '+': '-', '/': '_', '=': '' }[m] || m));
-    
-    const oauthProxyUrl = 'https://auth.vstats.zsoft.cc';
-    const redirectUri = encodeURIComponent(window.location.origin + '/cloud');
-    const oauthUrl = `${oauthProxyUrl}/oauth/${provider}?redirect_uri=${redirectUri}&state=${state}`;
-    window.location.href = oauthUrl;
+    try {
+      const { url } = await api.startOAuth(provider);
+      window.location.href = url;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to start OAuth');
+      setOauthLoading(null);
+    }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('vstats_cloud_user');
+  // Logout
+  const handleLogout = async () => {
+    try {
+      await api.logout();
+    } catch (err) {
+      // Ignore logout errors
+    }
     setUser(null);
+    setServers([]);
   };
 
+  // Add server
+  const handleAddServer = async () => {
+    if (!newServerName.trim()) return;
+    
+    setAddingServer(true);
+    try {
+      const server = await api.createServer(newServerName.trim());
+      setServers([server, ...servers]);
+      setNewServerName('');
+      setShowAddServer(false);
+      setSelectedServer(server);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create server');
+    } finally {
+      setAddingServer(false);
+    }
+  };
+
+  // Delete server
+  const handleDeleteServer = async (id: string) => {
+    if (!confirm(t('cloud.confirmDelete'))) return;
+    
+    try {
+      await api.deleteServer(id);
+      setServers(servers.filter(s => s.id !== id));
+      if (selectedServer?.id === id) {
+        setSelectedServer(null);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete server');
+    }
+  };
+
+  // Copy to clipboard
+  const copyToClipboard = async (text: string, key: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
+
+  // Loading state
   if (isLoading) {
     return (
       <div className="pt-20 min-h-screen flex items-center justify-center">
@@ -131,120 +174,285 @@ export default function CloudPage() {
     );
   }
 
-  // Logged in - Show Coming Soon Dashboard
+  // Logged in - Dashboard
   if (user) {
     return (
       <div className="pt-20 min-h-screen bg-slate-50 dark:bg-slate-900">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          {/* User Info Card */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Error Alert */}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-4 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex justify-between items-center"
+            >
+              <span>{error}</span>
+              <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700">×</button>
+            </motion.div>
+          )}
+
+          {/* User Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="glass-card rounded-2xl p-8 mb-8"
+            className="glass-card rounded-2xl p-6 mb-6"
           >
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-violet-500/30">
-                  {user.username.charAt(0).toUpperCase()}
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-violet-500/30">
+                  {user.avatar_url ? (
+                    <img src={user.avatar_url} alt={user.username} className="w-full h-full rounded-xl object-cover" />
+                  ) : (
+                    user.username.charAt(0).toUpperCase()
+                  )}
                 </div>
-                <div className="text-center sm:text-left">
-                  <h1 className="text-2xl font-bold dark:text-white flex items-center gap-2 justify-center sm:justify-start">
-                    {user.username}
-                    {user.provider === 'github' ? (
-                      <GitHubIcon className="w-5 h-5 text-slate-400" />
-                    ) : (
-                      <GoogleIcon className="w-5 h-5" />
-                    )}
-                  </h1>
-                  <p className="text-slate-500 text-sm">
-                    {t('cloud.loginWith', { provider: user.provider === 'github' ? 'GitHub' : 'Google' })}
+                <div>
+                  <h1 className="text-xl font-bold dark:text-white">{user.username}</h1>
+                  <p className="text-sm text-slate-500">
+                    {t('cloud.serversUsed', { count: user.serverCount, limit: user.serverLimit })}
+                    <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400">
+                      {user.plan}
+                    </span>
                   </p>
                 </div>
               </div>
-              <button
-                onClick={handleLogout}
-                className="btn btn-outline flex items-center gap-2"
-              >
+              <button onClick={handleLogout} className="btn btn-outline flex items-center gap-2">
                 <LogOut className="w-4 h-4" />
                 {t('cloud.logout')}
               </button>
             </div>
           </motion.div>
 
-          {/* Coming Soon Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="glass-card rounded-2xl p-12 text-center"
-          >
-            {/* Animated Icon */}
-            <div className="relative w-24 h-24 mx-auto mb-8">
-              <div className="absolute inset-0 rounded-2xl bg-violet-500/20 animate-ping" />
-              <div className="relative w-24 h-24 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
-                <Cloud className="w-12 h-12 text-white" />
-              </div>
-            </div>
-
-            {/* Coming Soon Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 text-sm font-medium mb-6">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500"></span>
-              </span>
-              {t('cloud.inDevelopment')}
-            </div>
-
-            <h2 className="text-3xl font-bold mb-4 dark:text-white">
-              {t('cloud.comingSoonTitle')}
-            </h2>
-            
-            <p className="text-slate-500 text-lg mb-8 max-w-md mx-auto">
-              {t('cloud.comingSoonDesc')}
-            </p>
-
-            {/* Features Preview */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-              {[
-                { icon: Server, labelKey: 'multiServer' },
-                { icon: Shield, labelKey: 'enterpriseSecurityShort' },
-                { icon: Zap, labelKey: 'realtime' },
-              ].map((feature) => (
-                <div key={feature.labelKey} className="p-4 rounded-xl bg-slate-100 dark:bg-slate-800/50">
-                  <feature.icon className="w-6 h-6 text-violet-500 mx-auto mb-2" />
-                  <div className="text-sm font-medium dark:text-white">{t(`cloud.features.${feature.labelKey}`)}</div>
+          {/* Servers Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Server List */}
+            <div className="lg:col-span-1">
+              <div className="glass-card rounded-2xl p-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="font-bold dark:text-white">{t('cloud.servers')}</h2>
+                  <button
+                    onClick={() => setShowAddServer(true)}
+                    disabled={user.serverCount >= user.serverLimit}
+                    className="p-2 rounded-lg bg-violet-500 hover:bg-violet-600 disabled:bg-slate-400 text-white transition-colors"
+                    title={user.serverCount >= user.serverLimit ? t('cloud.limitReached') : t('cloud.addServer')}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
                 </div>
-              ))}
-            </div>
 
-            {/* Links */}
-            <div className="mt-8 pt-8 border-t border-slate-200 dark:border-slate-700">
-              <p className="text-sm text-slate-500 mb-4">
-                {t('cloud.waitingMessage')}
-              </p>
-              <div className="flex flex-wrap gap-4 justify-center">
-                <a href="/" className="text-violet-600 dark:text-violet-400 hover:underline text-sm font-medium">
-                  {t('cloud.learnMore')}
-                </a>
-                <a href="/cli" className="text-violet-600 dark:text-violet-400 hover:underline text-sm font-medium">
-                  {t('cloud.cliGuide')}
-                </a>
-                <a href="https://github.com/zsai001/vstats" target="_blank" rel="noreferrer" className="text-violet-600 dark:text-violet-400 hover:underline text-sm font-medium">
-                  {t('cloud.githubOpenSource')}
-                </a>
+                {/* Add Server Form */}
+                {showAddServer && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="mb-4 p-3 rounded-lg bg-slate-100 dark:bg-slate-800"
+                  >
+                    <input
+                      type="text"
+                      value={newServerName}
+                      onChange={(e) => setNewServerName(e.target.value)}
+                      placeholder={t('cloud.serverName')}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white mb-2"
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddServer()}
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleAddServer}
+                        disabled={addingServer || !newServerName.trim()}
+                        className="flex-1 py-2 rounded-lg bg-violet-500 hover:bg-violet-600 disabled:bg-slate-400 text-white text-sm transition-colors"
+                      >
+                        {addingServer ? '...' : t('cloud.add')}
+                      </button>
+                      <button
+                        onClick={() => { setShowAddServer(false); setNewServerName(''); }}
+                        className="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-sm"
+                      >
+                        {t('cloud.cancel')}
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Server List */}
+                <div className="space-y-2">
+                  {servers.length === 0 ? (
+                    <p className="text-center py-8 text-slate-400">{t('cloud.noServers')}</p>
+                  ) : (
+                    servers.map((server) => (
+                      <div
+                        key={server.id}
+                        onClick={() => setSelectedServer(server)}
+                        className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                          selectedServer?.id === server.id
+                            ? 'bg-violet-100 dark:bg-violet-900/30 border border-violet-300 dark:border-violet-700'
+                            : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-2 h-2 rounded-full ${
+                              server.status === 'online' ? 'bg-green-500' :
+                              server.status === 'warning' ? 'bg-yellow-500' :
+                              server.status === 'error' ? 'bg-red-500' : 'bg-slate-400'
+                            }`} />
+                            <div>
+                              <div className="font-medium dark:text-white text-sm">{server.name}</div>
+                              <div className="text-xs text-slate-500">{server.hostname || server.id.slice(0, 8)}</div>
+                            </div>
+                          </div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteServer(server.id); }}
+                            className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-slate-400 hover:text-red-500 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
-          </motion.div>
+
+            {/* Server Details */}
+            <div className="lg:col-span-2">
+              {selectedServer ? (
+                <motion.div
+                  key={selectedServer.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="glass-card rounded-2xl p-6"
+                >
+                  <div className="flex justify-between items-start mb-6">
+                    <div>
+                      <h2 className="text-xl font-bold dark:text-white">{selectedServer.name}</h2>
+                      <p className="text-sm text-slate-500">
+                        {selectedServer.hostname || 'Not connected'} • {selectedServer.os_type || 'Unknown OS'}
+                      </p>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      selectedServer.status === 'online' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                      selectedServer.status === 'warning' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                      selectedServer.status === 'error' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                      'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                    }`}>
+                      {selectedServer.status}
+                    </span>
+                  </div>
+
+                  {/* Metrics (if online) */}
+                  {selectedServer.status === 'online' && selectedServer.metrics && (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+                      <div className="p-4 rounded-xl bg-slate-100 dark:bg-slate-800">
+                        <div className="text-xs text-slate-500 mb-1">CPU</div>
+                        <div className="text-lg font-bold dark:text-white">
+                          {selectedServer.metrics.cpu_usage?.toFixed(1) || '0'}%
+                        </div>
+                      </div>
+                      <div className="p-4 rounded-xl bg-slate-100 dark:bg-slate-800">
+                        <div className="text-xs text-slate-500 mb-1">Memory</div>
+                        <div className="text-lg font-bold dark:text-white">
+                          {selectedServer.metrics.memory_total 
+                            ? ((selectedServer.metrics.memory_used || 0) / selectedServer.metrics.memory_total * 100).toFixed(1)
+                            : '0'}%
+                        </div>
+                      </div>
+                      <div className="p-4 rounded-xl bg-slate-100 dark:bg-slate-800">
+                        <div className="text-xs text-slate-500 mb-1">Disk</div>
+                        <div className="text-lg font-bold dark:text-white">
+                          {selectedServer.metrics.disk_total
+                            ? ((selectedServer.metrics.disk_used || 0) / selectedServer.metrics.disk_total * 100).toFixed(1)
+                            : '0'}%
+                        </div>
+                      </div>
+                      <div className="p-4 rounded-xl bg-slate-100 dark:bg-slate-800">
+                        <div className="text-xs text-slate-500 mb-1">Network</div>
+                        <div className="text-lg font-bold dark:text-white">
+                          {((selectedServer.metrics.network_rx_bytes || 0) / 1024 / 1024).toFixed(1)} MB
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Install Command */}
+                  <div className="p-4 rounded-xl bg-slate-900 dark:bg-slate-950">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2 text-slate-400 text-sm">
+                        <Terminal className="w-4 h-4" />
+                        {t('cloud.installAgent')}
+                      </div>
+                      <button
+                        onClick={() => copyToClipboard(
+                          `curl -fsSL https://vstats.zsoft.cc/agent.sh | sudo bash -s -- --cloud --key "${selectedServer.agent_key}"`,
+                          'install'
+                        )}
+                        className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                      >
+                        {copiedKey === 'install' ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <code className="block text-sm text-green-400 font-mono overflow-x-auto whitespace-nowrap">
+                      curl -fsSL https://vstats.zsoft.cc/agent.sh | sudo bash -s -- --cloud --key "{selectedServer.agent_key}"
+                    </code>
+                  </div>
+
+                  {/* Agent Key */}
+                  <div className="mt-4 p-3 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-between">
+                    <div>
+                      <div className="text-xs text-slate-500">Agent Key</div>
+                      <code className="text-sm font-mono dark:text-white">{selectedServer.agent_key.slice(0, 16)}...</code>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => copyToClipboard(selectedServer.agent_key, 'key')}
+                        className="p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 transition-colors"
+                        title={t('cloud.copyKey')}
+                      >
+                        {copiedKey === 'key' ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const { agent_key } = await api.regenerateAgentKey(selectedServer.id);
+                          setSelectedServer({ ...selectedServer, agent_key });
+                          setServers(servers.map(s => s.id === selectedServer.id ? { ...s, agent_key } : s));
+                        }}
+                        className="p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 transition-colors"
+                        title={t('cloud.regenerateKey')}
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              ) : (
+                <div className="glass-card rounded-2xl p-12 text-center">
+                  <Server className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+                  <p className="text-slate-500">{t('cloud.selectServer')}</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
-  // Not logged in - Show Login Page
+  // Not logged in - Login Page
   return (
     <div className="pt-20 min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="text-center mb-16">
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-4 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 max-w-md mx-auto"
+            >
+              {error}
+            </motion.div>
+          )}
+          
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -274,15 +482,6 @@ export default function CloudPage() {
             transition={{ delay: 0.3 }}
             className="mt-8 flex flex-col gap-4 justify-center items-center"
           >
-            {/* Coming Soon Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 text-sm font-medium">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500"></span>
-              </span>
-              {t('cloud.comingSoon')}
-            </div>
-            
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <button
                 onClick={() => handleOAuthLogin('github')}
@@ -319,10 +518,6 @@ export default function CloudPage() {
                 )}
               </button>
             </div>
-            
-            <p className="text-sm text-slate-400 mt-2">
-              {t('cloud.devMessage')}
-            </p>
           </motion.div>
         </div>
 

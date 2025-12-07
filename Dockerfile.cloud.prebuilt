@@ -1,0 +1,31 @@
+# ===========================================
+# VStats Cloud - Pre-built Binary
+# ===========================================
+# This Dockerfile is used in CI to create images
+# from pre-built binaries
+
+FROM alpine:3.19
+
+RUN apk add --no-cache ca-certificates tzdata wget
+
+WORKDIR /app
+
+# Copy pre-built binary based on architecture
+ARG TARGETARCH
+COPY vstats-cloud-linux-${TARGETARCH} /app/vstats-cloud
+
+RUN chmod +x /app/vstats-cloud
+
+# Create non-root user
+RUN adduser -D -u 1000 vstats && \
+    chown -R vstats:vstats /app
+
+USER vstats
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD wget -q --spider http://localhost:3001/health || exit 1
+
+EXPOSE 3001
+
+ENTRYPOINT ["./vstats-cloud"]
