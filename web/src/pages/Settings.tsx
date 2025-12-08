@@ -1729,7 +1729,7 @@ export default function Settings() {
   };
 
   const deleteServer = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this server?')) return;
+    if (!confirm(isZh ? '确定要删除这个服务器吗？' : 'Are you sure you want to delete this server?')) return;
     
     try {
       const res = await fetch(`/api/servers/${id}`, {
@@ -1751,12 +1751,12 @@ export default function Settings() {
     setPasswordSuccess(false);
     
     if (passwords.new !== passwords.confirm) {
-      setPasswordError('Passwords do not match');
+      setPasswordError(isZh ? '两次输入的密码不一致' : 'Passwords do not match');
       return;
     }
     
     if (passwords.new.length < 4) {
-      setPasswordError('Password must be at least 4 characters');
+      setPasswordError(isZh ? '密码至少需要 4 个字符' : 'Password must be at least 4 characters');
       return;
     }
     
@@ -1778,10 +1778,10 @@ export default function Settings() {
         setPasswords({ current: '', new: '', confirm: '' });
         setShowPasswordForm(false);
       } else {
-        setPasswordError('Current password is incorrect');
+        setPasswordError(isZh ? '当前密码不正确' : 'Current password is incorrect');
       }
     } catch (e) {
-      setPasswordError('Failed to change password');
+      setPasswordError(isZh ? '修改密码失败' : 'Failed to change password');
     }
   };
 
@@ -1898,7 +1898,7 @@ export default function Settings() {
           >
             <div className="flex items-center gap-3 mb-1">
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              <span className="text-sm font-bold">Server Management</span>
+              <span className="text-sm font-bold">{isZh ? '管理服务器' : 'Server Management'}</span>
             </div>
           </button>
 
@@ -1910,12 +1910,12 @@ export default function Settings() {
                 ? 'bg-pink-500/20 text-pink-400 border-pink-500/30 shadow-lg'
                 : 'bg-white/5 text-gray-300 border-white/10 hover:bg-white/10 hover:border-white/20'
             }`}
-          >
-            <div className="flex items-center gap-3 mb-1">
-              <span className="w-2 h-2 rounded-full bg-pink-500"></span>
-              <span className="text-sm font-bold">Theme Settings</span>
-            </div>
-          </button>
+            >
+              <div className="flex items-center gap-3 mb-1">
+                <span className="w-2 h-2 rounded-full bg-pink-500"></span>
+                <span className="text-sm font-bold">{isZh ? '主题设置' : 'Theme Settings'}</span>
+              </div>
+            </button>
 
           {/* Security */}
           <button
@@ -1925,12 +1925,12 @@ export default function Settings() {
                 ? 'bg-purple-500/20 text-purple-400 border-purple-500/30 shadow-lg'
                 : 'bg-white/5 text-gray-300 border-white/10 hover:bg-white/10 hover:border-white/20'
             }`}
-          >
-            <div className="flex items-center gap-3 mb-1">
-              <span className="w-2 h-2 rounded-full bg-purple-500"></span>
-              <span className="text-sm font-bold">Security</span>
-            </div>
-          </button>
+            >
+              <div className="flex items-center gap-3 mb-1">
+                <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                <span className="text-sm font-bold">{isZh ? '安全' : 'Security'}</span>
+              </div>
+            </button>
         </nav>
       </aside>
 
@@ -2637,7 +2637,7 @@ export default function Settings() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-cyan-500"></span>
-            Quick Install Agent
+            {isZh ? '快速安装节点端' : 'Quick Install Agent'}
           </h2>
           <button
             onClick={() => setShowInstallCommand(!showInstallCommand)}
@@ -2646,12 +2646,14 @@ export default function Settings() {
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            {showInstallCommand ? 'Hide' : 'Show'} Command
+            {showInstallCommand 
+              ? (isZh ? '隐藏命令' : 'Hide Command') 
+              : (isZh ? '显示命令' : 'Show Command')}
           </button>
         </div>
         
         <p className="text-gray-400 text-sm mb-4">
-          Run this command on any server to install the monitoring agent.
+          {isZh ? '请使用上方提供的命令在远程服务器上安装节点端' : 'Run this command on any server to install the monitoring agent.'}
         </p>
         
         {showInstallCommand && (
@@ -2698,7 +2700,7 @@ export default function Settings() {
                     : 'bg-white/10 hover:bg-white/20 text-gray-400 hover:text-white'
                 }`}
               >
-                {copied ? 'Copied!' : 'Copy'}
+                {copied ? (isZh ? '已复制' : 'Copied!') : (isZh ? '复制' : 'Copy')}
               </button>
             </div>
             
@@ -2718,7 +2720,7 @@ export default function Settings() {
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            Server Management
+            {isZh ? '管理服务器' : 'Server Management'}
           </h2>
           <button
             onClick={() => setShowAddForm(true)}
@@ -2727,14 +2729,14 @@ export default function Settings() {
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            Add Agent
+            {isZh ? '添加节点' : 'Add Agent'}
           </button>
         </div>
 
         {/* Success messages */}
         {localNodeSuccess && (
           <div className="mb-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm">
-            Configuration saved successfully!
+            {isZh ? '配置已保存！' : 'Configuration saved successfully!'}
           </div>
         )}
 
@@ -2742,45 +2744,45 @@ export default function Settings() {
           <form onSubmit={addServer} className="mb-6 p-4 rounded-xl bg-white/[0.02] border border-white/10">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Server Name</label>
+                <label className="block text-xs text-gray-500 mb-1">{isZh ? '服务器名称' : 'Server Name'}</label>
                 <input
                   type="text"
                   value={newServer.name}
                   onChange={(e) => setNewServer({ ...newServer, name: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-emerald-500/50"
-                  placeholder="e.g., US-West-1"
+                  placeholder={isZh ? '例：US-West-1' : 'e.g., US-West-1'}
                   required
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Tag</label>
+                <label className="block text-xs text-gray-500 mb-1">{isZh ? '标签' : 'Tag'}</label>
                 <input
                   type="text"
                   value={newServer.tag}
                   onChange={(e) => setNewServer({ ...newServer, tag: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-emerald-500/50"
-                  placeholder="e.g., Production, Test"
+                  placeholder={isZh ? '例：生产、测试' : 'e.g., Production, Test'}
                 />
                 <p className="text-xs text-gray-600 mt-1">标签会自动同步到"标签"分组维度</p>
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Location Code</label>
+                <label className="block text-xs text-gray-500 mb-1">{isZh ? '位置代码' : 'Location Code'}</label>
                 <input
                   type="text"
                   value={newServer.location}
                   onChange={(e) => setNewServer({ ...newServer, location: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-emerald-500/50"
-                  placeholder="e.g., US, HK, JP"
+                  placeholder={isZh ? '例：US、HK、JP' : 'e.g., US, HK, JP'}
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Provider</label>
+                <label className="block text-xs text-gray-500 mb-1">{isZh ? '服务商' : 'Provider'}</label>
                 <input
                   type="text"
                   value={newServer.provider}
                   onChange={(e) => setNewServer({ ...newServer, provider: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-emerald-500/50"
-                  placeholder="e.g., AWS, Vultr"
+                  placeholder={isZh ? '例：阿里云、AWS、Vultr' : 'e.g., AWS, Vultr'}
                 />
               </div>
             </div>
@@ -3037,7 +3039,7 @@ export default function Settings() {
                     disabled={localNodeSaving}
                     className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium transition-colors disabled:opacity-50"
                   >
-                    {localNodeSaving ? 'Saving...' : 'Save'}
+                    {localNodeSaving ? (isZh ? '保存中...' : 'Saving...') : (isZh ? '保存' : 'Save')}
                   </button>
                 </div>
               </div>
@@ -3047,8 +3049,10 @@ export default function Settings() {
           {/* Remote Agents */}
           {servers.length === 0 ? (
             <div className="text-center py-6 text-gray-500 border border-dashed border-white/10 rounded-xl">
-              <p>No remote agents connected</p>
-              <p className="text-sm mt-1">Install the agent on a server using the command above</p>
+              <p>{isZh ? '没有已连接的远程节点' : 'No remote agents connected'}</p>
+              <p className="text-sm mt-1">
+                {isZh ? '请使用上方提供的命令在远程服务器上安装节点端' : 'Install the agent on a server using the command above'}
+              </p>
             </div>
           ) : (
             <>
@@ -3442,21 +3446,21 @@ export default function Settings() {
       <div className="nezha-card p-6 mb-6">
         <h2 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
           <span className="w-2 h-2 rounded-full bg-cyan-500"></span>
-          Version Information
+          {isZh ? '版本信息' : 'Version Information'}
         </h2>
         
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm text-gray-400">Current Version</div>
-              <div className="text-lg font-mono text-white">{serverVersion || 'Loading...'}</div>
+              <div className="text-sm text-gray-400">{isZh ? '当前版本' : 'Current Version'}</div>
+              <div className="text-lg font-mono text-white">{serverVersion || (isZh ? '加载中...' : 'Loading...')}</div>
             </div>
             <button
               onClick={checkLatestVersion}
               disabled={checkingVersion}
               className="px-4 py-2 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 text-sm font-medium transition-colors disabled:opacity-50"
             >
-              {checkingVersion ? 'Checking...' : 'Check Update'}
+              {checkingVersion ? (isZh ? '检查中...' : 'Checking...') : (isZh ? '检查更新' : 'Check Update')}
             </button>
           </div>
           
@@ -3464,34 +3468,34 @@ export default function Settings() {
             <div className="pt-3 border-t border-white/5">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-sm text-gray-400">Latest Version</div>
+                  <div className="text-sm text-gray-400">{isZh ? '最新版本' : 'Latest Version'}</div>
                   <div className="text-lg font-mono text-white">{latestVersion}</div>
                 </div>
                 {updateAvailable ? (
                   <div className="flex items-center gap-2">
                     <span className="px-3 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 text-xs font-medium">
-                      Update Available
+                      {isZh ? '有可用更新' : 'Update Available'}
                     </span>
                     <button
                       onClick={() => upgradeServer(false)}
                       disabled={upgrading}
                       className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {upgrading ? 'Upgrading...' : 'Execute Upgrade'}
+                      {upgrading ? (isZh ? '升级中...' : 'Upgrading...') : (isZh ? '执行升级' : 'Execute Upgrade')}
                     </button>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
                     <span className="px-3 py-1 rounded-lg bg-gray-500/10 text-gray-400 text-xs font-medium">
-                      Up to Date
+                      {isZh ? '已是最新版' : 'Up to Date'}
                     </span>
                     <button
                       onClick={() => upgradeServer(true)}
                       disabled={upgrading}
                       className="px-4 py-2 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Force reinstall the same version"
+                      title={isZh ? '强制重装当前版本' : 'Force reinstall the same version'}
                     >
-                      {upgrading ? 'Reinstalling...' : 'Force Reinstall'}
+                      {upgrading ? (isZh ? '重装中...' : 'Reinstalling...') : (isZh ? '强制重装' : 'Force Reinstall')}
                     </button>
                   </div>
                 )}
@@ -3506,38 +3510,42 @@ export default function Settings() {
       <div data-section="security" className="nezha-card p-6">
         <h2 className="text-lg font-bold text-white flex items-center gap-2 mb-6">
           <span className="w-2 h-2 rounded-full bg-purple-500"></span>
-          Security
+          {isZh ? '安全' : 'Security'}
         </h2>
 
         {passwordSuccess && (
           <div className="mb-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm">
-            Password changed successfully!
+            {isZh ? '密码修改成功！' : 'Password changed successfully!'}
           </div>
         )}
 
         {showPasswordForm ? (
           <form onSubmit={changePassword} className="space-y-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Current Password</label>
+              <label className="block text-xs text-gray-500 mb-1">{isZh ? '当前密码' : 'Current Password'}</label>
               <input type="password" value={passwords.current} onChange={(e) => setPasswords({ ...passwords, current: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-purple-500/50" required />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">New Password</label>
+              <label className="block text-xs text-gray-500 mb-1">{isZh ? '新密码' : 'New Password'}</label>
               <input type="password" value={passwords.new} onChange={(e) => setPasswords({ ...passwords, new: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-purple-500/50" required />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Confirm New Password</label>
+              <label className="block text-xs text-gray-500 mb-1">{isZh ? '确认新密码' : 'Confirm New Password'}</label>
               <input type="password" value={passwords.confirm} onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-purple-500/50" required />
             </div>
             {passwordError && <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{passwordError}</div>}
             <div className="flex gap-2">
-              <button type="button" onClick={() => { setShowPasswordForm(false); setPasswords({ current: '', new: '', confirm: '' }); setPasswordError(''); }} className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 text-sm transition-colors">Cancel</button>
-              <button type="submit" className="px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium transition-colors">Change Password</button>
+              <button type="button" onClick={() => { setShowPasswordForm(false); setPasswords({ current: '', new: '', confirm: '' }); setPasswordError(''); }} className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 text-sm transition-colors">
+                {isZh ? '取消' : 'Cancel'}
+              </button>
+              <button type="submit" className="px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium transition-colors">
+                {isZh ? '修改密码' : 'Change Password'}
+              </button>
             </div>
           </form>
         ) : (
           <button onClick={() => setShowPasswordForm(true)} className="px-4 py-2 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 text-sm font-medium transition-colors">
-            Change Password
+            {isZh ? '修改密码' : 'Change Password'}
           </button>
         )}
       </div>
