@@ -93,6 +93,7 @@ func main() {
 	go metricsBroadcastLoop(state)
 	go aggregationLoop(state, db)
 	go cleanupLoop(db)
+	go watchConfigFileChanges(state)
 
 	// Setup routes
 	gin.SetMode(gin.ReleaseMode)
@@ -445,6 +446,34 @@ func cleanupLoop(db *sql.DB) {
 
 func boolPtr(b bool) *bool {
 	return &b
+}
+
+// watchConfigFileChanges reloads sensitive config values when the config file changes.
+// This lets password resets via CLI take effect without restarting the server.
+func watchConfigFileChanges(state *AppState) {
+	configPath := GetConfigPath()
+	var lastModTime time.Time
+
+	for {
+		info, err := os.Stat(configPath)
+		if err == nil {
+			modTime := info.ModTime()
+			if modTime.After(lastModTime) {
+				lastModTime = modTime
+				if cfg, err := LoadConfig(); err == nil && cfg != nil {
+					state.ConfigMu.Lock()
+					state.Config.AdminPasswordHash = cfg.AdminPasswordHash
+					state.Config.JWTSecret = cfg.JWTSecret
+					state.ConfigMu.Unlock()
+					InitJWTSecret(cfg.JWTSecret)
+					fmt.Println("🔄 Config reloaded from disk (password/JWT refreshed)")
+				} else if err != nil {
+					fmt.Printf("⚠️  Failed to reload config after change: %v\n", err)
+				}
+			}
+		}
+		time.Sleep(10 * time.Second)
+	}
 }
 
 // getWebDir finds the web directory containing the frontend assets
