@@ -172,6 +172,16 @@
         "desc": "One-click deployment with Docker, no manual dependency installation required",
         "warning": "⚠️ Important: After first run, please save the initial admin password displayed in the console! Access URL:"
       },
+      "compose": {
+        "title": "🚀 Docker Compose Full Deployment",
+        "desc": "For production environments, includes full service stack with Nginx, PostgreSQL, Redis",
+        "step1": "1. Clone deployment config",
+        "step2": "2. Initialize configuration",
+        "step3": "3. Edit environment variables",
+        "step4": "4. Start services",
+        "note": "For full deployment documentation, see",
+        "noteLink": "Deployment Guide"
+      },
       "manual": {
         "title": "Manual Installation (Dashboard)"
       },

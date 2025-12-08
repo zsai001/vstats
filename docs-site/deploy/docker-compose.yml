@@ -42,7 +42,7 @@ services:
   # API Server (VStats Cloud Backend - Go)
   # ========================================
   api:
-    image: ${API_IMAGE:-ghcr.io/zsai001/vstats-cloud:latest}
+    image: ${API_IMAGE:-zsai001/vstats-cloud:latest}
     container_name: vstats-api
     restart: unless-stopped
     environment:

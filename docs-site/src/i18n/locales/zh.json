@@ -172,6 +172,16 @@
         "desc": "使用 Docker 一键部署，无需手动安装依赖",
         "warning": "⚠️ 重要：首次运行后，请保存控制台显示的初始管理员密码！访问地址："
       },
+      "compose": {
+        "title": "🚀 Docker Compose 完整部署",
+        "desc": "适用于生产环境，包含 Nginx、PostgreSQL、Redis 等完整服务栈",
+        "step1": "1. 克隆部署配置",
+        "step2": "2. 初始化配置",
+        "step3": "3. 修改环境变量",
+        "step4": "4. 启动服务",
+        "note": "完整部署文档请参考",
+        "noteLink": "部署指南"
+      },
       "manual": {
         "title": "手动安装 (Dashboard)"
       },

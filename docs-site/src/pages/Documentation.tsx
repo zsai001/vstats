@@ -112,6 +112,91 @@ docker logs -f vstats-server`}
                   </div>
                 </div>
 
+                {/* Docker Compose Full Deployment */}
+                <div className="glass-card rounded-xl p-6">
+                  <h3 className="text-xl font-bold mb-4 dark:text-white flex items-center gap-2">
+                    <span className="text-2xl">🚀</span>
+                    {t('documentation.installation.compose.title')}
+                  </h3>
+                  <p className="text-slate-500 mb-4">{t('documentation.installation.compose.desc')}</p>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-semibold mb-2 dark:text-white">{t('documentation.installation.compose.step1')}</h4>
+                      <CodeBlock
+                        language="bash"
+                        code={`git clone https://github.com/zsai001/vstats.git
+cd vstats/docs-site/deploy`}
+                        onCopy={() => setCopiedState('compose-clone')}
+                        copyId="compose-clone"
+                        copied={copiedCode === 'compose-clone'}
+                      />
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold mb-2 dark:text-white">{t('documentation.installation.compose.step2')}</h4>
+                      <CodeBlock
+                        language="bash"
+                        code="./scripts/deploy.sh setup"
+                        onCopy={() => setCopiedState('compose-setup')}
+                        copyId="compose-setup"
+                        copied={copiedCode === 'compose-setup'}
+                      />
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold mb-2 dark:text-white">{t('documentation.installation.compose.step3')}</h4>
+                      <CodeBlock
+                        language="bash"
+                        code={`# 编辑 .env 文件，修改以下配置
+vim .env
+
+# 必须修改的配置：
+# - POSTGRES_PASSWORD: PostgreSQL 密码
+# - REDIS_PASSWORD: Redis 密码
+# - JWT_SECRET: JWT 密钥
+# - SESSION_SECRET: Session 密钥
+# - APP_URL: 你的域名 (如 https://vstats.example.com)`}
+                        onCopy={() => setCopiedState('compose-env')}
+                        copyId="compose-env"
+                        copied={copiedCode === 'compose-env'}
+                      />
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold mb-2 dark:text-white">{t('documentation.installation.compose.step4')}</h4>
+                      <CodeBlock
+                        language="bash"
+                        code={`# 启动所有服务
+./scripts/deploy.sh start
+
+# 查看状态
+./scripts/deploy.sh status
+
+# 查看日志
+./scripts/deploy.sh logs`}
+                        onCopy={() => setCopiedState('compose-start')}
+                        copyId="compose-start"
+                        copied={copiedCode === 'compose-start'}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-4 p-4 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded-lg">
+                    <p className="text-sm text-sky-800 dark:text-sky-300">
+                      💡 {t('documentation.installation.compose.note')}{' '}
+                      <a 
+                        href="https://github.com/zsai001/vstats/blob/main/docs-site/deploy/README.md" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="underline hover:text-sky-600 dark:hover:text-sky-200"
+                      >
+                        {t('documentation.installation.compose.noteLink')}
+                      </a>
+                    </p>
+                  </div>
+                </div>
+
                 {/* Manual Installation */}
                 <div className="glass-card rounded-xl p-6">
                   <h3 className="text-xl font-bold mb-4 dark:text-white">{t('documentation.installation.manual.title')}</h3>
