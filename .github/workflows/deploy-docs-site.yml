@@ -165,19 +165,27 @@ jobs:
                 echo ">> Full deployment: updating all services..."
                 
                 # 拉取最新镜像并重建
+                echo ">> Pulling latest images..."
                 sudo docker compose pull
+                
+                echo ">> Starting services..."
                 sudo docker compose up -d --force-recreate
               else
                 echo ">> Frontend deployment: updating nginx..."
                 
                 # 仅重启 nginx 以加载新前端
-                if sudo docker compose ps nginx | grep -q "running"; then
+                if sudo docker compose ps nginx 2>/dev/null | grep -q "running\|Up"; then
+                  echo ">> Restarting nginx service..."
                   sudo docker compose restart nginx
                 else
+                  echo ">> Nginx not running, starting all services..."
                   # 如果 nginx 没有运行，启动所有服务
                   sudo docker compose up -d
                 fi
               fi
+              
+              echo ">> Waiting for services to start..."
+              sleep 10
               
               echo ">> Deployment completed"
             fi
@@ -189,6 +197,17 @@ jobs:
             echo "======================================"
             sudo docker compose ps
             
+            # 显示服务启动日志（如果有错误）
+            echo ""
+            echo "======================================"
+            echo "Service Logs (last 20 lines):"
+            echo "======================================"
+            for service in postgres redis api nginx; do
+              echo ""
+              echo "--- $service logs ---"
+              sudo docker compose logs --tail=20 $service 2>&1 || echo "No logs for $service"
+            done
+            
             # 健康检查
             echo ""
             echo "======================================"
@@ -197,13 +216,54 @@ jobs:
             sleep 5
             
             # 检查各服务健康状态
-            for service in nginx api postgres redis; do
-              if sudo docker compose ps $service 2>/dev/null | grep -q "running\|Up"; then
+            FAILED_SERVICES=()
+            for service in postgres redis api nginx; do
+              STATUS=$(sudo docker compose ps $service 2>/dev/null | tail -n +2 | awk '{print $1, $4, $5, $6, $7}' || echo "")
+              if echo "$STATUS" | grep -qE "running|Up|healthy"; then
                 echo "✅ $service: running"
               else
-                echo "⚠️  $service: not running (may be optional)"
+                echo "❌ $service: not running or unhealthy"
+                echo "   Status: $STATUS"
+                FAILED_SERVICES+=("$service")
               fi
             done
+            
+            # 如果 nginx 没有运行，显示详细错误信息
+            if [[ " ${FAILED_SERVICES[@]} " =~ " nginx " ]]; then
+              echo ""
+              echo "======================================"
+              echo "⚠️  Nginx failed to start!"
+              echo "======================================"
+              echo "Checking dependencies..."
+              
+              # 检查 api 服务状态（nginx 依赖于 api）
+              API_STATUS=$(sudo docker compose ps api 2>/dev/null | tail -n +2 || echo "")
+              if echo "$API_STATUS" | grep -qE "running|Up|healthy"; then
+                echo "✅ API service is running"
+              else
+                echo "❌ API service is not healthy - this may prevent nginx from starting"
+                echo "   API Status: $API_STATUS"
+                echo "   API Logs:"
+                sudo docker compose logs --tail=30 api 2>&1 | head -n 20 || true
+              fi
+              
+              # 显示 nginx 详细错误日志
+              echo ""
+              echo "Nginx container status:"
+              sudo docker inspect vstats-nginx 2>/dev/null | grep -A 10 '"State"' || echo "Container not found"
+              
+              echo ""
+              echo "Nginx logs:"
+              sudo docker compose logs --tail=50 nginx 2>&1 || echo "No nginx logs available"
+            fi
+            
+            # 如果有服务失败，返回非零退出码
+            if [ ${#FAILED_SERVICES[@]} -gt 0 ]; then
+              echo ""
+              echo "======================================"
+              echo "⚠️  Warning: Some services failed to start: ${FAILED_SERVICES[*]}"
+              echo "======================================"
+            fi
 
       - name: Deployment Summary
         run: |
