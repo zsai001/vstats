@@ -1,0 +1,12 @@
+name = "vstats-unsplash-proxy"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# Unsplash API credentials are stored as secrets
+# Run this command to set it:
+#   npx wrangler secret put UNSPLASH_ACCESS_KEY
+
+# Optional: Add a custom domain
+# routes = [
+#   { pattern = "unsplash.yourdomain.com", custom_domain = true }
+# ]

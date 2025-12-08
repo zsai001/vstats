@@ -17,6 +17,9 @@ oauth-proxy/node_modules
 
 # OAuth Proxy
 oauth-proxy/node_modules/
+
+# Unsplash Proxy
+unsplash-proxy/node_modules/
 docs-site/node_modules
 docs-site/dist
 server-go/cmd/cli/cli
