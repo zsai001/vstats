@@ -24,7 +24,6 @@ env:
 
 permissions:
   contents: write
-  pages: write
   id-token: write
 
 concurrency:
@@ -634,77 +633,3 @@ jobs:
             release/*
           draft: false
           prerelease: false
-
-  # ============================================================================
-  # Deploy to GitHub Pages (Documentation Site)
-  # ============================================================================
-  deploy-pages:
-    runs-on: ubuntu-latest
-    # Only deploy from main branch to avoid environment protection rule issues with tags
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: docs-site/package-lock.json
-
-      - name: Install docs-site dependencies
-        run: |
-          cd docs-site
-          npm ci
-
-      - name: Build docs-site
-        run: |
-          cd docs-site
-          npm run build
-
-      - name: Prepare pages content
-        run: |
-          # Create pages directory
-          rm -rf pages
-          mkdir -p pages
-          
-          # Copy docs-site build output
-          echo "Copying docs-site build output..."
-          cp -r docs-site/dist/* pages/ || true
-          
-          # Copy scripts to root for URL compatibility (https://vstats.zsoft.cc/install.sh)
-          if [ -d "docs-site/dist/scripts" ]; then
-            echo "Copying scripts to root..."
-            cp docs-site/dist/scripts/*.sh pages/ || true
-            cp docs-site/dist/scripts/*.ps1 pages/ || true
-          fi
-          
-          # Copy CNAME if exists
-          if [ -f "docs-site/public/CNAME" ]; then
-            cp docs-site/public/CNAME pages/ || true
-          elif [ -f "docs/CNAME" ]; then
-            cp docs/CNAME pages/ || true
-          fi
-          
-          echo "Contents of pages directory:"
-          ls -la pages/ || true
-          echo "Scripts in pages:"
-          ls -la pages/*.sh pages/*.ps1 2>/dev/null || echo "No scripts found"
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: pages
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4

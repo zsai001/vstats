@@ -10,11 +10,9 @@
    - 构建所有 Go 二进制文件
    - 构建 Web 前端
    - 创建 GitHub Release
-   - 部署到 GitHub Pages
 
-2. **Main 分支推送**：当 `web/` 或 `docs/` 目录有更改时
-   - 构建 Web 前端
-   - 部署到 GitHub Pages
+2. **Main 分支推送**：当 `server-go/`、`web/`、`docs-site/` 或 `docs/` 目录有更改时
+   - 构建对应的组件（Go 二进制文件、Web 前端或文档站点）
 
 3. **手动触发**：在 GitHub Actions 页面手动运行，需要提供版本号
 
@@ -50,7 +48,6 @@
    - 编译所有平台和架构的二进制文件
    - 构建 Web 前端
    - 创建 GitHub Release（包含所有二进制文件、Web 资源和校验和）
-   - 部署 Web 前端到 GitHub Pages
 
 #### 手动发布
 
@@ -88,8 +85,9 @@
 - CGO：禁用（静态链接）
 - 构建标志：`-trimpath -a -installsuffix cgo`
 
-### GitHub Pages
+### 文档站点部署
 
-Web 前端会自动部署到 GitHub Pages：
-- 访问地址：https://vstats.zsoft.cc
-- 包含文档和 Web 应用
+文档站点（docs-site）使用独立的部署工作流 `deploy-docs-site.yml`：
+- 使用 Docker Compose + Nginx 部署
+- 编译后的静态文件通过 Nginx 提供服务
+- 支持自动部署到服务器
