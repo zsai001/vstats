@@ -571,9 +571,10 @@ function ThemeSettingsSection({ isAuthenticated, token, siteSettings, onSiteSett
 }
 
 export default function Settings() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { isAuthenticated, token, logout, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const isZh = i18n.language.startsWith('zh');
   
   const [servers, setServers] = useState<RemoteServer[]>([]);
   const [loading, setLoading] = useState(true);
