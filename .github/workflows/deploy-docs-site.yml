@@ -1,4 +1,4 @@
-name: Deploy VStats Cloud (Docker Compose)
+name: Deploy VStats Cloud
 
 on:
   push:
@@ -27,7 +27,6 @@ jobs:
   build:
     name: Build Frontend
     runs-on: ubuntu-latest
-    # 跳过 restart 类型的部署
     if: github.event.inputs.deploy_type != 'restart'
     
     steps:
@@ -60,7 +59,6 @@ jobs:
     name: Deploy to Server
     runs-on: ubuntu-latest
     needs: [build]
-    # 如果是 restart，跳过 build job，直接执行
     if: always() && (needs.build.result == 'success' || github.event.inputs.deploy_type == 'restart')
     
     steps:
@@ -82,7 +80,6 @@ jobs:
           # 创建部署包目录
           mkdir -p package/dist
           mkdir -p package/db
-          mkdir -p package/nginx/conf.d
           mkdir -p package/scripts
           
           # 复制前端构建产物
@@ -90,10 +87,10 @@ jobs:
           
           # 复制配置文件
           cp docker-compose.yml package/
+          cp env.example package/
           cp db/schema.sql package/db/
-          cp nginx/nginx.conf package/nginx/
-          cp nginx/conf.d/default.conf package/nginx/conf.d/
-          cp scripts/*.sh package/scripts/ 2>/dev/null || true
+          cp scripts/deploy.sh package/scripts/
+          chmod +x package/scripts/*.sh
           
           # 创建部署归档
           cd package
@@ -145,15 +142,6 @@ jobs:
             else
               echo ">> Extracting deployment package..."
               
-              # 备份当前配置
-              if [ -f docker-compose.yml ]; then
-                BACKUP_DIR="/tmp/vstats-backup-$(date +%Y%m%d_%H%M%S)"
-                mkdir -p "$BACKUP_DIR"
-                cp docker-compose.yml "$BACKUP_DIR/" 2>/dev/null || true
-                cp -r nginx "$BACKUP_DIR/" 2>/dev/null || true
-                echo ">> Backup created at $BACKUP_DIR"
-              fi
-              
               # 解压新部署包
               sudo tar -xzf /tmp/vstats-deploy.tar.gz -C "$DEPLOY_DIR"
               rm -f /tmp/vstats-deploy.tar.gz
@@ -163,31 +151,19 @@ jobs:
               
               if [ "$DEPLOY_TYPE" = "full" ]; then
                 echo ">> Full deployment: updating all services..."
-                
-                # 拉取最新镜像并重建
-                echo ">> Pulling latest images..."
                 sudo docker compose pull
-                
-                echo ">> Starting services..."
                 sudo docker compose up -d --force-recreate
               else
-                echo ">> Frontend deployment: updating nginx..."
-                
-                # 仅重启 nginx 以加载新前端
-                if sudo docker compose ps nginx 2>/dev/null | grep -q "running\|Up"; then
-                  echo ">> Restarting nginx service..."
-                  sudo docker compose restart nginx
+                echo ">> Frontend deployment: restarting API to reload static files..."
+                if sudo docker compose ps api 2>/dev/null | grep -qE "running|Up"; then
+                  sudo docker compose restart api
                 else
-                  echo ">> Nginx not running, starting all services..."
-                  # 如果 nginx 没有运行，启动所有服务
                   sudo docker compose up -d
                 fi
               fi
               
               echo ">> Waiting for services to start..."
-              sleep 10
-              
-              echo ">> Deployment completed"
+              sleep 5
             fi
             
             # 显示服务状态
@@ -197,72 +173,26 @@ jobs:
             echo "======================================"
             sudo docker compose ps
             
-            # 显示服务启动日志（如果有错误）
-            echo ""
-            echo "======================================"
-            echo "Service Logs (last 20 lines):"
-            echo "======================================"
-            for service in postgres redis api nginx; do
-              echo ""
-              echo "--- $service logs ---"
-              sudo docker compose logs --tail=20 $service 2>&1 || echo "No logs for $service"
-            done
-            
             # 健康检查
             echo ""
             echo "======================================"
             echo "Health Check:"
             echo "======================================"
-            sleep 5
+            sleep 3
             
-            # 检查各服务健康状态
-            FAILED_SERVICES=()
-            for service in postgres redis api nginx; do
-              STATUS=$(sudo docker compose ps $service 2>/dev/null | tail -n +2 | awk '{print $1, $4, $5, $6, $7}' || echo "")
-              if echo "$STATUS" | grep -qE "running|Up|healthy"; then
+            for service in postgres redis api; do
+              if sudo docker compose ps $service 2>/dev/null | grep -qE "running|Up|healthy"; then
                 echo "✅ $service: running"
               else
                 echo "❌ $service: not running or unhealthy"
-                echo "   Status: $STATUS"
-                FAILED_SERVICES+=("$service")
               fi
             done
             
-            # 如果 nginx 没有运行，显示详细错误信息
-            if [[ " ${FAILED_SERVICES[@]} " =~ " nginx " ]]; then
-              echo ""
-              echo "======================================"
-              echo "⚠️  Nginx failed to start!"
-              echo "======================================"
-              echo "Checking dependencies..."
-              
-              # 检查 api 服务状态（nginx 依赖于 api）
-              API_STATUS=$(sudo docker compose ps api 2>/dev/null | tail -n +2 || echo "")
-              if echo "$API_STATUS" | grep -qE "running|Up|healthy"; then
-                echo "✅ API service is running"
-              else
-                echo "❌ API service is not healthy - this may prevent nginx from starting"
-                echo "   API Status: $API_STATUS"
-                echo "   API Logs:"
-                sudo docker compose logs --tail=30 api 2>&1 | head -n 20 || true
-              fi
-              
-              # 显示 nginx 详细错误日志
-              echo ""
-              echo "Nginx container status:"
-              sudo docker inspect vstats-nginx 2>/dev/null | grep -A 10 '"State"' || echo "Container not found"
-              
-              echo ""
-              echo "Nginx logs:"
-              sudo docker compose logs --tail=50 nginx 2>&1 || echo "No nginx logs available"
-            fi
-            
-            # 如果有服务失败，返回非零退出码
-            if [ ${#FAILED_SERVICES[@]} -gt 0 ]; then
-              echo ""
-              echo "======================================"
-              echo "⚠️  Warning: Some services failed to start: ${FAILED_SERVICES[*]}"
-              echo "======================================"
+            # 测试 API
+            if curl -sf --max-time 10 "http://127.0.0.1:3001/health" > /dev/null 2>&1; then
+              echo "✅ API health check passed (127.0.0.1:3001)"
+            else
+              echo "⚠️  API health check failed"
             fi
 
       - name: Deployment Summary
@@ -278,7 +208,9 @@ jobs:
           echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Services" >> $GITHUB_STEP_SUMMARY
-          echo "- nginx (frontend + reverse proxy)" >> $GITHUB_STEP_SUMMARY
-          echo "- api (backend server)" >> $GITHUB_STEP_SUMMARY
+          echo "- api (backend + static files on 127.0.0.1:3001)" >> $GITHUB_STEP_SUMMARY
           echo "- postgres (database)" >> $GITHUB_STEP_SUMMARY
           echo "- redis (cache)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Note" >> $GITHUB_STEP_SUMMARY
+          echo "Configure external nginx to proxy to 127.0.0.1:3001" >> $GITHUB_STEP_SUMMARY

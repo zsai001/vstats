@@ -24,3 +24,5 @@ docs-site/node_modules
 docs-site/dist
 server-go/cmd/cli/cli
 docs-site/deploy/dist
+docs-site/deploy/vstats-cloud
+server-go/cloud

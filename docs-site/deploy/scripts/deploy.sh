@@ -23,15 +23,14 @@ usage() {
     echo "Usage: $0 [command]"
     echo ""
     echo "Commands:"
-    echo "  start     - Start all services"
-    echo "  stop      - Stop all services"
-    echo "  restart   - Restart all services"
-    echo "  status    - Show service status"
-    echo "  logs      - Show service logs"
-    echo "  update    - Pull latest images and restart"
-    echo "  setup     - Initial setup (create .env, SSL, etc.)"
-    echo "  diagnose  - Run diagnostic checks for API container"
-    echo "  health    - Run health check for all services"
+    echo "  start         - Start all services"
+    echo "  stop          - Stop all services"
+    echo "  restart       - Restart all services"
+    echo "  status        - Show service status"
+    echo "  logs [svc]    - Show service logs"
+    echo "  update        - Pull latest images and restart"
+    echo "  setup         - Initial setup (create .env)"
+    echo "  health        - Run health check for all services"
     echo ""
     exit 1
 }
@@ -60,15 +59,6 @@ setup() {
         echo_info ".env already exists"
     fi
     
-    # 创建 SSL 目录和证书
-    if [ ! -f ssl/cert.pem ]; then
-        echo_info "Generating self-signed SSL certificate..."
-        mkdir -p ssl
-        ./scripts/generate-ssl.sh
-    else
-        echo_info "SSL certificate already exists"
-    fi
-    
     # 创建必要的目录
     mkdir -p dist
     
@@ -77,8 +67,9 @@ setup() {
     echo_warn "Next steps:"
     echo "  1. Edit .env and set secure passwords"
     echo "  2. Build frontend: cd ../.. && npm run build && cp -r dist/* deploy/dist/"
-    echo "  3. (Optional) Replace self-signed SSL with Cloudflare Origin Certificate"
-    echo "  4. Start services: ./scripts/deploy.sh start"
+    echo "  3. Start services: ./scripts/deploy.sh start"
+    echo "  4. Configure external nginx to proxy to 127.0.0.1:3001"
+    echo ""
 }
 
 start() {
@@ -90,17 +81,16 @@ start() {
         exit 1
     fi
     
-    if [ ! -f ssl/cert.pem ]; then
-        echo_error "SSL certificate not found. Run: $0 setup"
-        exit 1
-    fi
-    
     docker compose up -d
     
     echo ""
     echo_info "Services started. Checking status..."
     sleep 3
     status
+    
+    echo ""
+    echo_info "API is available at: http://127.0.0.1:3001"
+    echo_info "Configure your external nginx to proxy to this address"
 }
 
 stop() {
@@ -137,14 +127,37 @@ update() {
     echo_info "Update completed"
 }
 
-diagnose() {
-    echo_info "Running diagnostic checks..."
-    ./scripts/diagnose.sh
-}
-
 health() {
     echo_info "Running health checks..."
-    ./scripts/health-check.sh
+    
+    ERRORS=0
+    
+    for service in postgres redis api; do
+        if docker compose ps $service 2>/dev/null | grep -qE "running|Up|healthy"; then
+            echo "✅ $service: running"
+        else
+            echo "❌ $service: not running"
+            ERRORS=$((ERRORS + 1))
+        fi
+    done
+    
+    echo ""
+    echo "Testing API endpoint..."
+    if curl -sf --max-time 10 "http://127.0.0.1:3001/health" > /dev/null 2>&1; then
+        echo "✅ API health check passed"
+    else
+        echo "❌ API health check failed"
+        ERRORS=$((ERRORS + 1))
+    fi
+    
+    if [ $ERRORS -gt 0 ]; then
+        echo ""
+        echo_error "Some services are not healthy"
+        exit 1
+    fi
+    
+    echo ""
+    echo_info "All services are healthy"
 }
 
 # 主逻辑
@@ -158,7 +171,6 @@ case "${1:-}" in
     logs)     logs "$2" ;;
     update)   update ;;
     setup)    setup ;;
-    diagnose) diagnose ;;
     health)   health ;;
     *)        usage ;;
 esac

@@ -8,10 +8,11 @@ import (
 
 type Config struct {
 	// Server
-	Port     string
-	Env      string
-	AppURL   string
-	LogLevel string
+	Port      string
+	Env       string
+	AppURL    string
+	LogLevel  string
+	StaticDir string // 静态文件目录
 
 	// Database
 	DatabaseURL string
@@ -49,10 +50,11 @@ var cfg *Config
 func Load() *Config {
 	cfg = &Config{
 		// Server
-		Port:     getEnv("PORT", "3001"),
-		Env:      getEnv("APP_ENV", "production"),
-		AppURL:   getEnv("APP_URL", "https://vstats.example.com"),
-		LogLevel: getEnv("LOG_LEVEL", "info"),
+		Port:      getEnv("PORT", "3001"),
+		Env:       getEnv("APP_ENV", "production"),
+		AppURL:    getEnv("APP_URL", "https://vstats.example.com"),
+		LogLevel:  getEnv("LOG_LEVEL", "info"),
+		StaticDir: getEnv("STATIC_DIR", ""), // 空表示不启用静态文件服务
 
 		// Database
 		DatabaseURL: getEnv("DATABASE_URL", "postgres://vstats:vstats@postgres:5432/vstats_cloud?sslmode=disable"),

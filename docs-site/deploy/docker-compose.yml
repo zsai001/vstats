@@ -1,39 +1,5 @@
 services:
   # ========================================
-  # Nginx (Web Server + Reverse Proxy)
-  # ========================================
-  nginx:
-    image: nginx:alpine
-    container_name: vstats-nginx
-    restart: unless-stopped
-    ports:
-      - "${HTTP_PORT:-80}:80"
-    volumes:
-      # 前端静态文件
-      - ./dist:/usr/share/nginx/html:ro
-      # Nginx 配置
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      # 日志
-      - nginx_logs:/var/log/nginx
-    depends_on:
-      api:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-    networks:
-      - vstats-cloud
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  # ========================================
   # API Server (VStats Cloud Backend - Go)
   # ========================================
   api:
@@ -55,8 +21,14 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       METRICS_RETENTION_DAYS: ${METRICS_RETENTION_DAYS:-30}
-    expose:
-      - "3001"
+      # 静态文件目录
+      STATIC_DIR: /app/static
+    ports:
+      # 只绑定本地，由外部 nginx 代理
+      - "127.0.0.1:3001:3001"
+    volumes:
+      # 前端静态文件挂载到 API 容器
+      - ./dist:/app/static:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -138,53 +110,11 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # ========================================
-  # Redis Commander (Optional - for debugging)
-  # Uncomment to enable web-based Redis management
-  # ========================================
-  # redis-commander:
-  #   image: rediscommander/redis-commander:latest
-  #   container_name: vstats-redis-commander
-  #   restart: unless-stopped
-  #   environment:
-  #     REDIS_HOSTS: local:redis:6379:0:${REDIS_PASSWORD:-vstats_redis_password}
-  #   ports:
-  #     - "8081:8081"
-  #   depends_on:
-  #     - redis
-  #   networks:
-  #     - vstats-cloud
-
-  # ========================================
-  # pgAdmin (Optional - for database management)
-  # Uncomment to enable web-based PostgreSQL management
-  # ========================================
-  # pgadmin:
-  #   image: dpage/pgadmin4:latest
-  #   container_name: vstats-pgadmin
-  #   restart: unless-stopped
-  #   environment:
-  #     PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@vstats.local}
-  #     PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin_password}
-  #     PGADMIN_CONFIG_SERVER_MODE: 'False'
-  #   volumes:
-  #     - pgadmin_data:/var/lib/pgadmin
-  #   ports:
-  #     - "8082:80"
-  #   depends_on:
-  #     - postgres
-  #   networks:
-  #     - vstats-cloud
-
 volumes:
   postgres_data:
     name: vstats_postgres_data
   redis_data:
     name: vstats_redis_data
-  nginx_logs:
-    name: vstats_nginx_logs
-  # pgadmin_data:
-  #   name: vstats_pgadmin_data
 
 networks:
   vstats-cloud:

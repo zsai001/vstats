@@ -3,7 +3,10 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"vstats/internal/cloud/config"
 	"vstats/internal/cloud/database"
@@ -130,12 +133,52 @@ func main() {
 	}
 
 	// ============================================================================
+	// Static File Serving (SPA support)
+	// ============================================================================
+
+	if cfg.StaticDir != "" {
+		fmt.Printf("📁 Serving static files from: %s\n", cfg.StaticDir)
+
+		// Serve static files for SPA
+		r.NoRoute(func(c *gin.Context) {
+			path := c.Request.URL.Path
+
+			// Skip API routes
+			if strings.HasPrefix(path, "/api/") || strings.HasPrefix(path, "/ws/") ||
+				path == "/health" || path == "/health/detailed" || path == "/version" ||
+				strings.HasPrefix(path, "/download/") {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
+				return
+			}
+
+			// Try to serve the file directly
+			filePath := filepath.Join(cfg.StaticDir, path)
+			if _, err := os.Stat(filePath); err == nil {
+				c.File(filePath)
+				return
+			}
+
+			// For SPA: serve index.html for all other routes
+			indexPath := filepath.Join(cfg.StaticDir, "index.html")
+			if _, err := os.Stat(indexPath); err == nil {
+				c.File(indexPath)
+				return
+			}
+
+			c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
+		})
+	}
+
+	// ============================================================================
 	// Start Server
 	// ============================================================================
 
 	fmt.Printf("\n🚀 Server running on http://0.0.0.0:%s\n", cfg.Port)
 	fmt.Printf("📡 Agent WebSocket: ws://0.0.0.0:%s/ws/agent\n", cfg.Port)
 	fmt.Printf("🌐 Dashboard WebSocket: ws://0.0.0.0:%s/api/ws\n", cfg.Port)
+	if cfg.StaticDir != "" {
+		fmt.Printf("📁 Static files: %s\n", cfg.StaticDir)
+	}
 	fmt.Println()
 
 	if err := r.Run(":" + cfg.Port); err != nil {
