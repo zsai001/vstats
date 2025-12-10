@@ -55,11 +55,9 @@ func UpgradeServer(c *gin.Context) {
 	var req UpgradeServerRequest
 	c.ShouldBindJSON(&req)
 
-	// Build upgrade command with optional --force flag
-	upgradeCmd := "curl -fsSL https://vstats.zsoft.cc/install.sh | sudo bash -s -- --upgrade"
-	if req.Force {
-		upgradeCmd = "curl -fsSL https://vstats.zsoft.cc/install.sh | sudo bash -s -- --upgrade --force"
-	}
+	// Always use --force flag to ensure reinstall even if version matches
+	// This ensures users can reinstall/repair if needed
+	upgradeCmd := "curl -fsSL https://vstats.zsoft.cc/install.sh | sudo bash -s -- --upgrade --force"
 
 	// Use nohup and setsid to run in a completely detached process
 	// that survives the server shutdown during upgrade:
@@ -83,7 +81,7 @@ func UpgradeServer(c *gin.Context) {
 
 	c.JSON(http.StatusOK, UpgradeServerResponse{
 		Success: true,
-		Message: "Upgrade started in background. The server will restart shortly. Check /tmp/vstats-upgrade.log for details.",
+		Message: "Upgrade started in background (force mode). The server will restart shortly. Check /tmp/vstats-upgrade.log for details.",
 	})
 }
 

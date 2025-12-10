@@ -1476,15 +1476,16 @@ export default function Settings() {
     const host = window.location.host;
     const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
     const baseUrl = `${protocol}://${host}`;
+    const scriptUrl = 'https://vstats.zsoft.cc';
     
     // Linux/macOS command
-    const linuxCommand = `curl -fsSL ${baseUrl}/agent.sh | sudo bash -s -- \\
+    const linuxCommand = `curl -fsSL ${scriptUrl}/agent.sh | sudo bash -s -- \\
   --server ${baseUrl} \\
   --token "${token}" \\
   --name "$(hostname)"`;
     
     // Windows PowerShell command (with TLS 1.2 and execution policy bypass)
-    const windowsCommand = `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; iex (irm ${baseUrl}/agent.ps1); Install-VStatsAgent -Server "${baseUrl}" -Token "${token}"`;
+    const windowsCommand = `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; iex (irm ${scriptUrl}/agent.ps1); Install-VStatsAgent -Server "${baseUrl}" -Token "${token}"`;
     
     setInstallCommand(linuxCommand);
     setWindowsInstallCommand(windowsCommand);

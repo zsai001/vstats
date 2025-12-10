@@ -142,9 +142,35 @@ setup_dirs() {
         info "Using user directory: $INSTALL_DIR"
     fi
     
-    mkdir -p "$INSTALL_DIR"
-    mkdir -p "$INSTALL_DIR/data"
-    mkdir -p "$INSTALL_DIR/web"
+    if ! mkdir -p "$INSTALL_DIR" 2>/dev/null; then
+        error "Failed to create directory: $INSTALL_DIR. Check permissions."
+    fi
+    
+    if ! mkdir -p "$INSTALL_DIR/data" 2>/dev/null; then
+        error "Failed to create directory: $INSTALL_DIR/data. Check permissions."
+    fi
+    
+    if ! mkdir -p "$INSTALL_DIR/web" 2>/dev/null; then
+        error "Failed to create directory: $INSTALL_DIR/web. Check permissions."
+    fi
+    
+    # Verify directory is writable
+    if ! touch "$INSTALL_DIR/.write_test" 2>/dev/null; then
+        error "Directory $INSTALL_DIR is not writable. Check permissions."
+    fi
+    rm -f "$INSTALL_DIR/.write_test"
+    
+    # Check available disk space (need at least 100MB)
+    if command -v df &> /dev/null; then
+        AVAILABLE_KB=$(df -k "$INSTALL_DIR" | tail -1 | awk '{print $4}')
+        AVAILABLE_MB=$((AVAILABLE_KB / 1024))
+        if [ "$AVAILABLE_MB" -lt 100 ]; then
+            error "Insufficient disk space. Available: ${AVAILABLE_MB}MB, Required: 100MB"
+        fi
+        info "Available disk space: ${AVAILABLE_MB}MB"
+    fi
+    
+    success "Directories created: $INSTALL_DIR"
 }
 
 # Download and install binary
@@ -166,30 +192,67 @@ download_binary() {
     # Download with retry and better error handling
     local retry=0
     local max_retries=3
+    local tmp_file="/tmp/vstats-server-$$"
     
     while [ $retry -lt $max_retries ]; do
-        if curl -L --fail --silent --show-error "$DOWNLOAD_URL" -o "$INSTALL_DIR/vstats-server" 2>&1; then
-            # Verify the download is not empty and is executable
-            if [ -s "$INSTALL_DIR/vstats-server" ]; then
-                chmod +x "$INSTALL_DIR/vstats-server"
-                success "Downloaded binary successfully"
-                return 0
+        # Download to temp location first to avoid partial writes
+        rm -f "$tmp_file"
+        
+        local curl_output
+        local curl_exit_code
+        curl_output=$(curl -L --fail --show-error "$DOWNLOAD_URL" -o "$tmp_file" 2>&1)
+        curl_exit_code=$?
+        
+        if [ $curl_exit_code -eq 0 ]; then
+            # Verify the download is not empty
+            if [ -s "$tmp_file" ]; then
+                # Move to final location
+                if mv "$tmp_file" "$INSTALL_DIR/vstats-server"; then
+                    chmod +x "$INSTALL_DIR/vstats-server"
+                    success "Downloaded binary successfully"
+                    return 0
+                else
+                    error "Failed to move binary to $INSTALL_DIR/vstats-server. Check permissions."
+                fi
             else
                 warn "Downloaded file is empty, retrying..."
-                rm -f "$INSTALL_DIR/vstats-server"
+                rm -f "$tmp_file"
             fi
         else
+            warn "Download attempt $((retry + 1)) failed (exit code: $curl_exit_code)"
+            if [ -n "$curl_output" ]; then
+                warn "Error: $curl_output"
+            fi
+            
+            # Specific error handling
+            case $curl_exit_code in
+                23)
+                    error "Failed to write file. Check disk space and permissions on /tmp and $INSTALL_DIR"
+                    ;;
+                22)
+                    warn "HTTP error (possibly 404). The release may not exist for this architecture."
+                    ;;
+                6)
+                    warn "Could not resolve host. Check your network connection."
+                    ;;
+                7)
+                    warn "Failed to connect. Check your network and firewall settings."
+                    ;;
+            esac
+            
             # If vstats.zsoft.cc failed, try GitHub directly
             if [ "$USE_GITHUB_DOWNLOAD" != true ] && [ $retry -eq 1 ]; then
                 warn "Falling back to GitHub download..."
                 DOWNLOAD_URL="${GITHUB_DOWNLOAD}/${LATEST_VERSION}/${BINARY_NAME}"
             fi
-            warn "Download attempt $((retry + 1)) failed, retrying..."
+            
+            rm -f "$tmp_file"
         fi
         retry=$((retry + 1))
         sleep 2
     done
     
+    rm -f "$tmp_file"
     error "Failed to download binary after $max_retries attempts. Please check https://github.com/${GITHUB_REPO}/releases"
 }
 
@@ -448,6 +511,8 @@ upgrade() {
     done
     
     info "Upgrading vStats..."
+    info "Force mode: $force_upgrade"
+    info "Install dir: $INSTALL_DIR"
     
     detect_system
     get_latest_version
@@ -455,6 +520,9 @@ upgrade() {
     # Check current version
     if [ -f "$INSTALL_DIR/version" ]; then
         CURRENT_VERSION=$(cat "$INSTALL_DIR/version")
+        info "Current version: $CURRENT_VERSION"
+        info "Latest version: $LATEST_VERSION"
+        
         if [ "$CURRENT_VERSION" = "$LATEST_VERSION" ]; then
             if [ "$force_upgrade" = true ]; then
                 warn "Force reinstalling version: $LATEST_VERSION"
@@ -466,6 +534,8 @@ upgrade() {
         else
             info "Upgrading from $CURRENT_VERSION to $LATEST_VERSION"
         fi
+    else
+        info "No version file found, will install: $LATEST_VERSION"
     fi
     
     # Download files FIRST before stopping service
@@ -484,6 +554,7 @@ upgrade() {
         # Use systemd-run to spawn restart in a separate transient unit
         # This ensures the restart survives even if parent process is killed
         # --no-block returns immediately without waiting
+        info "Restarting service via systemd-run..."
         systemd-run --no-block systemctl restart $SERVICE_NAME
     fi
     
