@@ -1,0 +1,237 @@
+/* ========================================
+   Theme: Midnight Tech (午夜科技)
+   Classic dark with blue accent, glass cards
+   特色：深邃蓝黑渐变，科技蓝光，毛玻璃卡片，微光边框
+   ======================================== */
+.theme-midnight {
+  --theme-accent: #3b82f6;
+  --theme-accent-hover: #2563eb;
+  --theme-accent-soft: rgba(59, 130, 246, 0.15);
+  --theme-glow: rgba(59, 130, 246, 0.4);
+  
+  --bg-primary: #020617;
+  --bg-secondary: rgba(15, 23, 42, 0.85);
+  --bg-secondary-hover: rgba(30, 41, 59, 0.9);
+  --bg-card: rgba(15, 23, 42, 0.7);
+  --bg-input: rgba(255, 255, 255, 0.08);
+  
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-tertiary: #94a3b8;
+  --text-muted: #64748b;
+  
+  --border-primary: rgba(56, 189, 248, 0.2);
+  --border-secondary: rgba(56, 189, 248, 0.3);
+  --border-hover: rgba(56, 189, 248, 0.5);
+  
+  --page-bg-dark: 
+    radial-gradient(ellipse at 0% 0%, rgba(14, 165, 233, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 100% 0%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 100% 100%, rgba(14, 165, 233, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 0% 100%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
+    #020617;
+  
+  --card-bg-dark: rgba(15, 23, 42, 0.7);
+  --card-border-dark: rgba(56, 189, 248, 0.25);
+  --card-shadow-dark: 0 20px 50px rgba(0, 0, 0, 0.5);
+  
+  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4);
+  color-scheme: dark;
+}
+
+/* 中等圆角 */
+.theme-midnight,
+.theme-midnight * {
+  --theme-border-radius: 16px !important;
+}
+
+/* 科技感背景 */
+.theme-midnight {
+  background: 
+    radial-gradient(ellipse at 0% 0%, rgba(14, 165, 233, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 100% 0%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 100% 100%, rgba(14, 165, 233, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 0% 100%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
+    #020617;
+}
+
+/* Card styles - 科技毛玻璃 */
+.theme-midnight .vps-card {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 16px !important;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+  transition: all 0.3s ease;
+}
+
+.theme-midnight .vps-card:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+  box-shadow: 
+    0 25px 60px rgba(0, 0, 0, 0.6),
+    0 0 40px rgba(59, 130, 246, 0.1),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  transform: translateY(-4px);
+}
+
+/* Typography */
+.theme-midnight {
+  font-family: 'Inter', -apple-system, system-ui, sans-serif;
+}
+
+.theme-midnight h1,
+.theme-midnight h2,
+.theme-midnight h3,
+.theme-midnight .vps-card-title--dark {
+  font-family: 'SF Pro Display', 'Inter', sans-serif;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+/* Buttons */
+.theme-midnight .vps-btn,
+.theme-midnight button {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 12px !important;
+  color: #f8fafc;
+  backdrop-filter: blur(10px);
+}
+
+.theme-midnight .vps-btn:hover,
+.theme-midnight button:hover {
+  background: rgba(59, 130, 246, 0.25);
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+}
+
+/* 主按钮 */
+.theme-midnight .vps-btn-primary,
+.theme-midnight button[type="submit"] {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: none;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+}
+
+.theme-midnight .vps-btn-primary:hover,
+.theme-midnight button[type="submit"]:hover {
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+}
+
+/* Overview cards */
+.theme-midnight .vps-overview-card--online-midnight {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(52, 211, 153, 0.08));
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 16px !important;
+  backdrop-filter: blur(20px);
+}
+
+.theme-midnight .vps-overview-card--offline-midnight {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(248, 113, 113, 0.08));
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 16px !important;
+  backdrop-filter: blur(20px);
+}
+
+.theme-midnight .vps-overview-card--download-midnight {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(96, 165, 250, 0.08));
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  border-radius: 16px !important;
+  backdrop-filter: blur(20px);
+}
+
+.theme-midnight .vps-overview-card--upload-midnight {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(52, 211, 153, 0.08));
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 16px !important;
+  backdrop-filter: blur(20px);
+}
+
+/* Overview labels */
+.theme-midnight .vps-overview-label--online { color: #34d399; }
+.theme-midnight .vps-overview-label--offline { color: #f87171; }
+.theme-midnight .vps-overview-label--download { color: #60a5fa; }
+.theme-midnight .vps-overview-label--upload { color: #34d399; }
+
+.theme-midnight .vps-overview-value--midnight {
+  color: #f8fafc;
+  font-weight: 600;
+}
+
+/* Compact table styles */
+.theme-midnight .vps-compact-header--midnight {
+  background: rgba(255, 255, 255, 0.03);
+  color: #64748b;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px 16px 0 0 !important;
+}
+
+.theme-midnight .vps-compact-row--midnight {
+  background: rgba(15, 23, 42, 0.5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.theme-midnight .vps-compact-row--midnight:hover {
+  background: rgba(30, 41, 59, 0.7);
+}
+
+.theme-midnight .vps-compact-node-name--midnight {
+  color: #f8fafc;
+  font-weight: 500;
+}
+
+.theme-midnight .vps-compact-node-location--midnight {
+  color: #64748b;
+}
+
+.theme-midnight .vps-compact-text--midnight {
+  color: #94a3b8;
+}
+
+.theme-midnight .vps-compact-meter--midnight {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px !important;
+}
+
+.theme-midnight .vps-compact-meter-text--midnight {
+  color: #f8fafc;
+}
+
+/* Progress bars */
+.theme-midnight .vps-resource-bar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px !important;
+}
+
+.theme-midnight .vps-resource-bar-fill {
+  border-radius: 8px !important;
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+}
+
+/* 输入框 */
+.theme-midnight input,
+.theme-midnight select,
+.theme-midnight textarea {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px !important;
+  color: #f8fafc;
+  backdrop-filter: blur(10px);
+}
+
+.theme-midnight input:focus,
+.theme-midnight select:focus,
+.theme-midnight textarea:focus {
+  border-color: rgba(59, 130, 246, 0.5);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.theme-midnight input::placeholder,
+.theme-midnight textarea::placeholder {
+  color: #64748b;
+}

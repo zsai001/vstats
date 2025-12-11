@@ -1,0 +1,318 @@
+/* ========================================
+   Theme: Skeuomorphic (拟物风)
+   Realistic textures, depth, iOS6 style
+   特色：真实质感，光泽渐变，立体按钮，金属边框，皮革/木纹纹理
+   ======================================== */
+.theme-skeuomorphic {
+  --theme-accent: #2e7d32;
+  --theme-accent-hover: #1b5e20;
+  --theme-accent-soft: rgba(46, 125, 50, 0.15);
+  --theme-glow: rgba(46, 125, 50, 0.3);
+  
+  --bg-primary: #c0c0c0;
+  --bg-secondary: #d8d8d8;
+  --bg-card: linear-gradient(to bottom, #f5f5f5, #e0e0e0);
+  --bg-input: #ffffff;
+  
+  --text-primary: #333333;
+  --text-secondary: #555555;
+  --text-tertiary: #777777;
+  --text-muted: #999999;
+  
+  --border-primary: #a0a0a0;
+  --border-secondary: #b8b8b8;
+  --border-hover: #888888;
+  
+  --page-bg-light: #c0c0c0;
+  
+  --card-bg-light: linear-gradient(to bottom, #f8f8f8, #e8e8e8);
+  --card-border-light: #a0a0a0;
+  --card-shadow-light: 
+    0 1px 0 #ffffff inset,
+    0 -1px 0 #c0c0c0 inset,
+    0 4px 8px rgba(0,0,0,0.15);
+  
+  --shadow-card: 0 4px 8px rgba(0,0,0,0.15);
+  color-scheme: light;
+}
+
+/* 圆角 */
+.theme-skeuomorphic,
+.theme-skeuomorphic * {
+  --theme-border-radius: 10px !important;
+}
+
+/* 亚麻纹理背景 */
+.theme-skeuomorphic {
+  background-color: #c0c0c0;
+  background-image: 
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23999999' fill-opacity='0.1' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'%3E%3C/path%3E%3C/svg%3E");
+}
+
+/* Card styles - 拟物卡片 */
+.theme-skeuomorphic .vps-card {
+  background: linear-gradient(to bottom, #ffffff 0%, #f0f0f0 50%, #e0e0e0 100%);
+  border: 1px solid #a0a0a0;
+  border-radius: 10px !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05),
+    0 3px 8px rgba(0, 0, 0, 0.15),
+    0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.theme-skeuomorphic .vps-card:hover {
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05),
+    0 6px 16px rgba(0, 0, 0, 0.2),
+    0 2px 4px rgba(0, 0, 0, 0.12);
+}
+
+/* Typography */
+.theme-skeuomorphic {
+  font-family: 'Helvetica Neue', 'Lucida Grande', sans-serif;
+}
+
+.theme-skeuomorphic h1,
+.theme-skeuomorphic h2,
+.theme-skeuomorphic h3,
+.theme-skeuomorphic .vps-card-title--light {
+  font-family: 'Helvetica Neue', sans-serif;
+  font-weight: 500;
+  color: #333333;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* Buttons - 光泽按钮 */
+.theme-skeuomorphic .vps-btn,
+.theme-skeuomorphic button {
+  background: linear-gradient(to bottom, #ffffff 0%, #e8e8e8 50%, #d8d8d8 50%, #e0e0e0 100%);
+  border: 1px solid #a0a0a0;
+  border-radius: 6px !important;
+  color: #333333;
+  font-weight: 500;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.theme-skeuomorphic .vps-btn:hover,
+.theme-skeuomorphic button:hover {
+  background: linear-gradient(to bottom, #f8f8f8 0%, #e0e0e0 50%, #d0d0d0 50%, #d8d8d8 100%);
+}
+
+.theme-skeuomorphic .vps-btn:active,
+.theme-skeuomorphic button:active {
+  background: linear-gradient(to bottom, #d0d0d0 0%, #c8c8c8 50%, #d0d0d0 50%, #d8d8d8 100%);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* 绿色主按钮 (iOS风格) */
+.theme-skeuomorphic .vps-btn-primary,
+.theme-skeuomorphic button[type="submit"] {
+  background: linear-gradient(to bottom, #5cb85c 0%, #4cae4c 50%, #449d44 50%, #3d8b3d 100%);
+  border: 1px solid #3d8b3d;
+  color: #ffffff;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.3);
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+/* Progress bars - 光泽进度条 */
+.theme-skeuomorphic .vps-resource-bar-track {
+  background: linear-gradient(to bottom, #c8c8c8, #e0e0e0);
+  border: 1px solid #a0a0a0;
+  border-radius: 6px !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  height: 14px;
+}
+
+.theme-skeuomorphic .vps-resource-bar-fill {
+  border-radius: 5px !important;
+  background: linear-gradient(to bottom, #6ecf6e 0%, #4cae4c 50%, #449d44 50%, #3d8b3d 100%);
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 1px 0 rgba(0, 0, 0, 0.1);
+}
+
+/* Overview cards - 带图标的拟物卡片 */
+.theme-skeuomorphic .vps-overview-card--online-skeuomorphic {
+  background: linear-gradient(to bottom, #ffffff 0%, #f0f0f0 50%, #e0ffe0 100%);
+  border: 1px solid #90c090;
+  border-radius: 10px !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 3px 8px rgba(0, 0, 0, 0.12);
+}
+
+.theme-skeuomorphic .vps-overview-card--offline-skeuomorphic {
+  background: linear-gradient(to bottom, #ffffff 0%, #f0f0f0 50%, #ffe0e0 100%);
+  border: 1px solid #d09090;
+  border-radius: 10px !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 3px 8px rgba(0, 0, 0, 0.12);
+}
+
+.theme-skeuomorphic .vps-overview-card--download-skeuomorphic {
+  background: linear-gradient(to bottom, #ffffff 0%, #f0f0f0 50%, #e0e8ff 100%);
+  border: 1px solid #9090c0;
+  border-radius: 10px !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 3px 8px rgba(0, 0, 0, 0.12);
+}
+
+.theme-skeuomorphic .vps-overview-card--upload-skeuomorphic {
+  background: linear-gradient(to bottom, #ffffff 0%, #f0f0f0 50%, #e0ffe0 100%);
+  border: 1px solid #90c090;
+  border-radius: 10px !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 3px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* Overview label colors */
+.theme-skeuomorphic .vps-overview-label--online { 
+  color: #2e7d32; 
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+.theme-skeuomorphic .vps-overview-label--offline { 
+  color: #c62828;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+.theme-skeuomorphic .vps-overview-label--download { 
+  color: #1565c0;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+.theme-skeuomorphic .vps-overview-label--upload { 
+  color: #2e7d32;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+.theme-skeuomorphic .vps-overview-value--skeuomorphic { 
+  color: #333333; 
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+  font-weight: 600;
+  font-size: 1.5rem;
+}
+
+/* Compact table styles - 条纹表格 */
+.theme-skeuomorphic .vps-compact-header--skeuomorphic { 
+  background: linear-gradient(to bottom, #e8e8e8, #d8d8d8);
+  color: #555555; 
+  border: 1px solid #a0a0a0;
+  border-bottom: 1px solid #909090;
+  border-radius: 10px 10px 0 0 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.theme-skeuomorphic .vps-compact-row--skeuomorphic { 
+  background: linear-gradient(to bottom, #ffffff, #f8f8f8);
+  border-left: 1px solid #c0c0c0;
+  border-right: 1px solid #c0c0c0;
+  border-bottom: 1px solid #d8d8d8;
+}
+
+.theme-skeuomorphic .vps-compact-row--skeuomorphic:nth-child(even) {
+  background: linear-gradient(to bottom, #f8f8f8, #f0f0f0);
+}
+
+.theme-skeuomorphic .vps-compact-row--skeuomorphic:hover { 
+  background: linear-gradient(to bottom, #e8f4fc, #d8ecf8);
+}
+
+.theme-skeuomorphic .vps-compact-node-name--skeuomorphic { 
+  color: #333333; 
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+.theme-skeuomorphic .vps-compact-node-location--skeuomorphic { 
+  color: #777777;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.theme-skeuomorphic .vps-compact-text--skeuomorphic { 
+  color: #555555;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.theme-skeuomorphic .vps-compact-meter--skeuomorphic { 
+  background: linear-gradient(to bottom, #c8c8c8, #e0e0e0);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15);
+  border: 1px solid #a0a0a0;
+  border-radius: 6px !important;
+}
+
+.theme-skeuomorphic .vps-compact-meter-text--skeuomorphic { 
+  color: #333333;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+/* 输入框 - 内凹效果 */
+.theme-skeuomorphic input,
+.theme-skeuomorphic select,
+.theme-skeuomorphic textarea {
+  background: #ffffff;
+  border: 1px solid #a0a0a0;
+  border-radius: 6px !important;
+  color: #333333;
+  box-shadow: 
+    inset 0 1px 3px rgba(0, 0, 0, 0.1),
+    0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.theme-skeuomorphic input:focus,
+.theme-skeuomorphic select:focus,
+.theme-skeuomorphic textarea:focus {
+  border-color: #6cb5f9;
+  outline: none;
+  box-shadow: 
+    inset 0 1px 3px rgba(0, 0, 0, 0.1),
+    0 0 0 3px rgba(108, 181, 249, 0.3);
+}
+
+/* Toggle switches - iOS风格开关 */
+.theme-skeuomorphic input[type="checkbox"] {
+  appearance: none;
+  width: 50px;
+  height: 26px;
+  background: linear-gradient(to bottom, #d0d0d0, #e8e8e8);
+  border-radius: 13px !important;
+  border: 1px solid #a0a0a0;
+  position: relative;
+  cursor: pointer;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.theme-skeuomorphic input[type="checkbox"]::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(to bottom, #ffffff, #e8e8e8);
+  border-radius: 50%;
+  border: 1px solid #a0a0a0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: left 0.2s;
+}
+
+.theme-skeuomorphic input[type="checkbox"]:checked {
+  background: linear-gradient(to bottom, #5cb85c, #449d44);
+}
+
+.theme-skeuomorphic input[type="checkbox"]:checked::after {
+  left: 26px;
+}

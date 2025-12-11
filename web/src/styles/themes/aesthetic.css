@@ -1,0 +1,301 @@
+/* ========================================
+   Theme: Aesthetic (少女审美)
+   Soft pastels, dreamy, pinks
+   特色：梦幻渐变背景，柔和粉彩，大圆角，毛玻璃，星星装饰
+   ======================================== */
+.theme-aesthetic {
+  --theme-accent: #ff69b4;
+  --theme-accent-hover: #ff1493;
+  --theme-accent-soft: rgba(255, 105, 180, 0.2);
+  --theme-glow: rgba(255, 182, 193, 0.6);
+  
+  --bg-primary: #fff5f8;
+  --bg-secondary: #ffe4ec;
+  --bg-card: rgba(255, 255, 255, 0.65);
+  --bg-input: rgba(255, 255, 255, 0.6);
+  
+  --text-primary: #4a3f47;
+  --text-secondary: #7c6b75;
+  --text-tertiary: #a89aa0;
+  --text-muted: #c9bbc2;
+  
+  --border-primary: rgba(255, 182, 193, 0.5);
+  --border-secondary: rgba(255, 255, 255, 0.8);
+  --border-hover: #ff69b4;
+  
+  --page-bg-light: linear-gradient(135deg, #ffecd2 0%, #fcb69f 25%, #ffecd2 50%, #ee9ca7 75%, #ffdde1 100%);
+  
+  --card-bg-light: rgba(255, 255, 255, 0.65);
+  --card-border-light: rgba(255, 255, 255, 0.8);
+  --card-shadow-light: 0 8px 32px rgba(255, 105, 180, 0.15);
+  
+  --shadow-card: 0 8px 32px rgba(255, 105, 180, 0.15);
+  color-scheme: light;
+}
+
+/* 大圆角 */
+.theme-aesthetic,
+.theme-aesthetic * {
+  --theme-border-radius: 24px !important;
+}
+
+/* 梦幻渐变背景 + 星星动画 */
+.theme-aesthetic {
+  background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 25%, #ffecd2 50%, #ee9ca7 75%, #ffdde1 100%);
+  background-size: 400% 400%;
+  animation: aesthetic-gradient 15s ease infinite;
+  min-height: 100vh;
+}
+
+@keyframes aesthetic-gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* 星星装饰 */
+.theme-aesthetic::before {
+  content: '✦ ✧ ✦ ✧ ✦';
+  position: fixed;
+  top: 20px;
+  right: 30px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 10px;
+  animation: sparkle 2s ease-in-out infinite;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+@keyframes sparkle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.95); }
+}
+
+/* Card styles - 毛玻璃梦幻卡片 */
+.theme-aesthetic .vps-card {
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 24px !important;
+  box-shadow: 
+    0 8px 32px rgba(255, 105, 180, 0.12),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+  transition: all 0.3s ease;
+}
+
+.theme-aesthetic .vps-card:hover {
+  background: rgba(255, 255, 255, 0.8);
+  transform: translateY(-6px);
+  box-shadow: 
+    0 16px 48px rgba(255, 105, 180, 0.2),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+}
+
+/* Typography - 柔和可爱字体 */
+.theme-aesthetic {
+  font-family: 'Quicksand', 'Nunito', sans-serif;
+}
+
+.theme-aesthetic h1,
+.theme-aesthetic h2,
+.theme-aesthetic h3,
+.theme-aesthetic .vps-card-title--light {
+  font-family: 'Quicksand', sans-serif;
+  font-weight: 600;
+  color: #4a3f47;
+}
+
+/* 标题装饰 */
+.theme-aesthetic h1::before,
+.theme-aesthetic h2::before {
+  content: '♡';
+  color: #ff69b4;
+  margin-right: 8px;
+}
+
+/* Buttons - 柔和按钮 */
+.theme-aesthetic .vps-btn,
+.theme-aesthetic button {
+  border: 1px solid rgba(255, 182, 193, 0.5);
+  border-radius: 24px !important;
+  background: rgba(255, 255, 255, 0.7);
+  color: #4a3f47;
+  font-family: 'Quicksand', sans-serif;
+  font-weight: 600;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.theme-aesthetic .vps-btn:hover,
+.theme-aesthetic button:hover {
+  background: linear-gradient(135deg, #ff69b4 0%, #ffb6c1 100%);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 8px 24px rgba(255, 105, 180, 0.3);
+  transform: translateY(-2px);
+}
+
+/* Overview cards - 梦幻状态卡片 */
+.theme-aesthetic .vps-overview-card--online-aesthetic {
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(144, 238, 144, 0.4);
+  backdrop-filter: blur(20px);
+  border-radius: 24px !important;
+  box-shadow: 0 8px 24px rgba(144, 238, 144, 0.15);
+}
+
+.theme-aesthetic .vps-overview-card--online-aesthetic::after {
+  content: '✓';
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  color: #90ee90;
+  font-size: 14px;
+}
+
+.theme-aesthetic .vps-overview-card--offline-aesthetic {
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(255, 182, 193, 0.5);
+  backdrop-filter: blur(20px);
+  border-radius: 24px !important;
+  box-shadow: 0 8px 24px rgba(255, 105, 180, 0.15);
+}
+
+.theme-aesthetic .vps-overview-card--download-aesthetic {
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(135, 206, 235, 0.5);
+  backdrop-filter: blur(20px);
+  border-radius: 24px !important;
+  box-shadow: 0 8px 24px rgba(135, 206, 235, 0.15);
+}
+
+.theme-aesthetic .vps-overview-card--upload-aesthetic {
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(221, 160, 221, 0.5);
+  backdrop-filter: blur(20px);
+  border-radius: 24px !important;
+  box-shadow: 0 8px 24px rgba(221, 160, 221, 0.15);
+}
+
+/* Overview label colors - 柔和粉彩 */
+.theme-aesthetic .vps-overview-label--online { 
+  color: #90ee90;
+  font-weight: 600;
+}
+.theme-aesthetic .vps-overview-label--offline { 
+  color: #ffb6c1;
+  font-weight: 600;
+}
+.theme-aesthetic .vps-overview-label--download { 
+  color: #87ceeb;
+  font-weight: 600;
+}
+.theme-aesthetic .vps-overview-label--upload { 
+  color: #dda0dd;
+  font-weight: 600;
+}
+
+.theme-aesthetic .vps-overview-value--aesthetic { 
+  color: #4a3f47;
+  font-weight: 700;
+  font-size: 1.5rem;
+}
+
+/* Compact table styles - 梦幻表格 */
+.theme-aesthetic .vps-compact-header--aesthetic { 
+  background: rgba(255, 255, 255, 0.5);
+  color: #a89aa0;
+  border-bottom: 1px solid rgba(255, 182, 193, 0.3);
+  border-radius: 24px 24px 0 0 !important;
+  backdrop-filter: blur(10px);
+}
+
+.theme-aesthetic .vps-compact-row--aesthetic { 
+  background: rgba(255, 255, 255, 0.4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+}
+
+.theme-aesthetic .vps-compact-row--aesthetic:hover { 
+  background: rgba(255, 255, 255, 0.7);
+  transform: translateX(4px);
+}
+
+.theme-aesthetic .vps-compact-node-name--aesthetic { 
+  color: #4a3f47;
+  font-weight: 600;
+}
+
+.theme-aesthetic .vps-compact-node-location--aesthetic { 
+  color: #a89aa0;
+}
+
+.theme-aesthetic .vps-compact-text--aesthetic { 
+  color: #7c6b75;
+}
+
+.theme-aesthetic .vps-compact-meter--aesthetic { 
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 182, 193, 0.3);
+  border-radius: 12px !important;
+}
+
+.theme-aesthetic .vps-compact-meter-text--aesthetic { 
+  color: #4a3f47;
+  font-weight: 600;
+}
+
+/* Progress bars - 渐变进度条 */
+.theme-aesthetic .vps-resource-bar-track {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 182, 193, 0.3);
+  border-radius: 12px !important;
+  height: 8px;
+}
+
+.theme-aesthetic .vps-resource-bar-fill {
+  border-radius: 12px !important;
+  background: linear-gradient(90deg, #ffb6c1, #ff69b4, #dda0dd);
+}
+
+/* 输入框 */
+.theme-aesthetic input,
+.theme-aesthetic select,
+.theme-aesthetic textarea {
+  border: 1px solid rgba(255, 182, 193, 0.4);
+  border-radius: 16px !important;
+  background: rgba(255, 255, 255, 0.7);
+  color: #4a3f47;
+  font-family: 'Quicksand', sans-serif;
+  backdrop-filter: blur(10px);
+}
+
+.theme-aesthetic input:focus,
+.theme-aesthetic select:focus,
+.theme-aesthetic textarea:focus {
+  border-color: #ff69b4;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(255, 105, 180, 0.15);
+}
+
+.theme-aesthetic input::placeholder,
+.theme-aesthetic textarea::placeholder {
+  color: #c9bbc2;
+}
+
+/* 滚动条美化 */
+.theme-aesthetic ::-webkit-scrollbar {
+  width: 8px;
+}
+
+.theme-aesthetic ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.theme-aesthetic ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #ffb6c1, #ff69b4);
+  border-radius: 4px;
+}

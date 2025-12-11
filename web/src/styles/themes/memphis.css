@@ -1,0 +1,318 @@
+/* ========================================
+   Theme: Memphis (孟菲斯)
+   Geometric, vibrant, 80s
+   特色：几何图形装饰，鲜艳撞色，0圆角，波普艺术，图案背景
+   ======================================== */
+.theme-memphis {
+  --theme-accent: #ff00cc;
+  --theme-accent-hover: #d600ab;
+  --theme-accent-soft: rgba(255, 0, 204, 0.1);
+  --theme-glow: none;
+  
+  --bg-primary: #fff5f8;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-input: #ffffff;
+  
+  --text-primary: #1a1a1a;
+  --text-secondary: #333333;
+  --text-tertiary: #666666;
+  --text-muted: #999999;
+  
+  --border-primary: #1a1a1a;
+  --border-secondary: #1a1a1a;
+  --border-hover: #ff00cc;
+  
+  --page-bg-light: #fff5f8;
+  
+  --card-bg-light: #ffffff;
+  --card-border-light: #1a1a1a;
+  --card-shadow-light: 8px 8px 0 #00ffff;
+  
+  --shadow-card: 8px 8px 0 #00ffff;
+  color-scheme: light;
+}
+
+/* 强制0圆角 */
+.theme-memphis,
+.theme-memphis * {
+  --theme-border-radius: 0px !important;
+}
+
+.theme-memphis .vps-card,
+.theme-memphis .vps-overview-card,
+.theme-memphis .vps-btn,
+.theme-memphis input,
+.theme-memphis select,
+.theme-memphis button,
+.theme-memphis [class*="rounded"] {
+  border-radius: 0 !important;
+}
+
+/* 几何图案背景 */
+.theme-memphis {
+  background-color: #fff5f8;
+  background-image: 
+    /* 圆点 */
+    radial-gradient(#ff00cc 3px, transparent 3px),
+    radial-gradient(#00ffff 2px, transparent 2px),
+    /* 三角形用线性渐变模拟 */
+    linear-gradient(45deg, #ffff00 25%, transparent 25%),
+    linear-gradient(-45deg, transparent 75%, #ffff00 75%);
+  background-size: 
+    60px 60px,
+    40px 40px,
+    30px 30px,
+    30px 30px;
+  background-position: 
+    0 0,
+    20px 30px,
+    0 0,
+    15px 15px;
+}
+
+/* Card styles - 几何装饰卡片 */
+.theme-memphis .vps-card {
+  background: #ffffff;
+  border: 3px solid #1a1a1a;
+  border-radius: 0 !important;
+  box-shadow: 8px 8px 0 #00ffff;
+  position: relative;
+  overflow: visible;
+}
+
+/* 几何装饰元素 */
+.theme-memphis .vps-card::before {
+  content: '';
+  position: absolute;
+  top: -15px;
+  right: 20px;
+  width: 30px;
+  height: 30px;
+  background: #ffff00;
+  border: 2px solid #1a1a1a;
+  border-radius: 0 !important;
+  transform: rotate(45deg);
+}
+
+.theme-memphis .vps-card::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 15px;
+  width: 20px;
+  height: 20px;
+  background: #ff00cc;
+  border: 2px solid #1a1a1a;
+  border-radius: 50%;
+}
+
+.theme-memphis .vps-card:hover {
+  box-shadow: 10px 10px 0 #ff00cc;
+  transform: translate(-2px, -2px);
+}
+
+/* Typography - 粗体几何字体 */
+.theme-memphis h1,
+.theme-memphis h2,
+.theme-memphis h3,
+.theme-memphis .vps-card-title--light {
+  font-family: 'Work Sans', 'Futura', sans-serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* 标题装饰 */
+.theme-memphis h1::before,
+.theme-memphis h2::before {
+  content: '◆';
+  color: #ff00cc;
+  margin-right: 10px;
+}
+
+/* Buttons - 几何按钮 */
+.theme-memphis .vps-btn,
+.theme-memphis button {
+  border: 3px solid #1a1a1a;
+  border-radius: 0 !important;
+  font-weight: 800;
+  text-transform: uppercase;
+  background: #ffff00;
+  color: #1a1a1a;
+  box-shadow: 4px 4px 0 #1a1a1a;
+  transition: all 0.15s;
+}
+
+.theme-memphis .vps-btn:hover,
+.theme-memphis button:hover {
+  background: #ff00cc;
+  color: #ffffff;
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 #1a1a1a;
+}
+
+/* Overview cards - 不同几何阴影 */
+.theme-memphis .vps-overview-card--online-memphis {
+  background: #ffffff;
+  border: 3px solid #1a1a1a;
+  border-radius: 0 !important;
+  box-shadow: 6px 6px 0 #00ff88;
+  position: relative;
+}
+
+.theme-memphis .vps-overview-card--online-memphis::before {
+  content: '●';
+  position: absolute;
+  top: -10px;
+  right: 10px;
+  color: #00ff88;
+  font-size: 20px;
+}
+
+.theme-memphis .vps-overview-card--offline-memphis {
+  background: #ffffff;
+  border: 3px solid #1a1a1a;
+  border-radius: 0 !important;
+  box-shadow: 6px 6px 0 #ff4444;
+  position: relative;
+}
+
+.theme-memphis .vps-overview-card--offline-memphis::before {
+  content: '✕';
+  position: absolute;
+  top: -10px;
+  right: 10px;
+  color: #ff4444;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.theme-memphis .vps-overview-card--download-memphis {
+  background: #ffffff;
+  border: 3px solid #1a1a1a;
+  border-radius: 0 !important;
+  box-shadow: 6px 6px 0 #00aaff;
+}
+
+.theme-memphis .vps-overview-card--upload-memphis {
+  background: #ffffff;
+  border: 3px solid #1a1a1a;
+  border-radius: 0 !important;
+  box-shadow: 6px 6px 0 #aa00ff;
+}
+
+/* Overview label colors - 带背景色块 */
+.theme-memphis .vps-overview-label--online { 
+  color: #ffffff; 
+  background: #00ff88;
+  padding: 2px 8px;
+  border: 2px solid #1a1a1a;
+  font-weight: 800;
+}
+.theme-memphis .vps-overview-label--offline { 
+  color: #ffffff; 
+  background: #ff4444;
+  padding: 2px 8px;
+  border: 2px solid #1a1a1a;
+  font-weight: 800;
+}
+.theme-memphis .vps-overview-label--download { 
+  color: #ffffff; 
+  background: #00aaff;
+  padding: 2px 8px;
+  border: 2px solid #1a1a1a;
+  font-weight: 800;
+}
+.theme-memphis .vps-overview-label--upload { 
+  color: #ffffff; 
+  background: #aa00ff;
+  padding: 2px 8px;
+  border: 2px solid #1a1a1a;
+  font-weight: 800;
+}
+
+.theme-memphis .vps-overview-value--memphis { 
+  color: #1a1a1a;
+  font-weight: 800;
+}
+
+/* Compact table styles - 几何表格 */
+.theme-memphis .vps-compact-header--memphis { 
+  background: #ffff00;
+  color: #1a1a1a; 
+  border: 3px solid #1a1a1a;
+  border-radius: 0 !important;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.theme-memphis .vps-compact-row--memphis { 
+  background: #ffffff; 
+  border: 2px solid #1a1a1a;
+  border-top: none;
+  border-radius: 0 !important;
+}
+
+.theme-memphis .vps-compact-row--memphis:hover { 
+  background: #fff5f8;
+  box-shadow: 4px 4px 0 #00ffff;
+  transform: translate(-2px, -2px);
+}
+
+.theme-memphis .vps-compact-node-name--memphis { 
+  color: #1a1a1a; 
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.theme-memphis .vps-compact-node-location--memphis { 
+  color: #666666;
+  font-weight: 600;
+}
+
+.theme-memphis .vps-compact-text--memphis { 
+  color: #333333;
+  font-weight: 600;
+}
+
+.theme-memphis .vps-compact-meter--memphis { 
+  background: #ffffff; 
+  border: 3px solid #1a1a1a;
+  border-radius: 0 !important;
+}
+
+.theme-memphis .vps-compact-meter-text--memphis { 
+  color: #1a1a1a;
+  font-weight: 800;
+}
+
+/* Progress bars - 几何进度条 */
+.theme-memphis .vps-resource-bar-track {
+  background: #ffffff;
+  border: 2px solid #1a1a1a;
+  border-radius: 0 !important;
+}
+
+.theme-memphis .vps-resource-bar-fill {
+  border-radius: 0 !important;
+  background: linear-gradient(90deg, #ff00cc, #00ffff);
+}
+
+/* 输入框 */
+.theme-memphis input,
+.theme-memphis select,
+.theme-memphis textarea {
+  border: 3px solid #1a1a1a;
+  border-radius: 0 !important;
+  background: #ffffff;
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
+.theme-memphis input:focus,
+.theme-memphis select:focus,
+.theme-memphis textarea:focus {
+  outline: none;
+  box-shadow: 4px 4px 0 #ff00cc;
+}

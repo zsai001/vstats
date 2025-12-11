@@ -1,0 +1,249 @@
+/* ========================================
+   Theme: Daylight (晴空日光)
+   Clean white, soft shadows, modern feel
+   特色：纯净白色，天蓝渐变，柔和阴影，清新明亮
+   ======================================== */
+.theme-daylight {
+  --theme-accent: #0ea5e9;
+  --theme-accent-hover: #0284c7;
+  --theme-accent-soft: rgba(14, 165, 233, 0.1);
+  --theme-glow: rgba(14, 165, 233, 0.3);
+  
+  --bg-primary: #f8fafc;
+  --bg-secondary: rgba(255, 255, 255, 0.95);
+  --bg-secondary-hover: rgba(255, 255, 255, 0.98);
+  --bg-card: rgba(255, 255, 255, 0.9);
+  --bg-input: rgba(0, 0, 0, 0.04);
+  
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-tertiary: #64748b;
+  --text-muted: #94a3b8;
+  
+  --border-primary: rgba(0, 0, 0, 0.06);
+  --border-secondary: rgba(0, 0, 0, 0.1);
+  --border-hover: rgba(14, 165, 233, 0.3);
+  
+  --page-bg-light: linear-gradient(180deg, #f0f9ff 0%, #f8fafc 30%, #ffffff 100%);
+  
+  --card-bg-light: rgba(255, 255, 255, 0.9);
+  --card-border-light: rgba(0, 0, 0, 0.08);
+  --card-shadow-light: 0 4px 24px rgba(0, 0, 0, 0.06);
+  
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.08);
+  color-scheme: light;
+}
+
+/* 圆润设计 */
+.theme-daylight,
+.theme-daylight * {
+  --theme-border-radius: 20px !important;
+}
+
+/* 清新天空渐变背景 */
+.theme-daylight {
+  background: linear-gradient(180deg, #e0f2fe 0%, #f0f9ff 20%, #f8fafc 50%, #ffffff 100%);
+  min-height: 100vh;
+}
+
+/* Card styles - 柔和浮动卡片 */
+.theme-daylight .vps-card {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 20px !important;
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.05),
+    0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
+}
+
+.theme-daylight .vps-card:hover {
+  box-shadow: 
+    0 16px 48px rgba(0, 0, 0, 0.1),
+    0 4px 12px rgba(0, 0, 0, 0.05);
+  transform: translateY(-6px);
+}
+
+/* Typography */
+.theme-daylight {
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+}
+
+.theme-daylight h1,
+.theme-daylight h2,
+.theme-daylight h3,
+.theme-daylight .vps-card-title--light {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+/* Buttons */
+.theme-daylight .vps-btn,
+.theme-daylight button {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 14px !important;
+  color: #334155;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+.theme-daylight .vps-btn:hover,
+.theme-daylight button:hover {
+  background: #f8fafc;
+  border-color: rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+/* 主按钮 */
+.theme-daylight .vps-btn-primary,
+.theme-daylight button[type="submit"] {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  border: none;
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(14, 165, 233, 0.25);
+}
+
+.theme-daylight .vps-btn-primary:hover,
+.theme-daylight button[type="submit"]:hover {
+  box-shadow: 0 8px 24px rgba(14, 165, 233, 0.35);
+}
+
+/* Overview cards - 彩色渐变卡片 */
+.theme-daylight .vps-overview-card--online-daylight {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(52, 211, 153, 0.04));
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 20px !important;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.08);
+}
+
+.theme-daylight .vps-overview-card--offline-daylight {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(248, 113, 113, 0.04));
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 20px !important;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.08);
+}
+
+.theme-daylight .vps-overview-card--download-daylight {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(96, 165, 250, 0.04));
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 20px !important;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.08);
+}
+
+.theme-daylight .vps-overview-card--upload-daylight {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(52, 211, 153, 0.04));
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 20px !important;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.08);
+}
+
+/* Overview labels */
+.theme-daylight .vps-overview-label--online { color: #059669; }
+.theme-daylight .vps-overview-label--offline { color: #dc2626; }
+.theme-daylight .vps-overview-label--download { color: #2563eb; }
+.theme-daylight .vps-overview-label--upload { color: #059669; }
+
+.theme-daylight .vps-overview-value--daylight {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+/* Compact table styles */
+.theme-daylight .vps-compact-header--daylight {
+  background: rgba(248, 250, 252, 0.8);
+  color: #94a3b8;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 20px 20px 0 0 !important;
+}
+
+.theme-daylight .vps-compact-row--daylight {
+  background: rgba(255, 255, 255, 0.7);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.theme-daylight .vps-compact-row--daylight:hover {
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.theme-daylight .vps-compact-node-name--daylight {
+  color: #0f172a;
+  font-weight: 500;
+}
+
+.theme-daylight .vps-compact-node-location--daylight {
+  color: #94a3b8;
+}
+
+.theme-daylight .vps-compact-text--daylight {
+  color: #334155;
+}
+
+.theme-daylight .vps-compact-meter--daylight {
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 10px !important;
+}
+
+.theme-daylight .vps-compact-meter-text--daylight {
+  color: #0f172a;
+  font-weight: 500;
+}
+
+/* Progress bars */
+.theme-daylight .vps-resource-bar-track {
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 10px !important;
+  height: 8px;
+}
+
+.theme-daylight .vps-resource-bar-fill {
+  border-radius: 10px !important;
+  background: linear-gradient(90deg, #0ea5e9, #38bdf8);
+}
+
+/* 输入框 */
+.theme-daylight input,
+.theme-daylight select,
+.theme-daylight textarea {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 14px !important;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.theme-daylight input:focus,
+.theme-daylight select:focus,
+.theme-daylight textarea:focus {
+  border-color: rgba(14, 165, 233, 0.5);
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
+}
+
+.theme-daylight input::placeholder,
+.theme-daylight textarea::placeholder {
+  color: #94a3b8;
+}
+
+/* 滚动条 */
+.theme-daylight ::-webkit-scrollbar {
+  width: 8px;
+}
+
+.theme-daylight ::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 4px;
+}
+
+.theme-daylight ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+}
+
+.theme-daylight ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}

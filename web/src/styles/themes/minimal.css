@@ -1,0 +1,288 @@
+/* ========================================
+   Theme: Minimal Zen (极简禅意)
+   Maximum whitespace, minimal elements
+   特色：大量留白，极细边框，微妙阴影，呼吸感，纯净设计
+   ======================================== */
+.theme-minimal {
+  --theme-accent: #18181b;
+  --theme-accent-hover: #3f3f46;
+  --theme-accent-soft: rgba(24, 24, 27, 0.05);
+  --theme-glow: none;
+  
+  --bg-primary: #fafafa;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-input: #fafafa;
+  
+  --text-primary: #18181b;
+  --text-secondary: #52525b;
+  --text-tertiary: #a1a1aa;
+  --text-muted: #d4d4d8;
+  
+  --border-primary: #f4f4f5;
+  --border-secondary: #e4e4e7;
+  --border-hover: #a1a1aa;
+  
+  --page-bg-light: #fafafa;
+  
+  --card-bg-light: #ffffff;
+  --card-border-light: #f4f4f5;
+  --card-shadow-light: 0 1px 2px rgba(0, 0, 0, 0.02);
+  
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.02);
+  color-scheme: light;
+}
+
+/* 微圆角 */
+.theme-minimal,
+.theme-minimal * {
+  --theme-border-radius: 6px !important;
+}
+
+/* 极简干净背景 */
+.theme-minimal {
+  background: #fafafa;
+}
+
+/* Card styles - 极简卡片 */
+.theme-minimal .vps-card {
+  background: #ffffff;
+  border: 1px solid #f4f4f5;
+  border-radius: 6px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: all 0.3s ease;
+}
+
+.theme-minimal .vps-card:hover {
+  border-color: #e4e4e7;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+/* Typography - 简洁字体，大量留白 */
+.theme-minimal {
+  font-family: 'DM Sans', 'Inter', system-ui, sans-serif;
+  letter-spacing: 0.01em;
+  line-height: 1.7;
+}
+
+.theme-minimal h1 {
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  font-size: 2rem;
+  color: #18181b;
+}
+
+.theme-minimal h2 {
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: #18181b;
+}
+
+.theme-minimal h3,
+.theme-minimal .vps-card-title--light {
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: #18181b;
+}
+
+/* Buttons - 极简按钮 */
+.theme-minimal .vps-btn,
+.theme-minimal button {
+  border: 1px solid #e4e4e7;
+  border-radius: 6px !important;
+  background: #ffffff;
+  color: #52525b;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.theme-minimal .vps-btn:hover,
+.theme-minimal button:hover {
+  background: #fafafa;
+  border-color: #a1a1aa;
+  color: #18181b;
+}
+
+/* 主要按钮 */
+.theme-minimal .vps-btn-primary,
+.theme-minimal button[type="submit"] {
+  background: #18181b;
+  color: #ffffff;
+  border-color: #18181b;
+}
+
+.theme-minimal .vps-btn-primary:hover,
+.theme-minimal button[type="submit"]:hover {
+  background: #3f3f46;
+  border-color: #3f3f46;
+}
+
+/* Overview cards - 极简状态 */
+.theme-minimal .vps-overview-card--online-minimal {
+  background: #ffffff;
+  border: 1px solid #f4f4f5;
+  border-radius: 6px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.theme-minimal .vps-overview-card--online-minimal::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 6px;
+  height: 6px;
+  background: #22c55e;
+  border-radius: 50%;
+}
+
+.theme-minimal .vps-overview-card--offline-minimal {
+  background: #ffffff;
+  border: 1px solid #f4f4f5;
+  border-radius: 6px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.theme-minimal .vps-overview-card--offline-minimal::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 6px;
+  height: 6px;
+  background: #ef4444;
+  border-radius: 50%;
+}
+
+.theme-minimal .vps-overview-card--download-minimal {
+  background: #ffffff;
+  border: 1px solid #f4f4f5;
+  border-radius: 6px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.theme-minimal .vps-overview-card--upload-minimal {
+  background: #ffffff;
+  border: 1px solid #f4f4f5;
+  border-radius: 6px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+/* Overview labels - 极简标签 */
+.theme-minimal .vps-overview-label--online,
+.theme-minimal .vps-overview-label--offline,
+.theme-minimal .vps-overview-label--download,
+.theme-minimal .vps-overview-label--upload {
+  color: #a1a1aa;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 500;
+}
+
+.theme-minimal .vps-overview-value--minimal {
+  color: #18181b;
+  font-weight: 400;
+  font-size: 1.75rem;
+  letter-spacing: -0.02em;
+}
+
+/* Compact table styles - 极简表格 */
+.theme-minimal .vps-compact-header--minimal {
+  background: #ffffff;
+  color: #a1a1aa;
+  border-bottom: 1px solid #f4f4f5;
+  border-radius: 6px 6px 0 0 !important;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 500;
+}
+
+.theme-minimal .vps-compact-row--minimal {
+  background: #ffffff;
+  border-bottom: 1px solid #f4f4f5;
+  border-radius: 0 !important;
+}
+
+.theme-minimal .vps-compact-row--minimal:hover {
+  background: #fafafa;
+}
+
+.theme-minimal .vps-compact-node-name--minimal {
+  color: #18181b;
+  font-weight: 500;
+}
+
+.theme-minimal .vps-compact-node-location--minimal {
+  color: #a1a1aa;
+  font-size: 0.85em;
+}
+
+.theme-minimal .vps-compact-text--minimal {
+  color: #52525b;
+}
+
+.theme-minimal .vps-compact-meter--minimal {
+  background: #f4f4f5;
+  border: none;
+  height: 2px;
+  border-radius: 1px !important;
+}
+
+.theme-minimal .vps-compact-meter-text--minimal {
+  color: #18181b;
+  font-weight: 500;
+}
+
+/* Progress bars - 极细进度条 */
+.theme-minimal .vps-resource-bar-track {
+  background: #f4f4f5;
+  border: none;
+  height: 2px;
+  border-radius: 1px !important;
+}
+
+.theme-minimal .vps-resource-bar-fill {
+  border-radius: 1px !important;
+  background: #18181b;
+}
+
+/* 输入框 */
+.theme-minimal input,
+.theme-minimal select,
+.theme-minimal textarea {
+  border: 1px solid #e4e4e7;
+  border-radius: 6px !important;
+  background: #ffffff;
+  color: #18181b;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.theme-minimal input:focus,
+.theme-minimal select:focus,
+.theme-minimal textarea:focus {
+  border-color: #18181b;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(24, 24, 27, 0.05);
+}
+
+/* Placeholder */
+.theme-minimal input::placeholder,
+.theme-minimal textarea::placeholder {
+  color: #d4d4d8;
+}
+
+/* Server detail page */
+.theme-minimal .server-detail .bg-gradient-to-br {
+  background: #ffffff;
+  border: 1px solid #f4f4f5;
+  border-radius: 6px !important;
+}
+
+/* 分隔线 */
+.theme-minimal hr {
+  border: none;
+  border-top: 1px solid #f4f4f5;
+  margin: 2rem 0;
+}

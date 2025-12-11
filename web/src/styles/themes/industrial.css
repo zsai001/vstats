@@ -1,0 +1,322 @@
+/* ========================================
+   Theme: Industrial (工业科技)
+   Rugged, metallic, caution stripes
+   特色：警示条纹，金属质感，铆钉装饰，锐角设计，机械感
+   ======================================== */
+.theme-industrial {
+  --theme-accent: #f59e0b;
+  --theme-accent-hover: #d97706;
+  --theme-accent-soft: rgba(245, 158, 11, 0.15);
+  --theme-glow: rgba(245, 158, 11, 0.3);
+  
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #252525;
+  --bg-card: #202020;
+  --bg-input: #2a2a2a;
+  
+  --text-primary: #e5e5e5;
+  --text-secondary: #b0b0b0;
+  --text-tertiary: #808080;
+  --text-muted: #606060;
+  
+  --border-primary: #404040;
+  --border-secondary: #505050;
+  --border-hover: #f59e0b;
+  
+  --page-bg-dark: #1a1a1a;
+  
+  --card-bg-dark: #202020;
+  --card-border-dark: #404040;
+  --card-shadow-dark: 0 4px 8px rgba(0, 0, 0, 0.6);
+  
+  --shadow-card: 0 4px 8px rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
+}
+
+/* 锐角设计 */
+.theme-industrial,
+.theme-industrial * {
+  --theme-border-radius: 2px !important;
+}
+
+/* 金属网格背景 */
+.theme-industrial {
+  background-color: #1a1a1a;
+  background-image: 
+    linear-gradient(90deg, #222 1px, transparent 1px),
+    linear-gradient(#222 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Card styles - 金属面板 */
+.theme-industrial .vps-card {
+  background: linear-gradient(180deg, #282828 0%, #1e1e1e 100%);
+  border: 1px solid #404040;
+  border-radius: 2px !important;
+  position: relative;
+  box-shadow: 
+    0 4px 8px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* 警示条纹顶部 */
+.theme-industrial .vps-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: repeating-linear-gradient(
+    45deg,
+    #f59e0b,
+    #f59e0b 10px,
+    #1a1a1a 10px,
+    #1a1a1a 20px
+  );
+}
+
+/* 铆钉装饰 */
+.theme-industrial .vps-card::after {
+  content: '● ●';
+  position: absolute;
+  top: 12px;
+  right: 10px;
+  font-size: 6px;
+  color: #505050;
+  letter-spacing: 4px;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.1);
+}
+
+.theme-industrial .vps-card:hover {
+  border-color: #f59e0b;
+  box-shadow: 
+    0 6px 12px rgba(0, 0, 0, 0.7),
+    0 0 20px rgba(245, 158, 11, 0.1);
+}
+
+/* Typography - 工业字体 */
+.theme-industrial {
+  font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;
+}
+
+.theme-industrial h1,
+.theme-industrial h2,
+.theme-industrial h3,
+.theme-industrial .vps-card-title--dark {
+  font-family: 'Rajdhani', 'Share Tech', sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* 标题前缀 */
+.theme-industrial h1::before,
+.theme-industrial h2::before {
+  content: '//';
+  color: #f59e0b;
+  margin-right: 10px;
+}
+
+/* Buttons - 工业按钮 */
+.theme-industrial .vps-btn,
+.theme-industrial button {
+  border: 2px solid #505050;
+  border-radius: 2px !important;
+  background: linear-gradient(180deg, #333 0%, #252525 100%);
+  color: #e5e5e5;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  position: relative;
+  box-shadow: 
+    inset 0 1px 0 rgba(255,255,255,0.1),
+    0 2px 4px rgba(0,0,0,0.4);
+}
+
+.theme-industrial .vps-btn:hover,
+.theme-industrial button:hover {
+  background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+  border-color: #f59e0b;
+  color: #1a1a1a;
+  box-shadow: 
+    0 0 15px rgba(245, 158, 11, 0.4),
+    0 2px 4px rgba(0,0,0,0.4);
+}
+
+/* Overview cards - 状态面板 */
+.theme-industrial .vps-overview-card--online-industrial {
+  background: linear-gradient(180deg, #282828 0%, #1e1e1e 100%);
+  border: 1px solid #404040;
+  border-left: 5px solid #10b981;
+  border-radius: 2px !important;
+  position: relative;
+}
+
+.theme-industrial .vps-overview-card--online-industrial::before {
+  content: '◉';
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  color: #10b981;
+  font-size: 10px;
+  animation: industrial-blink 2s infinite;
+}
+
+@keyframes industrial-blink {
+  0%, 50%, 100% { opacity: 1; }
+  25%, 75% { opacity: 0.5; }
+}
+
+.theme-industrial .vps-overview-card--offline-industrial {
+  background: linear-gradient(180deg, #282828 0%, #1e1e1e 100%);
+  border: 1px solid #404040;
+  border-left: 5px solid #ef4444;
+  border-radius: 2px !important;
+}
+
+.theme-industrial .vps-overview-card--offline-industrial::before {
+  content: '◉';
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  color: #ef4444;
+  font-size: 10px;
+}
+
+.theme-industrial .vps-overview-card--download-industrial {
+  background: linear-gradient(180deg, #282828 0%, #1e1e1e 100%);
+  border: 1px solid #404040;
+  border-left: 5px solid #3b82f6;
+  border-radius: 2px !important;
+}
+
+.theme-industrial .vps-overview-card--upload-industrial {
+  background: linear-gradient(180deg, #282828 0%, #1e1e1e 100%);
+  border: 1px solid #404040;
+  border-left: 5px solid #f59e0b;
+  border-radius: 2px !important;
+}
+
+/* Overview label colors - 工业标签 */
+.theme-industrial .vps-overview-label--online { 
+  color: #10b981;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.8em;
+}
+.theme-industrial .vps-overview-label--offline { 
+  color: #ef4444;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.8em;
+}
+.theme-industrial .vps-overview-label--download { 
+  color: #3b82f6;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.8em;
+}
+.theme-industrial .vps-overview-label--upload { 
+  color: #f59e0b;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.8em;
+}
+
+.theme-industrial .vps-overview-value--industrial { 
+  color: #e5e5e5; 
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  font-size: 1.8rem;
+}
+
+/* Compact table styles - 数据面板 */
+.theme-industrial .vps-compact-header--industrial { 
+  background: linear-gradient(180deg, #333 0%, #252525 100%);
+  color: #f59e0b; 
+  border-bottom: 3px solid #f59e0b;
+  border-radius: 2px 2px 0 0 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+}
+
+.theme-industrial .vps-compact-row--industrial { 
+  background: linear-gradient(180deg, #252525 0%, #202020 100%);
+  border-bottom: 1px solid #353535;
+  border-radius: 0 !important;
+}
+
+.theme-industrial .vps-compact-row--industrial:hover { 
+  border-left: 4px solid #f59e0b;
+  background: linear-gradient(180deg, #2a2a2a 0%, #252525 100%);
+  padding-left: calc(1rem - 4px);
+}
+
+.theme-industrial .vps-compact-node-name--industrial { 
+  color: #e5e5e5; 
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.theme-industrial .vps-compact-node-location--industrial { 
+  color: #808080;
+  font-size: 0.85em;
+}
+
+.theme-industrial .vps-compact-text--industrial { 
+  color: #b0b0b0;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+.theme-industrial .vps-compact-meter--industrial { 
+  background: #1a1a1a;
+  border: 1px solid #404040;
+  border-radius: 0 !important;
+}
+
+.theme-industrial .vps-compact-meter-text--industrial { 
+  color: #e5e5e5;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+/* Progress bars - 工业进度条 */
+.theme-industrial .vps-resource-bar-track {
+  background: #1a1a1a;
+  border: 1px solid #404040;
+  border-radius: 0 !important;
+  height: 8px;
+}
+
+.theme-industrial .vps-resource-bar-fill {
+  border-radius: 0 !important;
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+}
+
+/* 输入框 */
+.theme-industrial input,
+.theme-industrial select,
+.theme-industrial textarea {
+  border: 1px solid #404040;
+  border-radius: 2px !important;
+  background: #1a1a1a;
+  color: #e5e5e5;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+.theme-industrial input:focus,
+.theme-industrial select:focus,
+.theme-industrial textarea:focus {
+  border-color: #f59e0b;
+  outline: none;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+}
+
+/* 警告/危险状态特殊样式 */
+.theme-industrial .danger,
+.theme-industrial .warning {
+  border-left: 4px solid #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}

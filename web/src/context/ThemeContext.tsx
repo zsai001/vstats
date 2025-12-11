@@ -10,7 +10,15 @@ export type ThemeId =
   | 'glassmorphism'  // 毛玻璃 - 现代透明
   | 'neumorphism'    // 新拟态 - 软UI风格
   | 'brutalist'      // 野兽派 - 大胆粗犷
-  | 'minimal';       // 极简主义 - 纯净留白
+  | 'minimal'        // 极简主义 - 纯净留白
+  | 'retro'          // 复古风 - 怀旧暖色
+  | 'tape'           // 磁带未来 - 模拟磁带
+  | 'handdrawn'      // 手绘风 - 涂鸦手稿
+  | 'memphis'        // 孟菲斯 - 几何拼贴
+  | 'skeuomorphic'   // 拟物风 - 真实质感
+  | 'aesthetic'      // 少女审美 - 梦幻粉彩
+  | 'magazine'       // 杂志风 - 大胆排版
+  | 'industrial';    // 工业风 - 硬核机械
 
 // 背景类型
 export type BackgroundType = 'gradient' | 'bing' | 'unsplash' | 'custom' | 'solid';
@@ -54,7 +62,7 @@ export const THEMES: ThemeConfig[] = [
     name: 'Midnight Tech',
     nameZh: '午夜科技',
     description: 'Classic dark tech theme with blue accents',
-    descriptionZh: '经典深色科技风，蓝色强调',
+    descriptionZh: '深邃蓝黑渐变，科技蓝光，毛玻璃卡片',
     isDark: true,
     style: 'glass',
     preview: {
@@ -76,14 +84,14 @@ export const THEMES: ThemeConfig[] = [
     name: 'Daylight',
     nameZh: '晴空日光',
     description: 'Clean and bright with soft shadows',
-    descriptionZh: '清新明亮，柔和阴影',
+    descriptionZh: '纯净白色，天蓝渐变，柔和阴影',
     isDark: false,
     style: 'flat',
     preview: {
       primary: '#ffffff',
       secondary: '#f8fafc',
       accent: '#0ea5e9',
-      background: '#f1f5f9'
+      background: '#e0f2fe'
     },
     fonts: {
       heading: '"Plus Jakarta Sans", sans-serif',
@@ -98,7 +106,7 @@ export const THEMES: ThemeConfig[] = [
     name: 'Cyberpunk 2077',
     nameZh: '赛博朋克',
     description: 'Neon lights, glitch effects, futuristic',
-    descriptionZh: '霓虹灯光，故障艺术，未来感',
+    descriptionZh: '霓虹渐变边框，故障艺术，扫描动画',
     isDark: true,
     style: 'brutalist',
     preview: {
@@ -120,14 +128,14 @@ export const THEMES: ThemeConfig[] = [
     name: 'Hacker Terminal',
     nameZh: '黑客终端',
     description: 'Retro terminal with scanlines',
-    descriptionZh: '复古终端，扫描线效果',
+    descriptionZh: '纯绿磷光，CRT扫描线，光标闪烁',
     isDark: true,
     style: 'minimal',
     preview: {
-      primary: '#0d0d0d',
-      secondary: '#1a1a1a',
+      primary: '#050505',
+      secondary: '#0a0a0a',
       accent: '#00ff41',
-      background: '#0d0d0d'
+      background: '#050505'
     },
     fonts: {
       heading: '"VT323", "Fira Code", monospace',
@@ -142,14 +150,14 @@ export const THEMES: ThemeConfig[] = [
     name: 'Glass UI',
     nameZh: '毛玻璃',
     description: 'Frosted glass with vibrant backgrounds',
-    descriptionZh: '磨砂玻璃效果，鲜艳背景',
+    descriptionZh: '强烈毛玻璃，彩色渐变，浮动光斑',
     isDark: true,
     style: 'glass',
     preview: {
-      primary: 'rgba(255,255,255,0.1)',
-      secondary: 'rgba(255,255,255,0.05)',
+      primary: 'rgba(255,255,255,0.12)',
+      secondary: 'rgba(255,255,255,0.08)',
       accent: '#a855f7',
-      background: '#1e1b4b'
+      background: '#667eea'
     },
     fonts: {
       heading: '"Poppins", sans-serif',
@@ -164,7 +172,7 @@ export const THEMES: ThemeConfig[] = [
     name: 'Soft UI',
     nameZh: '新拟态',
     description: 'Soft shadows and embossed elements',
-    descriptionZh: '柔和阴影，浮雕效果',
+    descriptionZh: '柔和凸起阴影，同色背景，无边框',
     isDark: false,
     style: 'neumorphic',
     preview: {
@@ -186,7 +194,7 @@ export const THEMES: ThemeConfig[] = [
     name: 'Brutalist',
     nameZh: '野兽派',
     description: 'Bold, raw, unapologetic design',
-    descriptionZh: '大胆粗犷，原始风格',
+    descriptionZh: '纯黑白极端对比，超粗边框，硬阴影',
     isDark: false,
     style: 'brutalist',
     preview: {
@@ -208,7 +216,7 @@ export const THEMES: ThemeConfig[] = [
     name: 'Minimal Zen',
     nameZh: '极简禅意',
     description: 'Maximum whitespace, minimal elements',
-    descriptionZh: '大量留白，极致简约',
+    descriptionZh: '大量留白，极细边框，微妙阴影',
     isDark: false,
     style: 'minimal',
     preview: {
@@ -222,8 +230,184 @@ export const THEMES: ThemeConfig[] = [
       body: '"DM Sans", system-ui, sans-serif',
       mono: '"DM Mono", monospace'
     },
-    borderRadius: '8px',
+    borderRadius: '6px',
     cardStyle: 'minimal'
+  },
+  {
+    id: 'retro',
+    name: 'Retro',
+    nameZh: '复古风',
+    description: 'Nostalgic warm colors and serif fonts',
+    descriptionZh: 'Solarized配色，打字机字体，纸张纹理',
+    isDark: false,
+    style: 'flat',
+    preview: {
+      primary: '#fdf6e3',
+      secondary: '#eee8d5',
+      accent: '#cb4b16',
+      background: '#fdf6e3'
+    },
+    fonts: {
+      heading: '"Merriweather", "Georgia", serif',
+      body: '"Merriweather", "Georgia", serif',
+      mono: '"Courier New", monospace'
+    },
+    borderRadius: '4px',
+    cardStyle: 'retro'
+  },
+  {
+    id: 'tape',
+    name: 'Tape Futurism',
+    nameZh: '磁带未来',
+    description: 'Analog cassette aesthetics',
+    descriptionZh: '磁带纹理，VU表，暖色调，卷轴装饰',
+    isDark: true,
+    style: 'flat',
+    preview: {
+      primary: '#1e1814',
+      secondary: '#2b211c',
+      accent: '#d75f27',
+      background: '#1e1814'
+    },
+    fonts: {
+      heading: '"Space Mono", monospace',
+      body: '"Space Mono", monospace',
+      mono: '"Space Mono", monospace'
+    },
+    borderRadius: '8px',
+    cardStyle: 'tape'
+  },
+  {
+    id: 'handdrawn',
+    name: 'Hand-drawn',
+    nameZh: '手绘风',
+    description: 'Sketchy borders and comic fonts',
+    descriptionZh: '不规则手绘边框，涂鸦装饰，手写字体',
+    isDark: false,
+    style: 'flat',
+    preview: {
+      primary: '#fffef8',
+      secondary: '#fff9e8',
+      accent: '#2c2c2c',
+      background: '#fffef8'
+    },
+    fonts: {
+      heading: '"Patrick Hand", "Comic Sans MS", sans-serif',
+      body: '"Patrick Hand", "Comic Sans MS", sans-serif',
+      mono: '"Patrick Hand", monospace'
+    },
+    borderRadius: '255px 15px 225px 15px/15px 225px 15px 255px',
+    cardStyle: 'handdrawn'
+  },
+  {
+    id: 'memphis',
+    name: 'Memphis',
+    nameZh: '孟菲斯',
+    description: 'Geometric shapes and vibrant colors',
+    descriptionZh: '几何图形装饰，鲜艳撞色，波普艺术',
+    isDark: false,
+    style: 'flat',
+    preview: {
+      primary: '#fff5f8',
+      secondary: '#ffffff',
+      accent: '#ff00cc',
+      background: '#fff5f8'
+    },
+    fonts: {
+      heading: '"Work Sans", sans-serif',
+      body: '"Work Sans", sans-serif',
+      mono: '"Fira Code", monospace'
+    },
+    borderRadius: '0px',
+    cardStyle: 'memphis'
+  },
+  {
+    id: 'skeuomorphic',
+    name: 'Skeuomorphic',
+    nameZh: '拟物风',
+    description: 'Realistic textures and depth',
+    descriptionZh: '真实质感，光泽渐变，立体按钮，iOS6风格',
+    isDark: false,
+    style: 'neumorphic',
+    preview: {
+      primary: '#f5f5f5',
+      secondary: '#e0e0e0',
+      accent: '#2e7d32',
+      background: '#c0c0c0'
+    },
+    fonts: {
+      heading: '"Helvetica Neue", sans-serif',
+      body: '"Helvetica Neue", sans-serif',
+      mono: '"Menlo", monospace'
+    },
+    borderRadius: '10px',
+    cardStyle: 'skeuomorphic'
+  },
+  {
+    id: 'aesthetic',
+    name: 'Aesthetic',
+    nameZh: '少女审美',
+    description: 'Soft pastels and dreamy vibes',
+    descriptionZh: '梦幻渐变背景，柔和粉彩，星星装饰',
+    isDark: false,
+    style: 'glass',
+    preview: {
+      primary: 'rgba(255,255,255,0.65)',
+      secondary: '#ffe4ec',
+      accent: '#ff69b4',
+      background: '#ffecd2'
+    },
+    fonts: {
+      heading: '"Quicksand", sans-serif',
+      body: '"Quicksand", sans-serif',
+      mono: '"Fira Code", monospace'
+    },
+    borderRadius: '24px',
+    cardStyle: 'aesthetic'
+  },
+  {
+    id: 'magazine',
+    name: 'Magazine',
+    nameZh: '杂志排版',
+    description: 'Bold typography and grid layout',
+    descriptionZh: '大胆排版，衬线字体，分栏线，报纸风格',
+    isDark: false,
+    style: 'flat',
+    preview: {
+      primary: '#ffffff',
+      secondary: '#fafaf8',
+      accent: '#cc0000',
+      background: '#fafaf8'
+    },
+    fonts: {
+      heading: '"Playfair Display", serif',
+      body: '"Inter", sans-serif',
+      mono: '"Courier New", monospace'
+    },
+    borderRadius: '0px',
+    cardStyle: 'magazine'
+  },
+  {
+    id: 'industrial',
+    name: 'Industrial',
+    nameZh: '工业科技',
+    description: 'Rugged, metallic, functional',
+    descriptionZh: '警示条纹，金属质感，铆钉装饰，锐角设计',
+    isDark: true,
+    style: 'brutalist',
+    preview: {
+      primary: '#202020',
+      secondary: '#252525',
+      accent: '#f59e0b',
+      background: '#1a1a1a'
+    },
+    fonts: {
+      heading: '"Rajdhani", sans-serif',
+      body: '"Roboto Condensed", sans-serif',
+      mono: '"Share Tech Mono", monospace'
+    },
+    borderRadius: '2px',
+    cardStyle: 'industrial'
   }
 ];
 

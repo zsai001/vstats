@@ -1,0 +1,301 @@
+/* ========================================
+   Theme: Brutalist (野兽派)
+   Bold, raw, high contrast
+   特色：纯黑白极端对比，超粗边框，硬阴影，0圆角，大胆排版
+   ======================================== */
+.theme-brutalist {
+  --theme-accent: #ff0000;
+  --theme-accent-hover: #cc0000;
+  --theme-accent-soft: rgba(255, 0, 0, 0.1);
+  --theme-glow: none;
+  
+  --bg-primary: #ffffff;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-input: #ffffff;
+  
+  --text-primary: #000000;
+  --text-secondary: #000000;
+  --text-tertiary: #000000;
+  --text-muted: #555555;
+  
+  --border-primary: #000000;
+  --border-secondary: #000000;
+  --border-hover: #ff0000;
+  
+  --page-bg-light: #ffffff;
+  
+  --card-bg-light: #ffffff;
+  --card-border-light: #000000;
+  --card-shadow-light: 10px 10px 0 #000000;
+  
+  --shadow-card: 10px 10px 0 #000000;
+  color-scheme: light;
+}
+
+/* 强制0圆角 */
+.theme-brutalist,
+.theme-brutalist * {
+  --theme-border-radius: 0px !important;
+}
+
+.theme-brutalist .vps-card,
+.theme-brutalist .vps-overview-card,
+.theme-brutalist .vps-btn,
+.theme-brutalist input,
+.theme-brutalist select,
+.theme-brutalist button,
+.theme-brutalist [class*="rounded"] {
+  border-radius: 0 !important;
+}
+
+/* Card styles - 极端粗犷 */
+.theme-brutalist .vps-card {
+  background: #ffffff;
+  border: 4px solid #000000;
+  border-radius: 0 !important;
+  box-shadow: 10px 10px 0 #000000;
+  transition: all 0.1s ease;
+}
+
+.theme-brutalist .vps-card:hover {
+  transform: translate(-5px, -5px);
+  box-shadow: 15px 15px 0 #000000;
+}
+
+.theme-brutalist .vps-card:active {
+  transform: translate(2px, 2px);
+  box-shadow: 8px 8px 0 #000000;
+}
+
+/* Typography - 大胆粗体 */
+.theme-brutalist h1, 
+.theme-brutalist h2, 
+.theme-brutalist h3,
+.theme-brutalist .vps-card-title--light {
+  font-family: 'Archivo Black', 'Impact', 'Arial Black', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: -0.03em;
+  font-weight: 900;
+}
+
+.theme-brutalist h1 {
+  font-size: 3rem;
+  line-height: 0.9;
+}
+
+/* 正文也使用monospace增强野兽派感觉 */
+.theme-brutalist {
+  font-family: 'Space Mono', 'Courier New', monospace;
+}
+
+/* Buttons - 极端风格按钮 */
+.theme-brutalist .vps-btn,
+.theme-brutalist button {
+  border: 4px solid #000000;
+  border-radius: 0 !important;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 5px 5px 0 #000000;
+  background: #ffffff;
+  color: #000000;
+  transition: all 0.1s ease;
+}
+
+.theme-brutalist .vps-btn:hover,
+.theme-brutalist button:hover {
+  background: #ff0000;
+  color: #ffffff;
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0 #000000;
+}
+
+.theme-brutalist .vps-btn:active,
+.theme-brutalist button:active {
+  transform: translate(2px, 2px);
+  box-shadow: 3px 3px 0 #000000;
+}
+
+/* Overview cards - 带色块阴影 */
+.theme-brutalist .vps-overview-card--online-brutalist {
+  background: #ffffff;
+  border: 4px solid #000000;
+  border-radius: 0 !important;
+  box-shadow: 8px 8px 0 #10b981;
+}
+
+.theme-brutalist .vps-overview-card--offline-brutalist {
+  background: #ffffff;
+  border: 4px solid #000000;
+  border-radius: 0 !important;
+  box-shadow: 8px 8px 0 #ef4444;
+}
+
+.theme-brutalist .vps-overview-card--download-brutalist {
+  background: #ffffff;
+  border: 4px solid #000000;
+  border-radius: 0 !important;
+  box-shadow: 8px 8px 0 #3b82f6;
+}
+
+.theme-brutalist .vps-overview-card--upload-brutalist {
+  background: #ffffff;
+  border: 4px solid #000000;
+  border-radius: 0 !important;
+  box-shadow: 8px 8px 0 #10b981;
+}
+
+/* Overview card hover */
+.theme-brutalist .vps-overview-card--online-brutalist:hover,
+.theme-brutalist .vps-overview-card--offline-brutalist:hover,
+.theme-brutalist .vps-overview-card--download-brutalist:hover,
+.theme-brutalist .vps-overview-card--upload-brutalist:hover {
+  transform: translate(-3px, -3px);
+}
+
+.theme-brutalist .vps-overview-card--online-brutalist:hover {
+  box-shadow: 11px 11px 0 #10b981;
+}
+
+.theme-brutalist .vps-overview-card--offline-brutalist:hover {
+  box-shadow: 11px 11px 0 #ef4444;
+}
+
+.theme-brutalist .vps-overview-card--download-brutalist:hover {
+  box-shadow: 11px 11px 0 #3b82f6;
+}
+
+.theme-brutalist .vps-overview-card--upload-brutalist:hover {
+  box-shadow: 11px 11px 0 #10b981;
+}
+
+/* Overview label colors - 纯黑 */
+.theme-brutalist .vps-overview-label--online { 
+  color: #000000; 
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.theme-brutalist .vps-overview-label--offline { 
+  color: #000000; 
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.theme-brutalist .vps-overview-label--download { 
+  color: #000000; 
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.theme-brutalist .vps-overview-label--upload { 
+  color: #000000; 
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+/* Compact table styles - 粗线条表格 */
+.theme-brutalist .vps-compact-header--brutalist {
+  background: #000000;
+  color: #ffffff;
+  border: none;
+  border-radius: 0 !important;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.theme-brutalist .vps-compact-row--brutalist {
+  background: #ffffff;
+  border: 2px solid #000000;
+  border-top: none;
+  border-radius: 0 !important;
+}
+
+.theme-brutalist .vps-compact-row--brutalist:hover {
+  background: #f0f0f0;
+  transform: translateX(-3px);
+  box-shadow: 3px 0 0 #ff0000;
+}
+
+.theme-brutalist .vps-compact-node-name--brutalist {
+  color: #000000;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.theme-brutalist .vps-compact-node-location--brutalist {
+  color: #555555;
+  font-weight: 700;
+}
+
+.theme-brutalist .vps-compact-text--brutalist {
+  color: #000000;
+  font-weight: 700;
+}
+
+.theme-brutalist .vps-compact-meter--brutalist {
+  background: #ffffff;
+  border: 3px solid #000000;
+  border-radius: 0 !important;
+}
+
+.theme-brutalist .vps-compact-meter-text--brutalist {
+  color: #000000;
+  font-weight: 900;
+}
+
+/* Progress bars - 粗线条 */
+.theme-brutalist .vps-resource-bar-track {
+  background: #ffffff;
+  border: 2px solid #000000;
+  border-radius: 0 !important;
+  height: 16px;
+}
+
+.theme-brutalist .vps-resource-bar-fill {
+  border-radius: 0 !important;
+}
+
+/* 输入框 */
+.theme-brutalist input,
+.theme-brutalist select,
+.theme-brutalist textarea {
+  border: 3px solid #000000;
+  border-radius: 0 !important;
+  background: #ffffff;
+  color: #000000;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+}
+
+.theme-brutalist input:focus,
+.theme-brutalist select:focus,
+.theme-brutalist textarea:focus {
+  border-color: #ff0000;
+  outline: none;
+  box-shadow: 4px 4px 0 #000000;
+}
+
+/* Server detail page */
+.theme-brutalist .server-detail h1,
+.theme-brutalist .server-detail h2,
+.theme-brutalist .server-detail .text-white {
+  color: #000000;
+}
+
+.theme-brutalist .server-detail .text-gray-400,
+.theme-brutalist .server-detail .text-gray-500,
+.theme-brutalist .server-detail .text-gray-300 {
+  color: #555555;
+}
+
+.theme-brutalist .server-detail .text-gray-600,
+.theme-brutalist .server-detail .text-gray-900 {
+  color: #000000;
+}
+
+/* 装饰性红色标记 */
+.theme-brutalist .vps-card-title--light::before {
+  content: '■';
+  color: #ff0000;
+  margin-right: 8px;
+}

@@ -1,0 +1,301 @@
+/* ========================================
+   Theme: Glassmorphism (毛玻璃)
+   Frosted glass, vibrant backgrounds
+   特色：强烈毛玻璃效果，彩色渐变背景，浮动光斑，大圆角
+   ======================================== */
+.theme-glassmorphism {
+  --theme-accent: #a855f7;
+  --theme-accent-hover: #9333ea;
+  --theme-accent-soft: rgba(168, 85, 247, 0.2);
+  --theme-glow: rgba(168, 85, 247, 0.5);
+  
+  --bg-primary: #1e1b4b;
+  --bg-secondary: rgba(255, 255, 255, 0.1);
+  --bg-card: rgba(255, 255, 255, 0.12);
+  --bg-input: rgba(255, 255, 255, 0.1);
+  
+  --text-primary: #ffffff;
+  --text-secondary: #e8e8ff;
+  --text-tertiary: #b8b8d0;
+  --text-muted: #9090b0;
+  
+  --border-primary: rgba(255, 255, 255, 0.25);
+  --border-secondary: rgba(255, 255, 255, 0.35);
+  --border-hover: rgba(255, 255, 255, 0.5);
+  
+  --page-bg-dark: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  
+  --card-bg-dark: rgba(255, 255, 255, 0.12);
+  --card-border-dark: rgba(255, 255, 255, 0.25);
+  --card-shadow-dark: 0 8px 32px rgba(0, 0, 0, 0.25);
+  
+  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.2);
+  color-scheme: dark;
+}
+
+/* 大圆角 */
+.theme-glassmorphism,
+.theme-glassmorphism * {
+  --theme-border-radius: 24px !important;
+}
+
+/* 渐变背景 + 动画 */
+.theme-glassmorphism {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  background-size: 200% 200%;
+  animation: glass-gradient 15s ease infinite;
+  min-height: 100vh;
+}
+
+@keyframes glass-gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* 浮动光斑 */
+.theme-glassmorphism::before {
+  content: '';
+  position: fixed;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 107, 107, 0.4) 0%, transparent 70%);
+  top: -150px;
+  left: -150px;
+  filter: blur(60px);
+  animation: float-orb-1 20s infinite ease-in-out;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.theme-glassmorphism::after {
+  content: '';
+  position: fixed;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(78, 205, 196, 0.4) 0%, transparent 70%);
+  bottom: -100px;
+  right: -100px;
+  filter: blur(60px);
+  animation: float-orb-2 18s infinite ease-in-out;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes float-orb-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(80px, 60px) scale(1.2); }
+  66% { transform: translate(-40px, 30px) scale(0.9); }
+}
+
+@keyframes float-orb-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-60px, -40px) scale(0.8); }
+  66% { transform: translate(50px, -30px) scale(1.1); }
+}
+
+/* Card styles - 毛玻璃卡片 */
+.theme-glassmorphism .vps-card {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 24px !important;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.2),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  position: relative;
+  z-index: 1;
+}
+
+.theme-glassmorphism .vps-card:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 
+    0 16px 48px rgba(0, 0, 0, 0.3),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+  transform: translateY(-4px);
+}
+
+/* Typography */
+.theme-glassmorphism {
+  font-family: 'Poppins', 'Inter', sans-serif;
+}
+
+.theme-glassmorphism h1,
+.theme-glassmorphism h2,
+.theme-glassmorphism h3,
+.theme-glassmorphism .vps-card-title--dark {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  color: #ffffff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+/* Buttons - 毛玻璃按钮 */
+.theme-glassmorphism .vps-btn,
+.theme-glassmorphism button {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 16px !important;
+  color: #ffffff;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+}
+
+.theme-glassmorphism .vps-btn:hover,
+.theme-glassmorphism button:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+/* Overview cards - 毛玻璃状态卡片 */
+.theme-glassmorphism .vps-overview-card--online-glassmorphism {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(52, 211, 153, 0.1));
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-radius: 24px !important;
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.15);
+}
+
+.theme-glassmorphism .vps-overview-card--offline-glassmorphism {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(248, 113, 113, 0.1));
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-radius: 24px !important;
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.15);
+}
+
+.theme-glassmorphism .vps-overview-card--download-glassmorphism {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(96, 165, 250, 0.1));
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-radius: 24px !important;
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
+}
+
+.theme-glassmorphism .vps-overview-card--upload-glassmorphism {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(139, 92, 246, 0.1));
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-radius: 24px !important;
+  box-shadow: 0 8px 24px rgba(168, 85, 247, 0.15);
+}
+
+/* Overview labels */
+.theme-glassmorphism .vps-overview-label--online { color: #34d399; }
+.theme-glassmorphism .vps-overview-label--offline { color: #f87171; }
+.theme-glassmorphism .vps-overview-label--download { color: #60a5fa; }
+.theme-glassmorphism .vps-overview-label--upload { color: #a78bfa; }
+
+.theme-glassmorphism .vps-overview-value--glassmorphism {
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 1.5rem;
+}
+
+/* Compact table styles - 毛玻璃表格 */
+.theme-glassmorphism .vps-compact-header--glassmorphism {
+  background: rgba(255, 255, 255, 0.1);
+  color: #9090b0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 24px 24px 0 0 !important;
+}
+
+.theme-glassmorphism .vps-compact-row--glassmorphism {
+  background: rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.theme-glassmorphism .vps-compact-row--glassmorphism:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.theme-glassmorphism .vps-compact-node-name--glassmorphism {
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.theme-glassmorphism .vps-compact-node-location--glassmorphism {
+  color: #9090b0;
+}
+
+.theme-glassmorphism .vps-compact-text--glassmorphism {
+  color: #b8b8d0;
+}
+
+.theme-glassmorphism .vps-compact-meter--glassmorphism {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px !important;
+}
+
+.theme-glassmorphism .vps-compact-meter-text--glassmorphism {
+  color: #ffffff;
+}
+
+/* Progress bars - 毛玻璃进度条 */
+.theme-glassmorphism .vps-resource-bar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px !important;
+}
+
+.theme-glassmorphism .vps-resource-bar-fill {
+  border-radius: 12px !important;
+  background: linear-gradient(90deg, #a855f7, #f093fb);
+}
+
+/* 输入框 */
+.theme-glassmorphism input,
+.theme-glassmorphism select,
+.theme-glassmorphism textarea {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px !important;
+  color: #ffffff;
+}
+
+.theme-glassmorphism input:focus,
+.theme-glassmorphism select:focus,
+.theme-glassmorphism textarea:focus {
+  border-color: rgba(255, 255, 255, 0.4);
+  outline: none;
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+}
+
+.theme-glassmorphism input::placeholder,
+.theme-glassmorphism textarea::placeholder {
+  color: #9090b0;
+}
+
+/* 滚动条 */
+.theme-glassmorphism ::-webkit-scrollbar {
+  width: 8px;
+}
+
+.theme-glassmorphism ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.theme-glassmorphism ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}

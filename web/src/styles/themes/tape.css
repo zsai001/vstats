@@ -1,0 +1,299 @@
+/* ========================================
+   Theme: Tape Futurism (磁带未来)
+   Cassette aesthetics, warm darks
+   特色：磁带纹理，VU表，暖色调，复古模拟感，卷轴装饰
+   ======================================== */
+.theme-tape {
+  --theme-accent: #d75f27;
+  --theme-accent-hover: #f07e4d;
+  --theme-accent-soft: rgba(215, 95, 39, 0.15);
+  --theme-glow: rgba(215, 95, 39, 0.4);
+  
+  --bg-primary: #1e1814;
+  --bg-secondary: #2b211c;
+  --bg-card: #16120f;
+  --bg-input: #3a2e28;
+  
+  --text-primary: #ede4d0;
+  --text-secondary: #d4c5a9;
+  --text-tertiary: #8f7e6a;
+  --text-muted: #6b5d4e;
+  
+  --border-primary: #4a3c32;
+  --border-secondary: #5d4b3f;
+  --border-hover: #d75f27;
+  
+  --page-bg-dark: #1e1814;
+  
+  --card-bg-dark: #16120f;
+  --card-border-dark: #4a3c32;
+  --card-shadow-dark: 0 4px 16px rgba(0, 0, 0, 0.5);
+  
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+
+/* 圆角 - 磁带风格 */
+.theme-tape,
+.theme-tape * {
+  --theme-border-radius: 8px !important;
+}
+
+/* 磁带纹理背景 */
+.theme-tape {
+  background-color: #1e1814;
+  background-image: 
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(255, 255, 255, 0.01) 2px,
+      rgba(255, 255, 255, 0.01) 4px
+    );
+}
+
+/* Card styles - 磁带机面板 */
+.theme-tape .vps-card {
+  background: linear-gradient(180deg, #1a1512 0%, #12100e 100%);
+  border: 2px solid #4a3c32;
+  border-radius: 8px !important;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 磁带条纹装饰 */
+.theme-tape .vps-card::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  height: 4px;
+  background: repeating-linear-gradient(
+    90deg,
+    #d75f27 0px,
+    #d75f27 4px,
+    transparent 4px,
+    transparent 8px
+  );
+  opacity: 0.6;
+  border-radius: 2px;
+}
+
+/* 卷轴装饰 */
+.theme-tape .vps-card::after {
+  content: '◉ ◉';
+  position: absolute;
+  bottom: 10px;
+  right: 15px;
+  font-size: 18px;
+  color: #4a3c32;
+  letter-spacing: 15px;
+}
+
+.theme-tape .vps-card:hover {
+  border-color: #d75f27;
+  box-shadow: 
+    0 8px 24px rgba(215, 95, 39, 0.2),
+    inset 0 0 30px rgba(215, 95, 39, 0.05);
+}
+
+/* Typography - 等宽复古字体 */
+.theme-tape {
+  font-family: 'Space Mono', 'Courier New', monospace;
+}
+
+.theme-tape h1,
+.theme-tape h2,
+.theme-tape h3,
+.theme-tape .vps-card-title--dark {
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* VU表指示器效果 */
+.theme-tape h1::before {
+  content: '▶';
+  color: #d75f27;
+  margin-right: 10px;
+  animation: vu-pulse 1s ease-in-out infinite;
+}
+
+@keyframes vu-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Buttons - 磁带按钮 */
+.theme-tape .vps-btn,
+.theme-tape button {
+  border: 2px solid #4a3c32;
+  border-radius: 8px !important;
+  background: linear-gradient(180deg, #2b211c 0%, #1e1814 100%);
+  color: #ede4d0;
+  font-family: 'Space Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.theme-tape .vps-btn:hover,
+.theme-tape button:hover {
+  background: linear-gradient(180deg, #d75f27 0%, #b54d1f 100%);
+  border-color: #d75f27;
+  color: #fff;
+}
+
+/* Overview cards - 模拟仪表 */
+.theme-tape .vps-overview-card--online-tape {
+  background: linear-gradient(180deg, #1a1512 0%, #12100e 100%);
+  border: 2px solid #4a3c32;
+  border-left: 4px solid #10b981;
+  border-radius: 8px !important;
+}
+
+.theme-tape .vps-overview-card--online-tape::before {
+  content: '●';
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: #10b981;
+  font-size: 10px;
+  animation: led-blink 1.5s infinite;
+}
+
+@keyframes led-blink {
+  0%, 100% { opacity: 1; box-shadow: 0 0 5px #10b981; }
+  50% { opacity: 0.6; box-shadow: none; }
+}
+
+.theme-tape .vps-overview-card--offline-tape {
+  background: linear-gradient(180deg, #1a1512 0%, #12100e 100%);
+  border: 2px solid #4a3c32;
+  border-left: 4px solid #ef4444;
+  border-radius: 8px !important;
+}
+
+.theme-tape .vps-overview-card--download-tape {
+  background: linear-gradient(180deg, #1a1512 0%, #12100e 100%);
+  border: 2px solid #4a3c32;
+  border-left: 4px solid #3b82f6;
+  border-radius: 8px !important;
+}
+
+.theme-tape .vps-overview-card--upload-tape {
+  background: linear-gradient(180deg, #1a1512 0%, #12100e 100%);
+  border: 2px solid #4a3c32;
+  border-left: 4px solid #d75f27;
+  border-radius: 8px !important;
+}
+
+/* Overview label colors */
+.theme-tape .vps-overview-label--online { 
+  color: #10b981;
+  text-transform: uppercase;
+  font-size: 0.8em;
+  letter-spacing: 0.1em;
+}
+.theme-tape .vps-overview-label--offline { 
+  color: #ef4444;
+  text-transform: uppercase;
+  font-size: 0.8em;
+  letter-spacing: 0.1em;
+}
+.theme-tape .vps-overview-label--download { 
+  color: #3b82f6;
+  text-transform: uppercase;
+  font-size: 0.8em;
+  letter-spacing: 0.1em;
+}
+.theme-tape .vps-overview-label--upload { 
+  color: #d75f27;
+  text-transform: uppercase;
+  font-size: 0.8em;
+  letter-spacing: 0.1em;
+}
+
+.theme-tape .vps-overview-value--tape { 
+  color: #ede4d0;
+  font-family: 'Space Mono', monospace;
+  font-size: 1.5rem;
+}
+
+/* Compact table styles - 磁带列表 */
+.theme-tape .vps-compact-header--tape { 
+  background: linear-gradient(180deg, #2b211c 0%, #1e1814 100%);
+  color: #d4c5a9; 
+  border-bottom: 2px solid #d75f27;
+  border-radius: 8px 8px 0 0 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.theme-tape .vps-compact-row--tape { 
+  background: linear-gradient(180deg, #1a1512 0%, #14100e 100%);
+  border-bottom: 1px solid #3a2e28;
+  border-radius: 0 !important;
+}
+
+.theme-tape .vps-compact-row--tape:hover { 
+  background: linear-gradient(180deg, #2b211c 0%, #1e1814 100%);
+  border-left: 3px solid #d75f27;
+}
+
+.theme-tape .vps-compact-node-name--tape { 
+  color: #ede4d0;
+  font-weight: 700;
+}
+
+.theme-tape .vps-compact-node-location--tape { 
+  color: #8f7e6a;
+}
+
+.theme-tape .vps-compact-text--tape { 
+  color: #d4c5a9;
+  font-family: 'Space Mono', monospace;
+}
+
+.theme-tape .vps-compact-meter--tape { 
+  background: #2b211c;
+  border: 1px solid #4a3c32;
+  border-radius: 4px !important;
+}
+
+.theme-tape .vps-compact-meter-text--tape { 
+  color: #ede4d0;
+}
+
+/* Progress bars - VU表风格 */
+.theme-tape .vps-resource-bar-track {
+  background: #16120f;
+  border: 1px solid #4a3c32;
+  border-radius: 4px !important;
+  height: 10px;
+}
+
+.theme-tape .vps-resource-bar-fill {
+  border-radius: 4px !important;
+  background: linear-gradient(90deg, #10b981, #d75f27, #ef4444);
+}
+
+/* 输入框 */
+.theme-tape input,
+.theme-tape select,
+.theme-tape textarea {
+  border: 2px solid #4a3c32;
+  border-radius: 8px !important;
+  background: #16120f;
+  color: #ede4d0;
+  font-family: 'Space Mono', monospace;
+}
+
+.theme-tape input:focus,
+.theme-tape select:focus,
+.theme-tape textarea:focus {
+  border-color: #d75f27;
+  outline: none;
+  box-shadow: 0 0 10px rgba(215, 95, 39, 0.3);
+}

@@ -1,0 +1,311 @@
+/* ========================================
+   Theme: Cyberpunk 2077 (赛博朋克)
+   Neon, glitch, futuristic
+   特色：霓虹渐变边框，故障艺术，扫描动画，锐角设计，双色霓虹
+   ======================================== */
+.theme-cyberpunk {
+  --theme-accent: #ff00ff;
+  --theme-accent-hover: #cc00cc;
+  --theme-accent-soft: rgba(255, 0, 255, 0.15);
+  --theme-glow: rgba(255, 0, 255, 0.6);
+  --theme-secondary: #00ffff;
+  
+  --bg-primary: #0a0a0f;
+  --bg-secondary: rgba(15, 15, 30, 0.95);
+  --bg-card: rgba(10, 10, 20, 0.9);
+  --bg-input: rgba(255, 0, 255, 0.1);
+  
+  --text-primary: #ffffff;
+  --text-secondary: #e0e0ff;
+  --text-tertiary: #a0a0c0;
+  --text-muted: #606080;
+  
+  --border-primary: rgba(255, 0, 255, 0.4);
+  --border-secondary: rgba(0, 255, 255, 0.4);
+  --border-hover: rgba(255, 0, 255, 0.8);
+  
+  --page-bg-dark: #0a0a0f;
+  
+  --card-bg-dark: rgba(10, 10, 20, 0.95);
+  --card-border-dark: rgba(255, 0, 255, 0.5);
+  --card-shadow-dark: 0 0 40px rgba(255, 0, 255, 0.25);
+  
+  --shadow-card: 0 0 50px rgba(255, 0, 255, 0.2);
+  color-scheme: dark;
+}
+
+/* 锐角设计 - 小圆角 */
+.theme-cyberpunk,
+.theme-cyberpunk * {
+  --theme-border-radius: 4px !important;
+}
+
+/* 背景网格 */
+.theme-cyberpunk {
+  background: 
+    linear-gradient(rgba(255, 0, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 0, 255, 0.03) 1px, transparent 1px),
+    #0a0a0f;
+  background-size: 50px 50px;
+}
+
+/* 顶部霓虹扫描线 */
+.theme-cyberpunk::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #ff00ff, #00ffff, transparent);
+  animation: neon-scan 4s linear infinite;
+  z-index: 10000;
+}
+
+@keyframes neon-scan {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Neon card style - 霓虹边框 */
+.theme-cyberpunk .vps-card {
+  background: linear-gradient(135deg, rgba(15, 15, 30, 0.95) 0%, rgba(5, 5, 15, 0.98) 100%);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  position: relative;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+/* 霓虹边框效果 */
+.theme-cyberpunk .vps-card::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(135deg, #ff00ff, #00ffff, #ff00ff);
+  z-index: -1;
+  border-radius: 6px;
+}
+
+/* 扫描动画 */
+.theme-cyberpunk .vps-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 0, 255, 0.1), transparent);
+  animation: cyberpunk-sweep 3s ease-in-out infinite;
+}
+
+@keyframes cyberpunk-sweep {
+  0% { left: -100%; }
+  50% { left: 100%; }
+  100% { left: 100%; }
+}
+
+.theme-cyberpunk .vps-card:hover {
+  box-shadow: 
+    0 0 30px rgba(255, 0, 255, 0.5),
+    0 0 60px rgba(0, 255, 255, 0.3),
+    inset 0 0 30px rgba(255, 0, 255, 0.1);
+}
+
+/* Glitch text effect for headings */
+.theme-cyberpunk h1, 
+.theme-cyberpunk h2, 
+.theme-cyberpunk .vps-card-title--dark {
+  position: relative;
+  text-shadow: 
+    3px 0 #ff00ff,
+    -3px 0 #00ffff;
+  animation: glitch-text 3s infinite;
+}
+
+@keyframes glitch-text {
+  0%, 85%, 100% { 
+    text-shadow: 3px 0 #ff00ff, -3px 0 #00ffff;
+    transform: translateX(0);
+  }
+  86% { 
+    text-shadow: -3px 0 #ff00ff, 3px 0 #00ffff;
+    transform: translateX(-2px);
+  }
+  88% { 
+    text-shadow: 3px 3px #ff00ff, -3px -3px #00ffff;
+    transform: translateX(2px);
+  }
+  90% { 
+    text-shadow: -3px -3px #ff00ff, 3px 3px #00ffff;
+    transform: translateX(0);
+  }
+}
+
+/* Overview cards - 霓虹状态卡片 */
+.theme-cyberpunk .vps-overview-card--online-cyberpunk {
+  background: linear-gradient(135deg, rgba(0, 255, 255, 0.15), rgba(0, 255, 255, 0.05));
+  border: 2px solid #00ffff;
+  box-shadow: 0 0 25px rgba(0, 255, 255, 0.4), inset 0 0 20px rgba(0, 255, 255, 0.1);
+}
+
+.theme-cyberpunk .vps-overview-card--offline-cyberpunk {
+  background: linear-gradient(135deg, rgba(255, 0, 255, 0.15), rgba(255, 50, 50, 0.05));
+  border: 2px solid #ff00ff;
+  box-shadow: 0 0 25px rgba(255, 0, 255, 0.4), inset 0 0 20px rgba(255, 0, 255, 0.1);
+}
+
+.theme-cyberpunk .vps-overview-card--download-cyberpunk {
+  background: linear-gradient(135deg, rgba(0, 255, 255, 0.15), rgba(59, 130, 246, 0.05));
+  border: 2px solid #00ffff;
+  box-shadow: 0 0 25px rgba(0, 255, 255, 0.4);
+}
+
+.theme-cyberpunk .vps-overview-card--upload-cyberpunk {
+  background: linear-gradient(135deg, rgba(255, 0, 255, 0.15), rgba(16, 185, 129, 0.05));
+  border: 2px solid #ff00ff;
+  box-shadow: 0 0 25px rgba(255, 0, 255, 0.4);
+}
+
+/* Overview label colors - 霓虹双色 */
+.theme-cyberpunk .vps-overview-label--online { 
+  color: #00ffff; 
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+}
+.theme-cyberpunk .vps-overview-label--offline { 
+  color: #ff00ff; 
+  text-shadow: 0 0 10px rgba(255, 0, 255, 0.8);
+}
+.theme-cyberpunk .vps-overview-label--download { 
+  color: #00ffff; 
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
+}
+.theme-cyberpunk .vps-overview-label--upload { 
+  color: #ff00ff; 
+  text-shadow: 0 0 10px rgba(255, 0, 255, 0.6);
+}
+
+/* Compact table styles - 霓虹表格 */
+.theme-cyberpunk .vps-compact-header--cyberpunk {
+  background: linear-gradient(135deg, rgba(255, 0, 255, 0.15), rgba(0, 255, 255, 0.08));
+  color: #a0a0c0;
+  border-bottom: 2px solid;
+  border-image: linear-gradient(90deg, #ff00ff, #00ffff) 1;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.theme-cyberpunk .vps-compact-row--cyberpunk {
+  background: linear-gradient(135deg, rgba(15, 15, 30, 0.8), rgba(5, 5, 15, 0.9));
+  border-bottom: 1px solid rgba(255, 0, 255, 0.2);
+  position: relative;
+}
+
+.theme-cyberpunk .vps-compact-row--cyberpunk:hover {
+  background: linear-gradient(135deg, rgba(30, 30, 60, 0.9), rgba(10, 10, 30, 0.95));
+  box-shadow: 
+    0 0 20px rgba(255, 0, 255, 0.3),
+    inset 0 0 20px rgba(0, 255, 255, 0.05);
+  border-left: 3px solid #ff00ff;
+}
+
+.theme-cyberpunk .vps-compact-node-name--cyberpunk {
+  color: #ffffff;
+  text-shadow: 0 0 8px rgba(255, 0, 255, 0.5);
+}
+
+.theme-cyberpunk .vps-compact-node-location--cyberpunk {
+  color: #a0a0c0;
+}
+
+.theme-cyberpunk .vps-compact-text--cyberpunk {
+  color: #b0b0d0;
+}
+
+.theme-cyberpunk .vps-compact-meter--cyberpunk {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 0, 255, 0.4);
+  border-radius: 0 !important;
+}
+
+.theme-cyberpunk .vps-compact-meter-text--cyberpunk {
+  color: #ffffff;
+  text-shadow: 0 0 5px rgba(255, 0, 255, 0.5);
+}
+
+/* Progress bars - 霓虹进度条 */
+.theme-cyberpunk .vps-resource-bar-track {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 0, 255, 0.3);
+}
+
+.theme-cyberpunk .vps-resource-bar-fill {
+  background: linear-gradient(90deg, #ff00ff, #00ffff);
+  box-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
+}
+
+/* Buttons - 霓虹按钮 */
+.theme-cyberpunk .vps-btn,
+.theme-cyberpunk button {
+  border: 2px solid #ff00ff;
+  background: rgba(255, 0, 255, 0.1);
+  color: #ff00ff;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-cyberpunk .vps-btn::before,
+.theme-cyberpunk button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 0, 255, 0.3), transparent);
+  transition: left 0.3s;
+}
+
+.theme-cyberpunk .vps-btn:hover::before,
+.theme-cyberpunk button:hover::before {
+  left: 100%;
+}
+
+.theme-cyberpunk .vps-btn:hover,
+.theme-cyberpunk button:hover {
+  background: rgba(255, 0, 255, 0.2);
+  box-shadow: 0 0 30px rgba(255, 0, 255, 0.5);
+  border-color: #00ffff;
+  color: #00ffff;
+}
+
+/* Server detail page */
+.theme-cyberpunk .server-detail .text-emerald-400,
+.theme-cyberpunk .server-detail .text-emerald-500 {
+  color: #00ffff;
+  text-shadow: 0 0 15px rgba(0, 255, 255, 0.6);
+}
+
+.theme-cyberpunk .server-detail .text-cyan-300,
+.theme-cyberpunk .server-detail .text-blue-300 {
+  color: #00ffff;
+}
+
+/* 输入框 */
+.theme-cyberpunk input,
+.theme-cyberpunk select,
+.theme-cyberpunk textarea {
+  border: 1px solid rgba(255, 0, 255, 0.4);
+  background: rgba(10, 10, 20, 0.9);
+  color: #e0e0ff;
+}
+
+.theme-cyberpunk input:focus,
+.theme-cyberpunk select:focus,
+.theme-cyberpunk textarea:focus {
+  border-color: #ff00ff;
+  box-shadow: 0 0 20px rgba(255, 0, 255, 0.3);
+  outline: none;
+}

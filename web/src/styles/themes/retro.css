@@ -1,0 +1,265 @@
+/* ========================================
+   Theme: Retro (复古风)
+   Nostalgic warm colors, serif fonts
+   特色：Solarized配色，打字机字体，纸张纹理，复古边框，衬线字体
+   ======================================== */
+.theme-retro {
+  --theme-accent: #cb4b16;
+  --theme-accent-hover: #dc322f;
+  --theme-accent-soft: rgba(203, 75, 22, 0.15);
+  --theme-glow: none;
+  
+  --bg-primary: #fdf6e3;
+  --bg-secondary: #eee8d5;
+  --bg-card: #fdf6e3;
+  --bg-input: #eee8d5;
+  
+  --text-primary: #657b83;
+  --text-secondary: #586e75;
+  --text-tertiary: #93a1a1;
+  --text-muted: #839496;
+  
+  --border-primary: #93a1a1;
+  --border-secondary: #d3d0c2;
+  --border-hover: #b58900;
+  
+  --page-bg-light: #fdf6e3;
+  
+  --card-bg-light: #fdf6e3;
+  --card-border-light: #93a1a1;
+  --card-shadow-light: 4px 4px 0 rgba(0, 0, 0, 0.1);
+  
+  --shadow-card: 4px 4px 0 rgba(0, 0, 0, 0.1);
+  color-scheme: light;
+}
+
+/* 小圆角 - 复古风格 */
+.theme-retro,
+.theme-retro * {
+  --theme-border-radius: 4px !important;
+}
+
+/* 纸张纹理背景 */
+.theme-retro {
+  background-color: #fdf6e3;
+  background-image: 
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%23d3d0c2' fill-opacity='0.15'%3E%3Cpath opacity='.5' d='M96 95h4v1h-4v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9zm-1 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Card styles - 打字机纸张风格 */
+.theme-retro .vps-card {
+  background: #fdf6e3;
+  border: 1px solid #93a1a1;
+  border-radius: 4px !important;
+  box-shadow: 4px 4px 0 rgba(101, 123, 131, 0.2);
+  position: relative;
+}
+
+/* 打孔装饰 */
+.theme-retro .vps-card::before {
+  content: '○ ○ ○';
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  font-size: 8px;
+  color: #93a1a1;
+  letter-spacing: 4px;
+}
+
+/* 红线装饰 */
+.theme-retro .vps-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 40px;
+  width: 1px;
+  height: 100%;
+  background: rgba(203, 75, 22, 0.3);
+}
+
+.theme-retro .vps-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 rgba(203, 75, 22, 0.25);
+}
+
+/* Typography - 打字机/衬线字体 */
+.theme-retro {
+  font-family: 'Merriweather', 'Georgia', 'Times New Roman', serif;
+  line-height: 1.7;
+}
+
+.theme-retro h1,
+.theme-retro h2,
+.theme-retro h3,
+.theme-retro .vps-card-title--light {
+  font-family: 'Merriweather', 'Georgia', serif;
+  font-weight: 700;
+  color: #073642;
+}
+
+/* 代码/数字用等宽字体 */
+.theme-retro code,
+.theme-retro .mono,
+.theme-retro .vps-overview-value--retro {
+  font-family: 'Courier New', 'Courier', monospace;
+}
+
+/* Buttons - 复古按钮 */
+.theme-retro .vps-btn,
+.theme-retro button {
+  border: 1px solid #93a1a1;
+  border-radius: 4px !important;
+  background: #eee8d5;
+  color: #657b83;
+  font-family: 'Merriweather', serif;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.1);
+}
+
+.theme-retro .vps-btn:hover,
+.theme-retro button:hover {
+  background: #cb4b16;
+  color: #fdf6e3;
+  border-color: #cb4b16;
+}
+
+/* Overview cards - 复古状态卡片 */
+.theme-retro .vps-overview-card--online-retro {
+  background: #fdf6e3;
+  border: 1px solid #93a1a1;
+  border-radius: 4px !important;
+  box-shadow: 4px 4px 0 rgba(133, 153, 0, 0.3);
+  border-left: 4px solid #859900;
+}
+
+.theme-retro .vps-overview-card--offline-retro {
+  background: #fdf6e3;
+  border: 1px solid #93a1a1;
+  border-radius: 4px !important;
+  box-shadow: 4px 4px 0 rgba(220, 50, 47, 0.3);
+  border-left: 4px solid #dc322f;
+}
+
+.theme-retro .vps-overview-card--download-retro {
+  background: #fdf6e3;
+  border: 1px solid #93a1a1;
+  border-radius: 4px !important;
+  box-shadow: 4px 4px 0 rgba(38, 139, 210, 0.3);
+  border-left: 4px solid #268bd2;
+}
+
+.theme-retro .vps-overview-card--upload-retro {
+  background: #fdf6e3;
+  border: 1px solid #93a1a1;
+  border-radius: 4px !important;
+  box-shadow: 4px 4px 0 rgba(133, 153, 0, 0.3);
+  border-left: 4px solid #859900;
+}
+
+/* Overview label colors - Solarized 色彩 */
+.theme-retro .vps-overview-label--online { 
+  color: #859900;
+  font-style: italic;
+}
+.theme-retro .vps-overview-label--offline { 
+  color: #dc322f;
+  font-style: italic;
+}
+.theme-retro .vps-overview-label--download { 
+  color: #268bd2;
+  font-style: italic;
+}
+.theme-retro .vps-overview-label--upload { 
+  color: #859900;
+  font-style: italic;
+}
+
+.theme-retro .vps-overview-value--retro { 
+  color: #073642;
+  font-family: 'Courier New', monospace;
+  font-size: 1.5rem;
+}
+
+/* Compact table styles - 打字机表格 */
+.theme-retro .vps-compact-header--retro { 
+  background: #eee8d5; 
+  color: #586e75; 
+  border-bottom: 2px solid #93a1a1;
+  border-radius: 4px 4px 0 0 !important;
+  font-family: 'Merriweather', serif;
+  font-style: italic;
+}
+
+.theme-retro .vps-compact-row--retro { 
+  background: #fdf6e3; 
+  border-bottom: 1px dashed #d3d0c2;
+  border-radius: 0 !important;
+}
+
+.theme-retro .vps-compact-row--retro:hover { 
+  background: #eee8d5;
+}
+
+.theme-retro .vps-compact-node-name--retro { 
+  color: #073642;
+  font-family: 'Merriweather', serif;
+  font-weight: 700;
+}
+
+.theme-retro .vps-compact-node-location--retro { 
+  color: #93a1a1;
+  font-style: italic;
+}
+
+.theme-retro .vps-compact-text--retro { 
+  color: #586e75;
+  font-family: 'Courier New', monospace;
+}
+
+.theme-retro .vps-compact-meter--retro { 
+  background: #eee8d5;
+  border: 1px solid #93a1a1;
+  border-radius: 4px !important;
+}
+
+.theme-retro .vps-compact-meter-text--retro { 
+  color: #073642;
+  font-family: 'Courier New', monospace;
+}
+
+/* Progress bars - 复古进度条 */
+.theme-retro .vps-resource-bar-track {
+  background: #eee8d5;
+  border: 1px solid #93a1a1;
+  border-radius: 4px !important;
+}
+
+.theme-retro .vps-resource-bar-fill {
+  border-radius: 4px !important;
+}
+
+/* 输入框 */
+.theme-retro input,
+.theme-retro select,
+.theme-retro textarea {
+  border: 1px solid #93a1a1;
+  border-radius: 4px !important;
+  background: #fdf6e3;
+  color: #657b83;
+  font-family: 'Courier New', monospace;
+}
+
+.theme-retro input:focus,
+.theme-retro select:focus,
+.theme-retro textarea:focus {
+  border-color: #b58900;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(181, 137, 0, 0.2);
+}
+
+/* 引用块 */
+.theme-retro blockquote {
+  border-left: 3px solid #cb4b16;
+  background: #eee8d5;
+  padding: 1rem;
+  font-style: italic;
+}

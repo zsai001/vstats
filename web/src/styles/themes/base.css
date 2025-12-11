@@ -1,0 +1,53 @@
+/* ========================================
+   Theme Base - Shared Utilities & Variables
+   ======================================== */
+
+/* Theme font variables - defaults */
+:root {
+  --theme-border-radius: 16px;
+  --theme-font-heading: "SF Pro Display", -apple-system, sans-serif;
+  --theme-font-body: "Inter", system-ui, sans-serif;
+  --theme-font-mono: "SF Mono", "Fira Code", monospace;
+}
+
+/* ========================================
+   Theme Utility Classes
+   ======================================== */
+.theme-accent {
+  color: var(--theme-accent);
+}
+
+.theme-accent-bg {
+  background-color: var(--theme-accent);
+}
+
+.theme-accent-border {
+  border-color: var(--theme-accent);
+}
+
+.theme-accent-glow {
+  box-shadow: 0 0 20px var(--theme-glow);
+}
+
+/* ========================================
+   Overview Card Base Labels
+   ======================================== */
+.vps-overview-label--online { color: #10b981; }
+.vps-overview-label--offline { color: #ef4444; }
+.vps-overview-label--download { color: #3b82f6; }
+.vps-overview-label--upload { color: #10b981; }
+
+/* ========================================
+   Overview Value Base Styles
+   ======================================== */
+.vps-overview-value--light,
+.vps-overview-value--midnight,
+.vps-overview-value--cyberpunk,
+.vps-overview-value--terminal,
+.vps-overview-value--glassmorphism,
+.vps-overview-value--daylight,
+.vps-overview-value--neumorphism,
+.vps-overview-value--brutalist,
+.vps-overview-value--minimal {
+  color: var(--text-primary);
+}

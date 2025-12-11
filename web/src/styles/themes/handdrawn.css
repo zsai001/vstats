@@ -1,0 +1,258 @@
+/* ========================================
+   Theme: Hand-drawn (手绘风)
+   Sketchy, comic, imperfect
+   特色：不规则手绘边框，涂鸦装饰，手写字体，纸张质感
+   ======================================== */
+.theme-handdrawn {
+  --theme-accent: #2c2c2c;
+  --theme-accent-hover: #000000;
+  --theme-accent-soft: rgba(0, 0, 0, 0.05);
+  --theme-glow: none;
+  
+  --bg-primary: #fffef8;
+  --bg-secondary: #fff9e8;
+  --bg-card: #fffef8;
+  --bg-input: #fffef8;
+  
+  --text-primary: #1a1a1a;
+  --text-secondary: #3a3a3a;
+  --text-tertiary: #5a5a5a;
+  --text-muted: #888888;
+  
+  --border-primary: #2c2c2c;
+  --border-secondary: #4a4a4a;
+  --border-hover: #000000;
+  
+  --page-bg-light: #fffef8;
+  
+  --card-bg-light: #fffef8;
+  --card-border-light: #2c2c2c;
+  --card-shadow-light: 3px 4px 0 rgba(0,0,0,0.15);
+  
+  --shadow-card: 3px 4px 0 rgba(0,0,0,0.15);
+  color-scheme: light;
+}
+
+/* 纸张纹理背景 */
+.theme-handdrawn {
+  background-image: 
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E"),
+    linear-gradient(#fffef8, #fff9e8);
+}
+
+/* Card styles - 手绘边框 */
+.theme-handdrawn .vps-card {
+  background: #fffef8;
+  border: 2.5px solid #2c2c2c;
+  border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+  box-shadow: 3px 4px 0 rgba(0,0,0,0.2);
+  transition: all 0.2s ease-in-out;
+  position: relative;
+}
+
+/* 涂鸦装饰角落 */
+.theme-handdrawn .vps-card::before {
+  content: '✦';
+  position: absolute;
+  top: -8px;
+  right: 10px;
+  font-size: 16px;
+  color: #ff6b6b;
+  transform: rotate(15deg);
+}
+
+.theme-handdrawn .vps-card::after {
+  content: '~';
+  position: absolute;
+  bottom: 5px;
+  left: 10px;
+  font-size: 20px;
+  color: #4ecdc4;
+  font-family: 'Patrick Hand', cursive;
+}
+
+.theme-handdrawn .vps-card:hover {
+  border-radius: 15px 225px 15px 255px/255px 15px 225px 15px;
+  transform: rotate(-0.5deg) scale(1.01);
+  box-shadow: 5px 6px 0 rgba(0,0,0,0.25);
+}
+
+/* Typography - 手写字体 */
+.theme-handdrawn {
+  font-family: 'Patrick Hand', 'Comic Sans MS', 'Segoe Script', cursive;
+}
+
+.theme-handdrawn h1,
+.theme-handdrawn h2,
+.theme-handdrawn h3,
+.theme-handdrawn .vps-card-title--light {
+  font-family: 'Patrick Hand', 'Comic Sans MS', cursive;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  position: relative;
+}
+
+/* 标题下划线装饰 */
+.theme-handdrawn h1::after,
+.theme-handdrawn h2::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 60%;
+  height: 3px;
+  background: 
+    linear-gradient(90deg, #ff6b6b 0%, #ff6b6b 30%, transparent 30%, transparent 35%, #4ecdc4 35%, #4ecdc4 65%, transparent 65%, transparent 70%, #ffe66d 70%);
+}
+
+/* Buttons - 手绘按钮 */
+.theme-handdrawn .vps-btn,
+.theme-handdrawn button {
+  border: 2.5px solid #2c2c2c;
+  border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+  font-family: 'Patrick Hand', cursive;
+  font-size: 1.1em;
+  background: #fffef8;
+  transition: all 0.2s;
+}
+
+.theme-handdrawn .vps-btn:hover,
+.theme-handdrawn button:hover {
+  border-radius: 15px 225px 15px 255px/255px 15px 225px 15px;
+  background: #ffe66d;
+  transform: rotate(1deg);
+}
+
+/* Overview cards - 彩色手绘边框 */
+.theme-handdrawn .vps-overview-card--online-handdrawn {
+  background: #fffef8;
+  border: 2.5px solid #2c2c2c;
+  border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+  box-shadow: 3px 4px 0 #4ecdc4;
+}
+
+.theme-handdrawn .vps-overview-card--offline-handdrawn {
+  background: #fffef8;
+  border: 2.5px solid #2c2c2c;
+  border-radius: 15px 225px 15px 255px/255px 15px 225px 15px;
+  box-shadow: 3px 4px 0 #ff6b6b;
+}
+
+.theme-handdrawn .vps-overview-card--download-handdrawn {
+  background: #fffef8;
+  border: 2.5px solid #2c2c2c;
+  border-radius: 225px 15px 255px 15px/15px 255px 15px 225px;
+  box-shadow: 3px 4px 0 #45b7d1;
+}
+
+.theme-handdrawn .vps-overview-card--upload-handdrawn {
+  background: #fffef8;
+  border: 2.5px solid #2c2c2c;
+  border-radius: 15px 255px 225px 15px/225px 15px 15px 255px;
+  box-shadow: 3px 4px 0 #96ceb4;
+}
+
+/* Overview label colors - 手绘风格标签 */
+.theme-handdrawn .vps-overview-label--online { 
+  color: #1a1a1a;
+  position: relative;
+}
+.theme-handdrawn .vps-overview-label--online::before {
+  content: '✓';
+  color: #4ecdc4;
+  margin-right: 4px;
+}
+
+.theme-handdrawn .vps-overview-label--offline { 
+  color: #1a1a1a; 
+}
+.theme-handdrawn .vps-overview-label--offline::before {
+  content: '✗';
+  color: #ff6b6b;
+  margin-right: 4px;
+}
+
+.theme-handdrawn .vps-overview-label--download { color: #1a1a1a; }
+.theme-handdrawn .vps-overview-label--upload { color: #1a1a1a; }
+
+.theme-handdrawn .vps-overview-value--handdrawn { 
+  color: #1a1a1a; 
+  font-family: 'Patrick Hand', 'Comic Sans MS', cursive;
+  font-size: 1.2em;
+}
+
+/* Compact table styles - 手绘表格 */
+.theme-handdrawn .vps-compact-header--handdrawn { 
+  background: #fff9e8; 
+  color: #3a3a3a; 
+  border-bottom: 2.5px dashed #2c2c2c; 
+  border-radius: 255px 15px 0 0/15px 225px 0 0;
+  font-family: 'Patrick Hand', cursive;
+}
+
+.theme-handdrawn .vps-compact-row--handdrawn { 
+  background: #fffef8; 
+  border-bottom: 1.5px dashed #aaa; 
+}
+
+.theme-handdrawn .vps-compact-row--handdrawn:hover { 
+  transform: rotate(-0.3deg) scale(1.005);
+  background: #fff9e8;
+}
+
+.theme-handdrawn .vps-compact-node-name--handdrawn { 
+  color: #1a1a1a;
+  font-family: 'Patrick Hand', cursive;
+  font-weight: 700;
+}
+
+.theme-handdrawn .vps-compact-node-location--handdrawn { 
+  color: #5a5a5a;
+  font-style: italic;
+}
+
+.theme-handdrawn .vps-compact-text--handdrawn { 
+  color: #3a3a3a;
+  font-family: 'Patrick Hand', cursive;
+}
+
+.theme-handdrawn .vps-compact-meter--handdrawn { 
+  background: #fffef8; 
+  border: 2px solid #2c2c2c; 
+  border-radius: 255px 15px 225px 15px/15px 225px 15px 255px; 
+}
+
+.theme-handdrawn .vps-compact-meter-text--handdrawn { 
+  color: #1a1a1a;
+  font-family: 'Patrick Hand', cursive;
+}
+
+/* Progress bars - 手绘进度条 */
+.theme-handdrawn .vps-resource-bar-track {
+  background: #fff9e8;
+  border: 2px solid #2c2c2c;
+  border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+}
+
+.theme-handdrawn .vps-resource-bar-fill {
+  border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+}
+
+/* 输入框 */
+.theme-handdrawn input,
+.theme-handdrawn select,
+.theme-handdrawn textarea {
+  border: 2px solid #2c2c2c;
+  border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+  background: #fffef8;
+  color: #1a1a1a;
+  font-family: 'Patrick Hand', cursive;
+}
+
+.theme-handdrawn input:focus,
+.theme-handdrawn select:focus,
+.theme-handdrawn textarea:focus {
+  border-radius: 15px 225px 15px 255px/255px 15px 225px 15px;
+  outline: none;
+  box-shadow: 3px 3px 0 #4ecdc4;
+}
