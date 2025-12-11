@@ -90,10 +90,27 @@ function handleGitHubStart(url: URL, env: Env): Response {
   }
 
   // Validate redirect_uri is a valid URL
+  let redirectUrl: URL;
   try {
-    new URL(redirectUri);
+    redirectUrl = new URL(redirectUri);
   } catch {
     return new Response('Invalid redirect_uri', { status: 400 });
+  }
+
+  // Allow HTTP only for localhost/127.0.0.1 (for local development)
+  // Production redirect_uris should use HTTPS
+  const isLocalhost = redirectUrl.hostname === 'localhost' || 
+                      redirectUrl.hostname === '127.0.0.1' ||
+                      redirectUrl.hostname.startsWith('192.168.') ||
+                      redirectUrl.hostname.startsWith('10.') ||
+                      redirectUrl.hostname.endsWith('.local');
+  
+  if (redirectUrl.protocol !== 'https:' && redirectUrl.protocol !== 'http:') {
+    return new Response('redirect_uri must use http or https protocol', { status: 400 });
+  }
+
+  if (redirectUrl.protocol === 'http:' && !isLocalhost) {
+    return new Response('redirect_uri must use https protocol for non-localhost addresses', { status: 400 });
   }
 
   // Store the original redirect_uri in state (base64 encoded)
@@ -103,6 +120,8 @@ function handleGitHubStart(url: URL, env: Env): Response {
     provider: 'github'
   }));
 
+  // Use the same protocol as the incoming request for callback URL
+  // This allows HTTP for local development (localhost)
   const githubAuthUrl = new URL('https://github.com/login/oauth/authorize');
   githubAuthUrl.searchParams.set('client_id', env.GITHUB_CLIENT_ID);
   githubAuthUrl.searchParams.set('redirect_uri', `${url.origin}/oauth/github/callback`);
@@ -211,10 +230,27 @@ function handleGoogleStart(url: URL, env: Env): Response {
   }
 
   // Validate redirect_uri is a valid URL
+  let redirectUrl: URL;
   try {
-    new URL(redirectUri);
+    redirectUrl = new URL(redirectUri);
   } catch {
     return new Response('Invalid redirect_uri', { status: 400 });
+  }
+
+  // Allow HTTP only for localhost/127.0.0.1 (for local development)
+  // Production redirect_uris should use HTTPS
+  const isLocalhost = redirectUrl.hostname === 'localhost' || 
+                      redirectUrl.hostname === '127.0.0.1' ||
+                      redirectUrl.hostname.startsWith('192.168.') ||
+                      redirectUrl.hostname.startsWith('10.') ||
+                      redirectUrl.hostname.endsWith('.local');
+  
+  if (redirectUrl.protocol !== 'https:' && redirectUrl.protocol !== 'http:') {
+    return new Response('redirect_uri must use http or https protocol', { status: 400 });
+  }
+
+  if (redirectUrl.protocol === 'http:' && !isLocalhost) {
+    return new Response('redirect_uri must use https protocol for non-localhost addresses', { status: 400 });
   }
 
   // Store the original redirect_uri in state (base64 encoded)
@@ -224,6 +260,8 @@ function handleGoogleStart(url: URL, env: Env): Response {
     provider: 'google'
   }));
 
+  // Use the same protocol as the incoming request for callback URL
+  // This allows HTTP for local development (localhost)
   const googleAuthUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   googleAuthUrl.searchParams.set('client_id', env.GOOGLE_CLIENT_ID);
   googleAuthUrl.searchParams.set('redirect_uri', `${url.origin}/oauth/google/callback`);

@@ -134,6 +134,14 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 
+	// Trust proxy headers (for X-Forwarded-Proto, X-Forwarded-For, etc.)
+	// This allows the app to correctly detect HTTPS when behind nginx
+	r.SetTrustedProxies([]string{"127.0.0.1", "::1"}) // Trust localhost proxies
+	// Also trust all proxies if VSTATS_TRUST_ALL_PROXIES is set
+	if os.Getenv("VSTATS_TRUST_ALL_PROXIES") == "true" {
+		r.SetTrustedProxies(nil) // nil means trust all proxies
+	}
+
 	// CORS middleware
 	r.Use(func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")

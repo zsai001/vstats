@@ -459,14 +459,19 @@ func (s *AppState) ProxyOAuthCallback(c *gin.Context) {
 
 func getCallbackURL(c *gin.Context, provider string) string {
 	protocol := "https"
-	if c.Request.TLS == nil {
-		// Check X-Forwarded-Proto header
-		if proto := c.GetHeader("X-Forwarded-Proto"); proto != "" {
-			protocol = proto
-		} else if strings.Contains(c.Request.Host, "localhost") || strings.HasPrefix(c.Request.Host, "127.") {
-			protocol = "http"
-		}
+
+	// Priority: X-Forwarded-Proto header > TLS detection > localhost fallback
+	if proto := c.GetHeader("X-Forwarded-Proto"); proto != "" {
+		// Trust the X-Forwarded-Proto header from nginx
+		protocol = proto
+	} else if c.Request.TLS != nil {
+		// Direct TLS connection
+		protocol = "https"
+	} else if strings.Contains(c.Request.Host, "localhost") || strings.HasPrefix(c.Request.Host, "127.") {
+		// Localhost fallback
+		protocol = "http"
 	}
+
 	return fmt.Sprintf("%s://%s/api/auth/oauth/%s/callback", protocol, c.Request.Host, provider)
 }
 

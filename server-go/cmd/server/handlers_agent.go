@@ -126,9 +126,18 @@ func (s *AppState) servePowerShellScript(c *gin.Context, filename string) {
 func (s *AppState) GetInstallCommand(c *gin.Context) {
 	host := c.Request.Host
 	protocol := "https"
-	if host == "localhost" || host[:4] == "127." || host[:10] == "localhost:" {
+
+	// Priority: X-Forwarded-Proto header > TLS detection > localhost fallback
+	if proto := c.GetHeader("X-Forwarded-Proto"); proto != "" {
+		// Trust the X-Forwarded-Proto header from nginx
+		protocol = proto
+	} else if c.Request.TLS != nil {
+		// Direct TLS connection
+		protocol = "https"
+	} else if host == "localhost" || (len(host) >= 4 && host[:4] == "127.") || (len(host) >= 10 && host[:10] == "localhost:") {
 		protocol = "http"
 	}
+
 	baseURL := fmt.Sprintf("%s://%s", protocol, host)
 
 	authHeader := c.GetHeader("Authorization")
