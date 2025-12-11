@@ -62,7 +62,7 @@ export const THEMES: ThemeConfig[] = [
     name: 'Midnight Tech',
     nameZh: '午夜科技',
     description: 'Classic dark tech theme with blue accents',
-    descriptionZh: '深邃蓝黑渐变，科技蓝光，毛玻璃卡片',
+    descriptionZh: '经典深色科技风，蓝色强调',
     isDark: true,
     style: 'glass',
     preview: {
@@ -84,14 +84,14 @@ export const THEMES: ThemeConfig[] = [
     name: 'Daylight',
     nameZh: '晴空日光',
     description: 'Clean and bright with soft shadows',
-    descriptionZh: '纯净白色，天蓝渐变，柔和阴影',
+    descriptionZh: '清新明亮，柔和阴影',
     isDark: false,
     style: 'flat',
     preview: {
       primary: '#ffffff',
       secondary: '#f8fafc',
       accent: '#0ea5e9',
-      background: '#e0f2fe'
+      background: '#f1f5f9'
     },
     fonts: {
       heading: '"Plus Jakarta Sans", sans-serif',
@@ -106,7 +106,7 @@ export const THEMES: ThemeConfig[] = [
     name: 'Cyberpunk 2077',
     nameZh: '赛博朋克',
     description: 'Neon lights, glitch effects, futuristic',
-    descriptionZh: '霓虹渐变边框，故障艺术，扫描动画',
+    descriptionZh: '霓虹灯光，故障艺术，未来感',
     isDark: true,
     style: 'brutalist',
     preview: {
@@ -128,14 +128,14 @@ export const THEMES: ThemeConfig[] = [
     name: 'Hacker Terminal',
     nameZh: '黑客终端',
     description: 'Retro terminal with scanlines',
-    descriptionZh: '纯绿磷光，CRT扫描线，光标闪烁',
+    descriptionZh: '复古终端，扫描线效果',
     isDark: true,
     style: 'minimal',
     preview: {
-      primary: '#050505',
-      secondary: '#0a0a0a',
+      primary: '#0d0d0d',
+      secondary: '#1a1a1a',
       accent: '#00ff41',
-      background: '#050505'
+      background: '#0d0d0d'
     },
     fonts: {
       heading: '"VT323", "Fira Code", monospace',
@@ -150,14 +150,14 @@ export const THEMES: ThemeConfig[] = [
     name: 'Glass UI',
     nameZh: '毛玻璃',
     description: 'Frosted glass with vibrant backgrounds',
-    descriptionZh: '强烈毛玻璃，彩色渐变，浮动光斑',
+    descriptionZh: '磨砂玻璃效果，鲜艳背景',
     isDark: true,
     style: 'glass',
     preview: {
-      primary: 'rgba(255,255,255,0.12)',
-      secondary: 'rgba(255,255,255,0.08)',
+      primary: 'rgba(255,255,255,0.1)',
+      secondary: 'rgba(255,255,255,0.05)',
       accent: '#a855f7',
-      background: '#667eea'
+      background: '#1e1b4b'
     },
     fonts: {
       heading: '"Poppins", sans-serif',
@@ -172,7 +172,7 @@ export const THEMES: ThemeConfig[] = [
     name: 'Soft UI',
     nameZh: '新拟态',
     description: 'Soft shadows and embossed elements',
-    descriptionZh: '柔和凸起阴影，同色背景，无边框',
+    descriptionZh: '柔和阴影，浮雕效果',
     isDark: false,
     style: 'neumorphic',
     preview: {
@@ -194,7 +194,7 @@ export const THEMES: ThemeConfig[] = [
     name: 'Brutalist',
     nameZh: '野兽派',
     description: 'Bold, raw, unapologetic design',
-    descriptionZh: '纯黑白极端对比，超粗边框，硬阴影',
+    descriptionZh: '大胆粗犷，原始风格',
     isDark: false,
     style: 'brutalist',
     preview: {
@@ -216,7 +216,7 @@ export const THEMES: ThemeConfig[] = [
     name: 'Minimal Zen',
     nameZh: '极简禅意',
     description: 'Maximum whitespace, minimal elements',
-    descriptionZh: '大量留白，极细边框，微妙阴影',
+    descriptionZh: '大量留白，极致简约',
     isDark: false,
     style: 'minimal',
     preview: {
@@ -230,7 +230,7 @@ export const THEMES: ThemeConfig[] = [
       body: '"DM Sans", system-ui, sans-serif',
       mono: '"DM Mono", monospace'
     },
-    borderRadius: '6px',
+    borderRadius: '8px',
     cardStyle: 'minimal'
   },
   {
@@ -238,7 +238,7 @@ export const THEMES: ThemeConfig[] = [
     name: 'Retro',
     nameZh: '复古风',
     description: 'Nostalgic warm colors and serif fonts',
-    descriptionZh: 'Solarized配色，打字机字体，纸张纹理',
+    descriptionZh: '怀旧暖色，衬线字体',
     isDark: false,
     style: 'flat',
     preview: {
@@ -260,21 +260,21 @@ export const THEMES: ThemeConfig[] = [
     name: 'Tape Futurism',
     nameZh: '磁带未来',
     description: 'Analog cassette aesthetics',
-    descriptionZh: '磁带纹理，VU表，暖色调，卷轴装饰',
+    descriptionZh: '模拟磁带美学',
     isDark: true,
     style: 'flat',
     preview: {
-      primary: '#1e1814',
-      secondary: '#2b211c',
+      primary: '#2b211e',
+      secondary: '#382b26',
       accent: '#d75f27',
-      background: '#1e1814'
+      background: '#2b211e'
     },
     fonts: {
       heading: '"Space Mono", monospace',
       body: '"Space Mono", monospace',
       mono: '"Space Mono", monospace'
     },
-    borderRadius: '8px',
+    borderRadius: '12px',
     cardStyle: 'tape'
   },
   {
@@ -282,14 +282,14 @@ export const THEMES: ThemeConfig[] = [
     name: 'Hand-drawn',
     nameZh: '手绘风',
     description: 'Sketchy borders and comic fonts',
-    descriptionZh: '不规则手绘边框，涂鸦装饰，手写字体',
+    descriptionZh: '涂鸦边框，手写字体',
     isDark: false,
     style: 'flat',
     preview: {
-      primary: '#fffef8',
-      secondary: '#fff9e8',
-      accent: '#2c2c2c',
-      background: '#fffef8'
+      primary: '#ffffff',
+      secondary: '#f9f9f9',
+      accent: '#444444',
+      background: '#ffffff'
     },
     fonts: {
       heading: '"Patrick Hand", "Comic Sans MS", sans-serif',
@@ -304,14 +304,14 @@ export const THEMES: ThemeConfig[] = [
     name: 'Memphis',
     nameZh: '孟菲斯',
     description: 'Geometric shapes and vibrant colors',
-    descriptionZh: '几何图形装饰，鲜艳撞色，波普艺术',
+    descriptionZh: '几何图形，活力色彩',
     isDark: false,
     style: 'flat',
     preview: {
-      primary: '#fff5f8',
+      primary: '#fff0f5',
       secondary: '#ffffff',
       accent: '#ff00cc',
-      background: '#fff5f8'
+      background: '#fff0f5'
     },
     fonts: {
       heading: '"Work Sans", sans-serif',
@@ -326,21 +326,21 @@ export const THEMES: ThemeConfig[] = [
     name: 'Skeuomorphic',
     nameZh: '拟物风',
     description: 'Realistic textures and depth',
-    descriptionZh: '真实质感，光泽渐变，立体按钮，iOS6风格',
+    descriptionZh: '真实质感，深度效果',
     isDark: false,
     style: 'neumorphic',
     preview: {
-      primary: '#f5f5f5',
-      secondary: '#e0e0e0',
-      accent: '#2e7d32',
-      background: '#c0c0c0'
+      primary: '#e0e0e0',
+      secondary: '#dcdcdc',
+      accent: '#333333',
+      background: '#dcdcdc'
     },
     fonts: {
       heading: '"Helvetica Neue", sans-serif',
       body: '"Helvetica Neue", sans-serif',
       mono: '"Menlo", monospace'
     },
-    borderRadius: '10px',
+    borderRadius: '12px',
     cardStyle: 'skeuomorphic'
   },
   {
@@ -348,14 +348,14 @@ export const THEMES: ThemeConfig[] = [
     name: 'Aesthetic',
     nameZh: '少女审美',
     description: 'Soft pastels and dreamy vibes',
-    descriptionZh: '梦幻渐变背景，柔和粉彩，星星装饰',
+    descriptionZh: '柔和粉彩，梦幻氛围',
     isDark: false,
     style: 'glass',
     preview: {
-      primary: 'rgba(255,255,255,0.65)',
-      secondary: '#ffe4ec',
-      accent: '#ff69b4',
-      background: '#ffecd2'
+      primary: '#fff0f5',
+      secondary: '#ffe4e1',
+      accent: '#ffb6c1',
+      background: '#fff0f5'
     },
     fonts: {
       heading: '"Quicksand", sans-serif',
@@ -370,14 +370,14 @@ export const THEMES: ThemeConfig[] = [
     name: 'Magazine',
     nameZh: '杂志排版',
     description: 'Bold typography and grid layout',
-    descriptionZh: '大胆排版，衬线字体，分栏线，报纸风格',
+    descriptionZh: '大胆排版，网格布局',
     isDark: false,
     style: 'flat',
     preview: {
       primary: '#ffffff',
-      secondary: '#fafaf8',
-      accent: '#cc0000',
-      background: '#fafaf8'
+      secondary: '#f2f2f2',
+      accent: '#000000',
+      background: '#ffffff'
     },
     fonts: {
       heading: '"Playfair Display", serif',
@@ -392,12 +392,12 @@ export const THEMES: ThemeConfig[] = [
     name: 'Industrial',
     nameZh: '工业科技',
     description: 'Rugged, metallic, functional',
-    descriptionZh: '警示条纹，金属质感，铆钉装饰，锐角设计',
+    descriptionZh: '粗犷金属，功能主义',
     isDark: true,
     style: 'brutalist',
     preview: {
-      primary: '#202020',
-      secondary: '#252525',
+      primary: '#2a2a2a',
+      secondary: '#333333',
       accent: '#f59e0b',
       background: '#1a1a1a'
     },
