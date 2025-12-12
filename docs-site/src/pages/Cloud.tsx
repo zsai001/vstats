@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Cloud, Shield, Zap, Globe, LogOut, Rocket, Send, Server, BarChart3, Bell, Clock, Sparkles } from 'lucide-react';
+import { Cloud, Shield, Zap, Globe, LogOut, Rocket, Send, Server, BarChart3, Bell, Clock, Sparkles, Users, MapPin, Activity, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
 import * as api from '../api/cloud';
+import type { AuthOverallStats, AuthDailyStats, AuthSiteStats } from '../api/cloud';
 
 // GitHub Icon SVG
 const GitHubIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
@@ -33,6 +34,38 @@ export default function CloudPage() {
   const [emailContent, setEmailContent] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [sendResult, setSendResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  // Auth stats state
+  const [authStats, setAuthStats] = useState<AuthOverallStats | null>(null);
+  const [dailyStats, setDailyStats] = useState<AuthDailyStats[]>([]);
+  const [siteStats, setSiteStats] = useState<AuthSiteStats[]>([]);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [showDailyDetails, setShowDailyDetails] = useState(false);
+  const [showSiteDetails, setShowSiteDetails] = useState(false);
+
+  // Fetch auth stats for admin
+  useEffect(() => {
+    if (user && isUserAdmin) {
+      const fetchStats = async () => {
+        setStatsLoading(true);
+        try {
+          const [overall, daily, sites] = await Promise.all([
+            api.getAuthOverallStats(),
+            api.getAuthDailyStats(30),
+            api.getAuthSiteStats(50),
+          ]);
+          setAuthStats(overall);
+          setDailyStats(daily.stats || []);
+          setSiteStats(sites.sites || []);
+        } catch (err) {
+          console.error('Failed to fetch auth stats:', err);
+        } finally {
+          setStatsLoading(false);
+        }
+      };
+      fetchStats();
+    }
+  }, [user, isUserAdmin]);
 
   // OAuth login
   const handleOAuthLogin = async (provider: 'github' | 'google') => {
@@ -233,12 +266,235 @@ export default function CloudPage() {
               ))}
             </motion.div>
 
-            {/* Admin Panel - Broadcast Email */}
+            {/* Admin Panel - Auth Statistics */}
             {isUserAdmin && (
               <motion.div
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
+                className="relative mb-8"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-3xl blur-xl opacity-10" />
+                <div className="relative bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-slate-700/50 p-8 shadow-xl">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                      <Activity className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                        {t('userCenter.authStats', 'OAuth Statistics')}
+                      </h2>
+                      <p className="text-slate-500 dark:text-slate-400 text-sm">
+                        {t('userCenter.authStatsDesc', 'OAuth authorization reports from all sites')}
+                      </p>
+                    </div>
+                  </div>
+
+                  {statsLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  ) : authStats ? (
+                    <div className="space-y-6">
+                      {/* Overall Stats Grid */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl p-4 border border-emerald-200/50 dark:border-emerald-800/50">
+                          <div className="flex items-center gap-2 mb-2">
+                            <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                            <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">
+                              {t('userCenter.totalSites', 'Total Sites')}
+                            </span>
+                          </div>
+                          <div className="text-3xl font-bold text-emerald-700 dark:text-emerald-300">
+                            {authStats.total_sites}
+                          </div>
+                          <div className="text-xs text-emerald-600/70 dark:text-emerald-400/70 mt-1">
+                            +{authStats.today_sites} {t('userCenter.today', 'today')}
+                          </div>
+                        </div>
+
+                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-4 border border-blue-200/50 dark:border-blue-800/50">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                            <span className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide">
+                              {t('userCenter.totalUsers', 'Total Users')}
+                            </span>
+                          </div>
+                          <div className="text-3xl font-bold text-blue-700 dark:text-blue-300">
+                            {authStats.total_users}
+                          </div>
+                          <div className="text-xs text-blue-600/70 dark:text-blue-400/70 mt-1">
+                            +{authStats.today_users} {t('userCenter.today', 'today')}
+                          </div>
+                        </div>
+
+                        <div className="bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 rounded-2xl p-4 border border-violet-200/50 dark:border-violet-800/50">
+                          <div className="flex items-center gap-2 mb-2">
+                            <TrendingUp className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                            <span className="text-xs font-medium text-violet-600 dark:text-violet-400 uppercase tracking-wide">
+                              {t('userCenter.totalAuths', 'Total Auths')}
+                            </span>
+                          </div>
+                          <div className="text-3xl font-bold text-violet-700 dark:text-violet-300">
+                            {authStats.total_auths}
+                          </div>
+                          <div className="text-xs text-violet-600/70 dark:text-violet-400/70 mt-1">
+                            +{authStats.today_auths} {t('userCenter.today', 'today')}
+                          </div>
+                        </div>
+
+                        <div className="bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-800/50 dark:to-gray-800/50 rounded-2xl p-4 border border-slate-200/50 dark:border-slate-700/50">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Shield className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                            <span className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wide">
+                              {t('userCenter.providers', 'Providers')}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1.5">
+                              <GitHubIcon className="w-4 h-4" />
+                              <span className="text-lg font-bold text-slate-700 dark:text-slate-300">{authStats.github_users}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <GoogleIcon className="w-4 h-4" />
+                              <span className="text-lg font-bold text-slate-700 dark:text-slate-300">{authStats.google_users}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Daily Stats */}
+                      {dailyStats.length > 0 && (
+                        <div className="bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 overflow-hidden">
+                          <button
+                            onClick={() => setShowDailyDetails(!showDailyDetails)}
+                            className="w-full flex items-center justify-between p-4 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <BarChart3 className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                              <span className="font-semibold text-slate-700 dark:text-slate-300">
+                                {t('userCenter.dailyStats', 'Daily Statistics')}
+                              </span>
+                              <span className="text-xs text-slate-500 px-2 py-0.5 bg-slate-200 dark:bg-slate-700 rounded-full">
+                                {dailyStats.length} {t('userCenter.days', 'days')}
+                              </span>
+                            </div>
+                            {showDailyDetails ? (
+                              <ChevronUp className="w-5 h-5 text-slate-500" />
+                            ) : (
+                              <ChevronDown className="w-5 h-5 text-slate-500" />
+                            )}
+                          </button>
+                          
+                          {showDailyDetails && (
+                            <div className="border-t border-slate-200/50 dark:border-slate-700/50 max-h-80 overflow-y-auto">
+                              <table className="w-full text-sm">
+                                <thead className="bg-slate-100/80 dark:bg-slate-800/80 sticky top-0">
+                                  <tr className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                    <th className="px-4 py-3">{t('userCenter.date', 'Date')}</th>
+                                    <th className="px-4 py-3 text-center">{t('userCenter.sites', 'Sites')}</th>
+                                    <th className="px-4 py-3 text-center">{t('userCenter.users', 'Users')}</th>
+                                    <th className="px-4 py-3 text-center">{t('userCenter.auths', 'Auths')}</th>
+                                    <th className="px-4 py-3 text-center">GitHub</th>
+                                    <th className="px-4 py-3 text-center">Google</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-200/50 dark:divide-slate-700/50">
+                                  {dailyStats.map((day) => (
+                                    <tr key={day.date} className="hover:bg-slate-100/50 dark:hover:bg-slate-800/30 transition-colors">
+                                      <td className="px-4 py-3 font-medium text-slate-700 dark:text-slate-300">{day.date}</td>
+                                      <td className="px-4 py-3 text-center text-emerald-600 dark:text-emerald-400">{day.unique_sites}</td>
+                                      <td className="px-4 py-3 text-center text-blue-600 dark:text-blue-400">{day.unique_users}</td>
+                                      <td className="px-4 py-3 text-center text-violet-600 dark:text-violet-400">{day.total_auths}</td>
+                                      <td className="px-4 py-3 text-center text-slate-600 dark:text-slate-400">{day.github_users}</td>
+                                      <td className="px-4 py-3 text-center text-slate-600 dark:text-slate-400">{day.google_users}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Site Stats */}
+                      {siteStats.length > 0 && (
+                        <div className="bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 overflow-hidden">
+                          <button
+                            onClick={() => setShowSiteDetails(!showSiteDetails)}
+                            className="w-full flex items-center justify-between p-4 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <MapPin className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                              <span className="font-semibold text-slate-700 dark:text-slate-300">
+                                {t('userCenter.siteStats', 'Site Statistics')}
+                              </span>
+                              <span className="text-xs text-slate-500 px-2 py-0.5 bg-slate-200 dark:bg-slate-700 rounded-full">
+                                {siteStats.length} {t('userCenter.sites', 'sites')}
+                              </span>
+                            </div>
+                            {showSiteDetails ? (
+                              <ChevronUp className="w-5 h-5 text-slate-500" />
+                            ) : (
+                              <ChevronDown className="w-5 h-5 text-slate-500" />
+                            )}
+                          </button>
+                          
+                          {showSiteDetails && (
+                            <div className="border-t border-slate-200/50 dark:border-slate-700/50 max-h-80 overflow-y-auto">
+                              <table className="w-full text-sm">
+                                <thead className="bg-slate-100/80 dark:bg-slate-800/80 sticky top-0">
+                                  <tr className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                    <th className="px-4 py-3">{t('userCenter.site', 'Site')}</th>
+                                    <th className="px-4 py-3 text-center">{t('userCenter.users', 'Users')}</th>
+                                    <th className="px-4 py-3 text-center">{t('userCenter.auths', 'Auths')}</th>
+                                    <th className="px-4 py-3 text-center">{t('userCenter.activeDays', 'Active Days')}</th>
+                                    <th className="px-4 py-3">{t('userCenter.lastSeen', 'Last Seen')}</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-200/50 dark:divide-slate-700/50">
+                                  {siteStats.map((site) => (
+                                    <tr key={site.site_host} className="hover:bg-slate-100/50 dark:hover:bg-slate-800/30 transition-colors">
+                                      <td className="px-4 py-3">
+                                        <a 
+                                          href={site.site_url} 
+                                          target="_blank" 
+                                          rel="noopener noreferrer"
+                                          className="font-medium text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                                        >
+                                          {site.site_host}
+                                        </a>
+                                      </td>
+                                      <td className="px-4 py-3 text-center text-blue-600 dark:text-blue-400">{site.unique_users}</td>
+                                      <td className="px-4 py-3 text-center text-violet-600 dark:text-violet-400">{site.total_auths}</td>
+                                      <td className="px-4 py-3 text-center text-slate-600 dark:text-slate-400">{site.active_days}</td>
+                                      <td className="px-4 py-3 text-xs text-slate-500">
+                                        {new Date(site.last_seen).toLocaleString()}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                      {t('userCenter.noStatsData', 'No statistics data available')}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Admin Panel - Broadcast Email */}
+            {isUserAdmin && (
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
                 className="relative"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-amber-500 to-orange-500 rounded-3xl blur-xl opacity-10" />

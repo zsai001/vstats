@@ -172,6 +172,71 @@ export async function getServerHistory(id: string, range: '1h' | '24h' | '7d' | 
 }
 
 // ============================================================================
+// Auth Reports API (Admin)
+// ============================================================================
+
+export interface AuthDailyStats {
+  date: string;
+  unique_sites: number;
+  unique_users: number;
+  total_auths: number;
+  github_users: number;
+  google_users: number;
+}
+
+export interface AuthSiteStats {
+  site_host: string;
+  site_url: string;
+  unique_users: number;
+  total_auths: number;
+  first_seen: string;
+  last_seen: string;
+  active_days: number;
+}
+
+export interface AuthOverallStats {
+  total_sites: number;
+  total_users: number;
+  total_auths: number;
+  today_sites: number;
+  today_users: number;
+  today_auths: number;
+  github_users: number;
+  google_users: number;
+}
+
+export interface AuthReport {
+  id: number;
+  site_url: string;
+  site_host: string;
+  provider: string;
+  username: string;
+  ip_address?: string;
+  user_agent?: string;
+  reported_at: string;
+}
+
+export async function getAuthOverallStats(): Promise<AuthOverallStats> {
+  return request('/admin/auth-stats');
+}
+
+export async function getAuthDailyStats(days: number = 30): Promise<{ stats: AuthDailyStats[] }> {
+  return request(`/admin/auth-stats/daily?days=${days}`);
+}
+
+export async function getAuthSiteStats(limit: number = 100): Promise<{ sites: AuthSiteStats[] }> {
+  return request(`/admin/auth-stats/sites?limit=${limit}`);
+}
+
+export async function getAuthUsersBySite(siteHost: string, limit: number = 100): Promise<{ reports: AuthReport[] }> {
+  return request(`/admin/auth-stats/sites/${encodeURIComponent(siteHost)}?limit=${limit}`);
+}
+
+export async function getAuthUsersByDate(date: string, limit: number = 100): Promise<{ reports: AuthReport[] }> {
+  return request(`/admin/auth-stats/date/${date}?limit=${limit}`);
+}
+
+// ============================================================================
 // WebSocket
 // ============================================================================
 
