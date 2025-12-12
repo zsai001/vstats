@@ -263,10 +263,8 @@ func (s *AppState) HandleAgentWS(c *gin.Context) {
 
 		case "metrics":
 			if authenticatedServerID != "" && agentMsg.Metrics != nil {
-				// Store to database
-				if s.DB != nil {
-					go StoreMetrics(s.DB, authenticatedServerID, agentMsg.Metrics)
-				}
+				// Store to database asynchronously via channel queue
+				StoreMetricsAsync(authenticatedServerID, agentMsg.Metrics)
 
 				// Determine IP address
 				agentIP := clientIP
