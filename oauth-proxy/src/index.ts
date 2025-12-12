@@ -42,7 +42,7 @@ export default {
 
       // GitHub OAuth callback
       if (path === '/oauth/github/callback') {
-        return handleGitHubCallback(url, env);
+        return await handleGitHubCallback(url, env);
       }
 
       // Google OAuth start
@@ -52,7 +52,7 @@ export default {
 
       // Google OAuth callback
       if (path === '/oauth/google/callback') {
-        return handleGoogleCallback(url, env);
+        return await handleGoogleCallback(url, env);
       }
 
       // Health check
@@ -167,10 +167,29 @@ async function handleGitHubCallback(url: URL, env: Env): Promise<Response> {
     }),
   });
 
-  const tokenData = await tokenResponse.json() as { access_token?: string; error?: string };
+  const tokenText = await tokenResponse.text();
+  
+  if (!tokenResponse.ok) {
+    console.error('GitHub token exchange failed:', tokenResponse.status, tokenText);
+    return redirectWithError(proxyState, `GitHub token exchange failed: ${tokenResponse.status}`);
+  }
+
+  let tokenData: { access_token?: string; error?: string; error_description?: string };
+  try {
+    tokenData = JSON.parse(tokenText);
+  } catch (e) {
+    console.error('Failed to parse token response:', tokenText);
+    return redirectWithError(proxyState, 'Failed to parse GitHub token response');
+  }
+
+  if (tokenData.error) {
+    console.error('GitHub OAuth error:', tokenData.error, tokenData.error_description);
+    return redirectWithError(proxyState, `GitHub OAuth error: ${tokenData.error_description || tokenData.error}`);
+  }
 
   if (!tokenData.access_token) {
-    return redirectWithError(proxyState, `Failed to get access token: ${tokenData.error || 'unknown error'}`);
+    console.error('No access token in response:', JSON.stringify(tokenData));
+    return redirectWithError(proxyState, 'Failed to get access token from GitHub');
   }
 
   // Get user info
@@ -182,26 +201,47 @@ async function handleGitHubCallback(url: URL, env: Env): Promise<Response> {
     },
   });
 
-  const userData = await userResponse.json() as { login?: string; email?: string };
+  const userText = await userResponse.text();
+  
+  if (!userResponse.ok) {
+    console.error('GitHub user fetch failed:', userResponse.status, userText);
+    return redirectWithError(proxyState, `Failed to get GitHub user info: ${userResponse.status}`);
+  }
+
+  let userData: { login?: string; email?: string };
+  try {
+    userData = JSON.parse(userText);
+  } catch (e) {
+    console.error('Failed to parse user response:', userText);
+    return redirectWithError(proxyState, 'Failed to parse GitHub user response');
+  }
 
   if (!userData.login) {
-    return redirectWithError(proxyState, 'Failed to get user info');
+    console.error('No login in user data:', userText);
+    return redirectWithError(proxyState, 'Failed to get GitHub username');
   }
 
   // Try to get user's primary email if not public
   let userEmail = userData.email;
   if (!userEmail) {
-    const emailsResponse = await fetch('https://api.github.com/user/emails', {
-      headers: {
-        'Authorization': `Bearer ${tokenData.access_token}`,
-        'Accept': 'application/json',
-        'User-Agent': 'vStats-OAuth-Proxy',
-      },
-    });
-    const emails = await emailsResponse.json() as Array<{ email: string; primary: boolean; verified: boolean }>;
-    const primaryEmail = emails.find(e => e.primary && e.verified);
-    if (primaryEmail) {
-      userEmail = primaryEmail.email;
+    try {
+      const emailsResponse = await fetch('https://api.github.com/user/emails', {
+        headers: {
+          'Authorization': `Bearer ${tokenData.access_token}`,
+          'Accept': 'application/json',
+          'User-Agent': 'vStats-OAuth-Proxy',
+        },
+      });
+      if (emailsResponse.ok) {
+        const emails = await emailsResponse.json() as Array<{ email: string; primary: boolean; verified: boolean }>;
+        const primaryEmail = emails.find(e => e.primary && e.verified);
+        if (primaryEmail) {
+          userEmail = primaryEmail.email;
+        }
+      }
+    } catch (e) {
+      // Ignore email fetch errors - email is optional
+      console.warn('Failed to fetch user emails:', e);
     }
   }
 

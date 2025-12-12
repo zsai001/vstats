@@ -3,15 +3,111 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"sync"
 	"time"
 
 	_ "modernc.org/sqlite"
 )
 
+// DBWriter serializes all database write operations through a channel
+type DBWriter struct {
+	db       *sql.DB
+	writeCh  chan writeJob
+	done     chan struct{}
+	wg       sync.WaitGroup
+}
+
+type writeJob struct {
+	fn     func(*sql.DB) error
+	result chan error // nil for fire-and-forget
+}
+
+// Global DBWriter instance
+var dbWriter *DBWriter
+
+// NewDBWriter creates a new database writer with a buffered channel
+func NewDBWriter(db *sql.DB, bufferSize int) *DBWriter {
+	w := &DBWriter{
+		db:      db,
+		writeCh: make(chan writeJob, bufferSize),
+		done:    make(chan struct{}),
+	}
+	w.wg.Add(1)
+	go w.processWrites()
+	return w
+}
+
+// processWrites handles all write operations sequentially
+func (w *DBWriter) processWrites() {
+	defer w.wg.Done()
+	for {
+		select {
+		case job := <-w.writeCh:
+			err := job.fn(w.db)
+			if job.result != nil {
+				job.result <- err
+			} else if err != nil {
+				fmt.Printf("Database write error: %v\n", err)
+			}
+		case <-w.done:
+			// Drain remaining jobs before exiting
+			for {
+				select {
+				case job := <-w.writeCh:
+					err := job.fn(w.db)
+					if job.result != nil {
+						job.result <- err
+					}
+				default:
+					return
+				}
+			}
+		}
+	}
+}
+
+// WriteAsync queues a write operation (fire-and-forget)
+func (w *DBWriter) WriteAsync(fn func(*sql.DB) error) {
+	select {
+	case w.writeCh <- writeJob{fn: fn, result: nil}:
+	default:
+		fmt.Println("Warning: write queue full, dropping write")
+	}
+}
+
+// WriteSync queues a write operation and waits for result
+func (w *DBWriter) WriteSync(fn func(*sql.DB) error) error {
+	result := make(chan error, 1)
+	w.writeCh <- writeJob{fn: fn, result: result}
+	return <-result
+}
+
+// Close stops the writer and waits for pending writes
+func (w *DBWriter) Close() {
+	close(w.done)
+	w.wg.Wait()
+}
+
+// GetDB returns the underlying database for read operations
+func (w *DBWriter) GetDB() *sql.DB {
+	return w.db
+}
+
 func InitDatabase() (*sql.DB, error) {
-	db, err := sql.Open("sqlite", GetDBPath())
+	// Open database with busy_timeout as fallback
+	db, err := sql.Open("sqlite", GetDBPath()+"?_busy_timeout=5000")
 	if err != nil {
 		return nil, err
+	}
+
+	// Enable WAL mode for better concurrent read access
+	if _, err := db.Exec("PRAGMA journal_mode=WAL"); err != nil {
+		fmt.Printf("Warning: Failed to enable WAL mode: %v\n", err)
+	}
+
+	// Set synchronous to NORMAL for better performance while still being safe
+	if _, err := db.Exec("PRAGMA synchronous=NORMAL"); err != nil {
+		fmt.Printf("Warning: Failed to set synchronous mode: %v\n", err)
 	}
 
 	// Create tables
@@ -100,7 +196,32 @@ func InitDatabase() (*sql.DB, error) {
 	return db, nil
 }
 
+// StoreMetricsAsync queues metrics storage (fire-and-forget)
+func StoreMetricsAsync(serverID string, metrics *SystemMetrics) {
+	if dbWriter == nil {
+		return
+	}
+	// Copy data to avoid race conditions
+	m := *metrics
+	sid := serverID
+	dbWriter.WriteAsync(func(db *sql.DB) error {
+		return storeMetricsInternal(db, sid, &m)
+	})
+}
+
+// StoreMetrics stores metrics synchronously (legacy, for compatibility)
 func StoreMetrics(db *sql.DB, serverID string, metrics *SystemMetrics) error {
+	if dbWriter != nil {
+		m := *metrics
+		sid := serverID
+		return dbWriter.WriteSync(func(db *sql.DB) error {
+			return storeMetricsInternal(db, sid, &m)
+		})
+	}
+	return storeMetricsInternal(db, serverID, metrics)
+}
+
+func storeMetricsInternal(db *sql.DB, serverID string, metrics *SystemMetrics) error {
 	var diskUsage float32 = 0
 	if len(metrics.Disks) > 0 {
 		diskUsage = metrics.Disks[0].UsagePercent
@@ -168,6 +289,13 @@ func StoreMetrics(db *sql.DB, serverID string, metrics *SystemMetrics) error {
 }
 
 func AggregateHourly(db *sql.DB) error {
+	if dbWriter != nil {
+		return dbWriter.WriteSync(aggregateHourlyInternal)
+	}
+	return aggregateHourlyInternal(db)
+}
+
+func aggregateHourlyInternal(db *sql.DB) error {
 	hourAgo := time.Now().UTC().Add(-time.Hour)
 	hourStart := hourAgo.Format("2006-01-02T15:00:00Z")
 
@@ -191,6 +319,13 @@ func AggregateHourly(db *sql.DB) error {
 }
 
 func AggregateDaily(db *sql.DB) error {
+	if dbWriter != nil {
+		return dbWriter.WriteSync(aggregateDailyInternal)
+	}
+	return aggregateDailyInternal(db)
+}
+
+func aggregateDailyInternal(db *sql.DB) error {
 	yesterday := time.Now().UTC().AddDate(0, 0, -1).Format("2006-01-02")
 
 	_, err := db.Exec(`
@@ -214,6 +349,13 @@ func AggregateDaily(db *sql.DB) error {
 }
 
 func CleanupOldData(db *sql.DB) error {
+	if dbWriter != nil {
+		return dbWriter.WriteSync(cleanupOldDataInternal)
+	}
+	return cleanupOldDataInternal(db)
+}
+
+func cleanupOldDataInternal(db *sql.DB) error {
 	// Delete raw data older than 24 hours
 	cutoffRaw := time.Now().UTC().Add(-24 * time.Hour).Format(time.RFC3339)
 	if _, err := db.Exec("DELETE FROM metrics_raw WHERE timestamp < ?", cutoffRaw); err != nil {

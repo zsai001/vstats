@@ -83,6 +83,10 @@ func main() {
 	}
 	defer db.Close()
 
+	// Initialize the database writer for serialized writes
+	dbWriter = NewDBWriter(db, 1000) // Buffer up to 1000 write operations
+	defer dbWriter.Close()
+
 	fmt.Printf("📦 Database initialized: %s\n", GetDBPath())
 	fmt.Printf("⚙️  Config file: %s\n", GetConfigPath())
 
