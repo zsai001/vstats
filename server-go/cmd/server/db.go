@@ -113,6 +113,7 @@ func InitDatabase() (*sql.DB, error) {
 	// Create tables
 	_, err = db.Exec(`
 		-- Raw metrics (keep for 24 hours)
+		-- Note: bucket_5min column added via migration for existing databases
 		CREATE TABLE IF NOT EXISTS metrics_raw (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			server_id TEXT NOT NULL,
@@ -126,7 +127,6 @@ func InitDatabase() (*sql.DB, error) {
 			load_5 REAL NOT NULL,
 			load_15 REAL NOT NULL,
 			ping_ms REAL,
-			bucket_5min INTEGER,
 			created_at TEXT DEFAULT CURRENT_TIMESTAMP
 		);
 		
@@ -190,6 +190,7 @@ func InitDatabase() (*sql.DB, error) {
 		CREATE INDEX IF NOT EXISTS idx_metrics_daily_server_time ON metrics_daily(server_id, date);
 		
 		-- Ping metrics per target (keep for 24 hours)
+		-- Note: bucket_5min column added via migration for existing databases
 		CREATE TABLE IF NOT EXISTS ping_raw (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			server_id TEXT NOT NULL,
@@ -198,8 +199,7 @@ func InitDatabase() (*sql.DB, error) {
 			target_host TEXT NOT NULL,
 			latency_ms REAL,
 			packet_loss REAL NOT NULL DEFAULT 0,
-			status TEXT NOT NULL DEFAULT 'ok',
-			bucket_5min INTEGER
+			status TEXT NOT NULL DEFAULT 'ok'
 		);
 		
 		CREATE INDEX IF NOT EXISTS idx_ping_raw_server_time ON ping_raw(server_id, timestamp);
