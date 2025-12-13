@@ -278,9 +278,18 @@ func InitDatabase() (*sql.DB, error) {
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_metrics_raw_server_bucket ON metrics_raw(server_id, bucket_5min)")
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_ping_raw_server_bucket ON ping_raw(server_id, bucket_5min)")
 
-	// Backfill bucket for existing data - use 120 seconds (2 min) for 720 points over 24h
-	db.Exec("UPDATE metrics_raw SET bucket_5min = CAST(strftime('%s', timestamp) AS INTEGER) / 120 WHERE bucket_5min IS NULL OR bucket_5min > 100000000")
-	db.Exec("UPDATE ping_raw SET bucket_5min = CAST(strftime('%s', timestamp) AS INTEGER) / 120 WHERE bucket_5min IS NULL OR bucket_5min > 100000000")
+	// Backfill bucket for existing data - only if there are NULL values (check first for fast startup)
+	var needsBackfill5min int
+	db.QueryRow("SELECT 1 FROM metrics_raw WHERE bucket_5min IS NULL OR bucket_5min > 100000000 LIMIT 1").Scan(&needsBackfill5min)
+	if needsBackfill5min == 1 {
+		fmt.Println("⏳ Backfilling bucket_5min for metrics_raw (one-time migration)...")
+		db.Exec("UPDATE metrics_raw SET bucket_5min = CAST(strftime('%s', timestamp) AS INTEGER) / 120 WHERE bucket_5min IS NULL OR bucket_5min > 100000000")
+	}
+	db.QueryRow("SELECT 1 FROM ping_raw WHERE bucket_5min IS NULL OR bucket_5min > 100000000 LIMIT 1").Scan(&needsBackfill5min)
+	if needsBackfill5min == 1 {
+		fmt.Println("⏳ Backfilling bucket_5min for ping_raw (one-time migration)...")
+		db.Exec("UPDATE ping_raw SET bucket_5min = CAST(strftime('%s', timestamp) AS INTEGER) / 120 WHERE bucket_5min IS NULL OR bucket_5min > 100000000")
+	}
 
 	// Migration: Add bucket_5sec column for efficient 1h sampling (5-sec buckets for 720 points over 1h)
 	db.Exec("ALTER TABLE metrics_raw ADD COLUMN bucket_5sec INTEGER")
@@ -290,9 +299,18 @@ func InitDatabase() (*sql.DB, error) {
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_metrics_raw_server_bucket_5sec ON metrics_raw(server_id, bucket_5sec)")
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_ping_raw_server_bucket_5sec ON ping_raw(server_id, bucket_5sec)")
 
-	// Backfill bucket_5sec for existing data - use 5 seconds for 720 points over 1h
-	db.Exec("UPDATE metrics_raw SET bucket_5sec = CAST(strftime('%s', timestamp) AS INTEGER) / 5 WHERE bucket_5sec IS NULL")
-	db.Exec("UPDATE ping_raw SET bucket_5sec = CAST(strftime('%s', timestamp) AS INTEGER) / 5 WHERE bucket_5sec IS NULL")
+	// Backfill bucket_5sec for existing data - only if there are NULL values (check first for fast startup)
+	var needsBackfill5sec int
+	db.QueryRow("SELECT 1 FROM metrics_raw WHERE bucket_5sec IS NULL LIMIT 1").Scan(&needsBackfill5sec)
+	if needsBackfill5sec == 1 {
+		fmt.Println("⏳ Backfilling bucket_5sec for metrics_raw (one-time migration)...")
+		db.Exec("UPDATE metrics_raw SET bucket_5sec = CAST(strftime('%s', timestamp) AS INTEGER) / 5 WHERE bucket_5sec IS NULL")
+	}
+	db.QueryRow("SELECT 1 FROM ping_raw WHERE bucket_5sec IS NULL LIMIT 1").Scan(&needsBackfill5sec)
+	if needsBackfill5sec == 1 {
+		fmt.Println("⏳ Backfilling bucket_5sec for ping_raw (one-time migration)...")
+		db.Exec("UPDATE ping_raw SET bucket_5sec = CAST(strftime('%s', timestamp) AS INTEGER) / 5 WHERE bucket_5sec IS NULL")
+	}
 
 	// Create real-time aggregation tables for fast queries
 	db.Exec(`
@@ -365,8 +383,11 @@ func InitDatabase() (*sql.DB, error) {
 		) WITHOUT ROWID
 	`)
 
-	// Run ANALYZE to update query planner statistics for optimal index usage
-	db.Exec("ANALYZE")
+	// Run ANALYZE in background to avoid slow startup
+	go func() {
+		time.Sleep(10 * time.Second) // Wait for server to fully start
+		db.Exec("ANALYZE")
+	}()
 
 	return db, nil
 }
