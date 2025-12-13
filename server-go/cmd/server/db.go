@@ -204,6 +204,62 @@ func InitDatabase() (*sql.DB, error) {
 		
 		CREATE INDEX IF NOT EXISTS idx_ping_raw_server_time ON ping_raw(server_id, timestamp);
 		CREATE INDEX IF NOT EXISTS idx_ping_raw_target ON ping_raw(server_id, target_name, timestamp);
+		
+		-- 15-minute aggregated ping metrics (keep for 7 days)
+		CREATE TABLE IF NOT EXISTS ping_15min (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			server_id TEXT NOT NULL,
+			bucket_start TEXT NOT NULL,
+			target_name TEXT NOT NULL,
+			target_host TEXT NOT NULL,
+			latency_avg REAL,
+			latency_max REAL,
+			packet_loss_avg REAL NOT NULL DEFAULT 0,
+			ok_count INTEGER NOT NULL DEFAULT 0,
+			fail_count INTEGER NOT NULL DEFAULT 0,
+			sample_count INTEGER NOT NULL,
+			UNIQUE(server_id, target_name, bucket_start)
+		);
+		
+		CREATE INDEX IF NOT EXISTS idx_ping_15min_server_time ON ping_15min(server_id, bucket_start);
+		CREATE INDEX IF NOT EXISTS idx_ping_15min_target ON ping_15min(server_id, target_name, bucket_start);
+		
+		-- Hourly aggregated ping metrics (keep for 30 days)
+		CREATE TABLE IF NOT EXISTS ping_hourly (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			server_id TEXT NOT NULL,
+			hour_start TEXT NOT NULL,
+			target_name TEXT NOT NULL,
+			target_host TEXT NOT NULL,
+			latency_avg REAL,
+			latency_max REAL,
+			packet_loss_avg REAL NOT NULL DEFAULT 0,
+			ok_count INTEGER NOT NULL DEFAULT 0,
+			fail_count INTEGER NOT NULL DEFAULT 0,
+			sample_count INTEGER NOT NULL,
+			UNIQUE(server_id, target_name, hour_start)
+		);
+		
+		CREATE INDEX IF NOT EXISTS idx_ping_hourly_server_time ON ping_hourly(server_id, hour_start);
+		CREATE INDEX IF NOT EXISTS idx_ping_hourly_target ON ping_hourly(server_id, target_name, hour_start);
+		
+		-- Daily aggregated ping metrics (keep forever)
+		CREATE TABLE IF NOT EXISTS ping_daily (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			server_id TEXT NOT NULL,
+			date TEXT NOT NULL,
+			target_name TEXT NOT NULL,
+			target_host TEXT NOT NULL,
+			latency_avg REAL,
+			latency_max REAL,
+			packet_loss_avg REAL NOT NULL DEFAULT 0,
+			uptime_percent REAL NOT NULL DEFAULT 0,
+			sample_count INTEGER NOT NULL,
+			UNIQUE(server_id, target_name, date)
+		);
+		
+		CREATE INDEX IF NOT EXISTS idx_ping_daily_server_time ON ping_daily(server_id, date);
+		CREATE INDEX IF NOT EXISTS idx_ping_daily_target ON ping_daily(server_id, target_name, date);
 	`)
 	if err != nil {
 		return nil, err
@@ -361,6 +417,30 @@ func aggregate15MinInternal(db *sql.DB) error {
 		bucketStart.Format(time.RFC3339),
 		bucketStart.Format(time.RFC3339),
 		bucketEnd.Format(time.RFC3339))
+	if err != nil {
+		return err
+	}
+
+	// Aggregate ping data into 15-minute buckets
+	_, err = db.Exec(`
+		INSERT OR REPLACE INTO ping_15min (server_id, bucket_start, target_name, target_host, latency_avg, latency_max, packet_loss_avg, ok_count, fail_count, sample_count)
+		SELECT 
+			server_id,
+			? as bucket_start,
+			target_name,
+			target_host,
+			AVG(latency_ms),
+			MAX(latency_ms),
+			AVG(packet_loss),
+			SUM(CASE WHEN status = 'ok' THEN 1 ELSE 0 END),
+			SUM(CASE WHEN status != 'ok' THEN 1 ELSE 0 END),
+			COUNT(*)
+		FROM ping_raw
+		WHERE timestamp >= ? AND timestamp < ?
+		GROUP BY server_id, target_name, target_host`,
+		bucketStart.Format(time.RFC3339),
+		bucketStart.Format(time.RFC3339),
+		bucketEnd.Format(time.RFC3339))
 	return err
 }
 
@@ -392,6 +472,27 @@ func aggregateHourlyInternal(db *sql.DB) error {
 		FROM metrics_15min
 		WHERE bucket_start >= ? AND bucket_start < datetime(?, '+1 hour')
 		GROUP BY server_id, hour`, hourStart, hourStart)
+	if err != nil {
+		return err
+	}
+
+	// Aggregate ping data into hourly buckets
+	_, err = db.Exec(`
+		INSERT OR REPLACE INTO ping_hourly (server_id, hour_start, target_name, target_host, latency_avg, latency_max, packet_loss_avg, ok_count, fail_count, sample_count)
+		SELECT 
+			server_id,
+			strftime('%Y-%m-%dT%H:00:00Z', bucket_start) as hour,
+			target_name,
+			target_host,
+			AVG(latency_avg),
+			MAX(latency_max),
+			AVG(packet_loss_avg),
+			SUM(ok_count),
+			SUM(fail_count),
+			SUM(sample_count)
+		FROM ping_15min
+		WHERE bucket_start >= ? AND bucket_start < datetime(?, '+1 hour')
+		GROUP BY server_id, target_name, target_host, hour`, hourStart, hourStart)
 	return err
 }
 
@@ -422,6 +523,26 @@ func aggregateDailyInternal(db *sql.DB) error {
 		FROM metrics_hourly
 		WHERE date(hour_start) = ?
 		GROUP BY server_id, day`, yesterday)
+	if err != nil {
+		return err
+	}
+
+	// Aggregate ping data into daily buckets
+	_, err = db.Exec(`
+		INSERT OR REPLACE INTO ping_daily (server_id, date, target_name, target_host, latency_avg, latency_max, packet_loss_avg, uptime_percent, sample_count)
+		SELECT 
+			server_id,
+			date(hour_start) as day,
+			target_name,
+			target_host,
+			AVG(latency_avg),
+			MAX(latency_max),
+			AVG(packet_loss_avg),
+			(SUM(ok_count) * 100.0 / (SUM(ok_count) + SUM(fail_count))),
+			SUM(sample_count)
+		FROM ping_hourly
+		WHERE date(hour_start) = ?
+		GROUP BY server_id, target_name, target_host, day`, yesterday)
 	return err
 }
 
@@ -450,9 +571,19 @@ func cleanupOldDataInternal(db *sql.DB) error {
 		return err
 	}
 
+	// Delete ping 15-min data older than 7 days
+	if _, err := db.Exec("DELETE FROM ping_15min WHERE bucket_start < ?", cutoff15min); err != nil {
+		return err
+	}
+
 	// Delete hourly data older than 30 days
 	cutoffHourly := time.Now().UTC().AddDate(0, 0, -30).Format(time.RFC3339)
 	if _, err := db.Exec("DELETE FROM metrics_hourly WHERE hour_start < ?", cutoffHourly); err != nil {
+		return err
+	}
+
+	// Delete ping hourly data older than 30 days
+	if _, err := db.Exec("DELETE FROM ping_hourly WHERE hour_start < ?", cutoffHourly); err != nil {
 		return err
 	}
 
@@ -466,11 +597,22 @@ func GetHistory(db *sql.DB, serverID, rangeStr string) ([]HistoryPoint, error) {
 
 	switch rangeStr {
 	case "1h":
-		cutoff := time.Now().UTC().Add(-time.Hour).Format(time.RFC3339)
+		// Use 5-second buckets for 1h sampling (720 points max)
+		cutoffBucket := time.Now().UTC().Add(-time.Hour).Unix() / 5
 		rows, err = db.Query(`
-			SELECT timestamp, cpu_usage, memory_usage, disk_usage, net_rx, net_tx, ping_ms
-			FROM metrics_raw WHERE server_id = ? AND timestamp >= ?
-			ORDER BY timestamp ASC`, serverID, cutoff)
+			SELECT 
+				MIN(timestamp) as timestamp,
+				AVG(cpu_usage) as cpu_usage,
+				AVG(memory_usage) as memory_usage,
+				AVG(disk_usage) as disk_usage,
+				MAX(net_rx) as net_rx,
+				MAX(net_tx) as net_tx,
+				AVG(ping_ms) as ping_ms
+			FROM metrics_raw 
+			WHERE server_id = ? AND (CAST(strftime('%s', timestamp) AS INTEGER) / 5) >= ?
+			GROUP BY (CAST(strftime('%s', timestamp) AS INTEGER) / 5)
+			ORDER BY MIN(timestamp) ASC
+			LIMIT 720`, serverID, cutoffBucket)
 
 	case "24h":
 		// Use 2-min buckets for 720 data points over 24h (24*60/2 = 720)
@@ -662,12 +804,19 @@ func GetPingHistory(db *sql.DB, serverID, rangeStr string) ([]PingHistoryTarget,
 
 	switch rangeStr {
 	case "1h":
-		cutoff := time.Now().UTC().Add(-time.Hour).Format(time.RFC3339)
+		// Use 5-second buckets for 1h sampling (720 points max)
+		cutoffBucket := time.Now().UTC().Add(-time.Hour).Unix() / 5
 		rows, err = db.Query(`
-			SELECT target_name, target_host, timestamp, latency_ms, status
+			SELECT 
+				target_name,
+				target_host,
+				MIN(timestamp) as timestamp,
+				AVG(latency_ms) as latency_ms,
+				MIN(status) as status
 			FROM ping_raw 
-			WHERE server_id = ? AND timestamp >= ?
-			ORDER BY target_name, timestamp ASC`, serverID, cutoff)
+			WHERE server_id = ? AND (CAST(strftime('%s', timestamp) AS INTEGER) / 5) >= ?
+			GROUP BY target_name, target_host, (CAST(strftime('%s', timestamp) AS INTEGER) / 5)
+			ORDER BY target_name, MIN(timestamp) ASC`, serverID, cutoffBucket)
 
 	case "24h":
 		// Use 2-min buckets for efficient 24h sampling (720 points)
@@ -687,47 +836,125 @@ func GetPingHistory(db *sql.DB, serverID, rangeStr string) ([]PingHistoryTarget,
 	case "7d":
 		// 7d with 15-min buckets (672 points max)
 		cutoff := time.Now().UTC().Add(-7 * 24 * time.Hour).Format(time.RFC3339)
-		rows, err = db.Query(`
-			SELECT 
-				target_name,
-				target_host,
-				datetime((strftime('%s', timestamp) / 900) * 900, 'unixepoch') as bucket_start,
-				AVG(latency_ms) as latency_ms,
-				MIN(status) as status
-			FROM ping_raw 
-			WHERE server_id = ? AND timestamp >= ?
-			GROUP BY target_name, target_host, strftime('%s', timestamp) / 900
-			ORDER BY target_name, bucket_start ASC`, serverID, cutoff)
+		var count int
+		db.QueryRow(`SELECT COUNT(*) FROM ping_15min WHERE server_id = ? AND bucket_start >= ?`,
+			serverID, cutoff).Scan(&count)
+
+		if count > 0 {
+			// Use pre-aggregated 15-min data
+			rows, err = db.Query(`
+				SELECT 
+					target_name,
+					target_host,
+					bucket_start,
+					latency_avg as latency_ms,
+					CASE WHEN fail_count > 0 THEN 'error' ELSE 'ok' END as status
+				FROM ping_15min 
+				WHERE server_id = ? AND bucket_start >= ?
+				ORDER BY target_name, bucket_start ASC`, serverID, cutoff)
+		} else {
+			// Fall back to real-time aggregation from raw data
+			rows, err = db.Query(`
+				SELECT 
+					target_name,
+					target_host,
+					datetime((strftime('%s', timestamp) / 900) * 900, 'unixepoch') as bucket_start,
+					AVG(latency_ms) as latency_ms,
+					MIN(status) as status
+				FROM ping_raw 
+				WHERE server_id = ? AND timestamp >= ?
+				GROUP BY target_name, target_host, strftime('%s', timestamp) / 900
+				ORDER BY target_name, bucket_start ASC`, serverID, cutoff)
+		}
 
 	case "30d":
 		// 30d with hourly buckets (720 points max)
 		cutoff := time.Now().UTC().AddDate(0, 0, -30).Format(time.RFC3339)
-		rows, err = db.Query(`
-			SELECT 
-				target_name,
-				target_host,
-				strftime('%Y-%m-%dT%H:00:00Z', timestamp) as hour_start,
-				AVG(latency_ms) as latency_ms,
-				MIN(status) as status
-			FROM ping_raw 
-			WHERE server_id = ? AND timestamp >= ?
-			GROUP BY target_name, target_host, strftime('%Y-%m-%dT%H:00:00Z', timestamp)
-			ORDER BY target_name, hour_start ASC`, serverID, cutoff)
+		var count int
+		db.QueryRow(`SELECT COUNT(*) FROM ping_hourly WHERE server_id = ? AND hour_start >= ?`,
+			serverID, cutoff).Scan(&count)
+
+		if count > 0 {
+			// Use pre-aggregated hourly data
+			rows, err = db.Query(`
+				SELECT 
+					target_name,
+					target_host,
+					hour_start,
+					latency_avg as latency_ms,
+					CASE WHEN fail_count > 0 THEN 'error' ELSE 'ok' END as status
+				FROM ping_hourly 
+				WHERE server_id = ? AND hour_start >= ?
+				ORDER BY target_name, hour_start ASC`, serverID, cutoff)
+		} else {
+			// Try 15-min table first
+			var count15 int
+			db.QueryRow(`SELECT COUNT(*) FROM ping_15min WHERE server_id = ? AND bucket_start >= ?`,
+				serverID, cutoff).Scan(&count15)
+
+			if count15 > 0 {
+				// Aggregate from 15-min data to hourly
+				rows, err = db.Query(`
+					SELECT 
+						target_name,
+						target_host,
+						strftime('%Y-%m-%dT%H:00:00Z', bucket_start) as hour_start,
+						AVG(latency_avg) as latency_ms,
+						CASE WHEN SUM(fail_count) > 0 THEN 'error' ELSE 'ok' END as status
+					FROM ping_15min 
+					WHERE server_id = ? AND bucket_start >= ?
+					GROUP BY target_name, target_host, strftime('%Y-%m-%dT%H:00:00Z', bucket_start)
+					ORDER BY target_name, hour_start ASC`, serverID, cutoff)
+			} else {
+				// Fall back to raw data with hourly aggregation
+				rows, err = db.Query(`
+					SELECT 
+						target_name,
+						target_host,
+						strftime('%Y-%m-%dT%H:00:00Z', timestamp) as hour_start,
+						AVG(latency_ms) as latency_ms,
+						MIN(status) as status
+					FROM ping_raw 
+					WHERE server_id = ? AND timestamp >= ?
+					GROUP BY target_name, target_host, strftime('%Y-%m-%dT%H:00:00Z', timestamp)
+					ORDER BY target_name, hour_start ASC`, serverID, cutoff)
+			}
+		}
 
 	case "1y":
 		// 1y with 12-hour buckets (730 points max)
 		cutoff := time.Now().UTC().AddDate(0, 0, -365).Format(time.RFC3339)
-		rows, err = db.Query(`
-			SELECT 
-				target_name,
-				target_host,
-				MIN(timestamp) as timestamp,
-				AVG(latency_ms) as latency_ms,
-				MIN(status) as status
-			FROM ping_raw 
-			WHERE server_id = ? AND timestamp >= ?
-			GROUP BY target_name, target_host, date(timestamp), (CAST(strftime('%H', timestamp) AS INTEGER) / 12)
-			ORDER BY target_name, MIN(timestamp) ASC`, serverID, cutoff)
+		var count int
+		db.QueryRow(`SELECT COUNT(*) FROM ping_hourly WHERE server_id = ? AND hour_start >= ?`,
+			serverID, cutoff).Scan(&count)
+
+		if count > 0 {
+			// Use hourly data with 12-hour grouping
+			rows, err = db.Query(`
+				SELECT 
+					target_name,
+					target_host,
+					MIN(hour_start) as timestamp,
+					AVG(latency_avg) as latency_ms,
+					CASE WHEN SUM(fail_count) > 0 THEN 'error' ELSE 'ok' END as status
+				FROM ping_hourly 
+				WHERE server_id = ? AND hour_start >= ?
+				GROUP BY target_name, target_host, date(hour_start), (CAST(strftime('%H', hour_start) AS INTEGER) / 12)
+				ORDER BY target_name, MIN(hour_start) ASC`, serverID, cutoff)
+		} else {
+			// Fall back to raw data with 12-hour aggregation
+			rows, err = db.Query(`
+				SELECT 
+					target_name,
+					target_host,
+					MIN(timestamp) as timestamp,
+					AVG(latency_ms) as latency_ms,
+					MIN(status) as status
+				FROM ping_raw 
+				WHERE server_id = ? AND timestamp >= ?
+				GROUP BY target_name, target_host, date(timestamp), (CAST(strftime('%H', timestamp) AS INTEGER) / 12)
+				ORDER BY target_name, MIN(timestamp) ASC`, serverID, cutoff)
+		}
 
 	default:
 		// Default to 24h
