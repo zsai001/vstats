@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, Activity, Settings, Shield, Send, 
   ChevronDown, ChevronUp, ChevronLeft, MapPin, TrendingUp, 
   BarChart3, RefreshCw, Globe, Calendar, ArrowUpRight, Sparkles,
-  Search, UserCog, Trash2, Crown, X, Server, UserCheck, UserX
+  Search, UserCog, Trash2, Crown, X, Server, UserCheck, UserX, ArrowLeft
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
@@ -254,10 +254,10 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-900 pt-16">
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-900">
       <div className="flex">
         {/* Sidebar */}
-        <aside className={`fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 transition-all duration-300 z-40 ${sidebarCollapsed ? 'w-16' : 'w-64'}`}>
+        <aside className={`fixed left-0 top-0 h-screen bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 transition-all duration-300 z-40 ${sidebarCollapsed ? 'w-16' : 'w-64'}`}>
           <div className="flex flex-col h-full">
             {/* Sidebar Header */}
             <div className="p-4 border-b border-slate-200 dark:border-slate-700">
@@ -277,6 +277,17 @@ export default function AdminPage() {
                   <ChevronLeft className={`w-4 h-4 transition-transform ${sidebarCollapsed ? 'rotate-180' : ''}`} />
                 </button>
               </div>
+            </div>
+
+            {/* Back Button */}
+            <div className="p-2">
+              <button
+                onClick={() => navigate('/')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors`}
+              >
+                <ArrowLeft className="w-5 h-5 flex-shrink-0" />
+                {!sidebarCollapsed && <span className="font-medium">返回首页</span>}
+              </button>
             </div>
 
             {/* Menu */}

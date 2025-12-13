@@ -96,6 +96,7 @@ func main() {
 	r.GET("/api/auth/oauth/github/callback", handlers.GitHubOAuthCallback)
 	r.GET("/api/auth/oauth/google", handlers.GoogleOAuthStart)
 	r.GET("/api/auth/oauth/google/callback", handlers.GoogleOAuthCallback)
+	r.POST("/api/auth/exchange", handlers.ExchangeToken) // Exchange OAuth info for JWT (for external OAuth proxy)
 
 	// Auth Reports (public endpoint for sites to report auth events)
 	r.POST("/api/auth/report", handlers.ReportAuth)

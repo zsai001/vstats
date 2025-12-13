@@ -11,6 +11,7 @@ import (
 
 	"vstats/internal/cloud/auth"
 	"vstats/internal/cloud/config"
+	"vstats/internal/cloud/models"
 	"vstats/internal/cloud/database"
 	"vstats/internal/cloud/middleware"
 	"vstats/internal/cloud/redis"
@@ -223,6 +224,106 @@ func GoogleOAuthCallback(c *gin.Context) {
 	}
 
 	redirectWithToken(c, token, expiresAt, "google", user.Username, stateData.RedirectURL)
+}
+
+// ExchangeToken exchanges OAuth user info for JWT token
+// This is used when OAuth is handled by external proxy (like Cloudflare Worker)
+func ExchangeToken(c *gin.Context) {
+	var req struct {
+		Provider string `json:"provider" binding:"required"`
+		Username string `json:"username" binding:"required"`
+		Email    string `json:"email"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request: " + err.Error()})
+		return
+	}
+
+	ctx := context.Background()
+
+	var user *models.User
+	var err error
+
+	// For Google, oauth-proxy returns email as user, so try to find by email first
+	if req.Provider == "google" && req.Email != "" {
+		user, err = database.GetUserByEmail(ctx, req.Email)
+	}
+
+	// If not found by email, try by provider username
+	if user == nil {
+		user, err = database.FindUserByProviderUsername(ctx, req.Provider, req.Username)
+	}
+
+	// Also try finding by email in oauth request
+	if user == nil && req.Email != "" {
+		user, err = database.FindUserByProviderEmail(ctx, req.Provider, req.Email)
+	}
+
+	if err != nil || user == nil {
+		// Try to find existing user by email
+		if req.Email != "" {
+			user, _ = database.GetUserByEmail(ctx, req.Email)
+		}
+
+		if user != nil {
+			// User exists but no OAuth provider link - create one
+			providerUserID := req.Username
+			if req.Provider == "google" && req.Email != "" {
+				providerUserID = req.Email
+			}
+			var email *string
+			if req.Email != "" {
+				email = &req.Email
+			}
+			op := &models.OAuthProvider{
+				UserID:           user.ID,
+				Provider:         req.Provider,
+				ProviderUserID:   providerUserID,
+				ProviderUsername: &req.Username,
+				ProviderEmail:    email,
+			}
+			database.CreateOAuthProvider(ctx, op)
+		} else {
+			// Create new user
+			var email *string
+			if req.Email != "" {
+				email = &req.Email
+			}
+			// Use email as provider_user_id for Google since that's what we get from proxy
+			providerUserID := req.Username
+			if req.Provider == "google" && req.Email != "" {
+				providerUserID = req.Email
+			}
+			user, err = database.FindOrCreateUserByOAuth(ctx, req.Provider, providerUserID, req.Username, email, nil, nil)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user: " + err.Error()})
+				return
+			}
+		}
+	}
+
+	// Update last login
+	database.UpdateUserLastLogin(ctx, user.ID)
+
+	// Generate JWT token
+	emailStr := ""
+	if user.Email != nil {
+		emailStr = *user.Email
+	}
+	token, expiresAt, err := auth.GenerateToken(user.ID, user.Username, emailStr, user.Plan)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"token":      token,
+		"expires_at": expiresAt.Unix(),
+		"user_id":    user.ID,
+		"username":   user.Username,
+		"plan":       user.Plan,
+	})
 }
 
 // VerifyToken verifies the current token

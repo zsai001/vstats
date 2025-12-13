@@ -112,6 +112,22 @@ export async function startOAuth(provider: 'github' | 'google'): Promise<{ url: 
   return { url };
 }
 
+// Exchange OAuth user info for JWT token from backend
+export async function exchangeForToken(provider: string, username: string, email?: string): Promise<{ token: string; expires_at: number }> {
+  const response = await fetch(`${API_BASE}/auth/exchange`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider, username, email }),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Token exchange failed' }));
+    throw new Error(error.error || `HTTP ${response.status}`);
+  }
+  
+  return response.json();
+}
+
 export async function verifyToken(): Promise<{ valid: boolean; user_id: string; username: string; plan: string }> {
   return request('/auth/verify');
 }

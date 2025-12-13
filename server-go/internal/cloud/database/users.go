@@ -248,6 +248,32 @@ func GetUserStats(ctx context.Context) (map[string]interface{}, error) {
 // OAuth Provider Operations
 // ============================================================================
 
+// FindUserByProviderUsername finds user by OAuth provider and username
+func FindUserByProviderUsername(ctx context.Context, provider, username string) (*models.User, error) {
+	var userID string
+	err := pool.QueryRow(ctx, `
+		SELECT user_id FROM oauth_providers 
+		WHERE provider = $1 AND provider_username = $2
+	`, provider, username).Scan(&userID)
+	if err != nil {
+		return nil, err
+	}
+	return GetUserByID(ctx, userID)
+}
+
+// FindUserByProviderEmail finds user by OAuth provider and email
+func FindUserByProviderEmail(ctx context.Context, provider, email string) (*models.User, error) {
+	var userID string
+	err := pool.QueryRow(ctx, `
+		SELECT user_id FROM oauth_providers 
+		WHERE provider = $1 AND provider_email = $2
+	`, provider, email).Scan(&userID)
+	if err != nil {
+		return nil, err
+	}
+	return GetUserByID(ctx, userID)
+}
+
 // GetOAuthProvider retrieves OAuth provider by provider and provider_user_id
 func GetOAuthProvider(ctx context.Context, provider, providerUserID string) (*models.OAuthProvider, error) {
 	var op models.OAuthProvider
