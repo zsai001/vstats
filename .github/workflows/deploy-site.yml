@@ -70,7 +70,7 @@ jobs:
 
       - name: Download frontend artifact
         if: github.event.inputs.deploy_type != 'restart'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: frontend-dist
           path: site/dist/
