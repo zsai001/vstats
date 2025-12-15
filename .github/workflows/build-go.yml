@@ -169,7 +169,7 @@ jobs:
             ./cmd/${{ matrix.cmd }}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.output }}
           path: ${{ matrix.output }}
@@ -207,21 +207,21 @@ jobs:
           zip -r ../../web-dist.zip .
 
       - name: Upload web artifact (directory)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: web-dist
           path: web/dist
           retention-days: 30
 
       - name: Upload web archive (tar.gz)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: web-dist-tar
           path: web-dist.tar.gz
           retention-days: 30
 
       - name: Upload web archive (zip)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: web-dist-zip
           path: web-dist.zip
