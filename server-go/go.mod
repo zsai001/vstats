@@ -12,8 +12,8 @@ require (
 	github.com/redis/go-redis/v9 v9.17.2
 	github.com/shirou/gopsutil/v4 v4.25.11
 	github.com/spf13/cobra v1.10.2
-	golang.org/x/crypto v0.41.0
-	golang.org/x/term v0.34.0
+	golang.org/x/crypto v0.46.0
+	golang.org/x/term v0.38.0
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.40.1
 )
@@ -63,12 +63,12 @@ require (
 	go.uber.org/mock v0.5.0 // indirect
 	golang.org/x/arch v0.20.0 // indirect
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b // indirect
-	golang.org/x/mod v0.27.0 // indirect
-	golang.org/x/net v0.43.0 // indirect
-	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/sys v0.38.0 // indirect
-	golang.org/x/text v0.28.0 // indirect
-	golang.org/x/tools v0.36.0 // indirect
+	golang.org/x/mod v0.30.0 // indirect
+	golang.org/x/net v0.47.0 // indirect
+	golang.org/x/sync v0.19.0 // indirect
+	golang.org/x/sys v0.39.0 // indirect
+	golang.org/x/text v0.32.0 // indirect
+	golang.org/x/tools v0.39.0 // indirect
 	google.golang.org/protobuf v1.36.9 // indirect
 	modernc.org/libc v1.66.10 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
